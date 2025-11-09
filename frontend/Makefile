@@ -4,19 +4,16 @@ SRC := src
 DST := dest
 CNA := kobar
 
+all: node assets static
 
 static:
 	cp $(SRC)/index.html $(DST)/
 	find $(SRC)/js -type f -exec cp {} $(DST)/js \;
 	find $(SRC)/css -type f -exec cp {} $(DST)/css \;
-	cp -r ./api $(DST)
 assets:
-	 find  assets/img/ -type f -exec cp {} $(DST)/img \;
-
-
+	find  assets/img/ -type f -exec cp {} $(DST)/img \;
 execnode:
 	docker run -v .:/app --rm -it --entrypoint /bin/bash node
-
 node:
 	mkdir -p $(DST)/css
 	mkdir -p $(DST)/img

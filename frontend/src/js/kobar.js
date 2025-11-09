@@ -12,8 +12,8 @@ const app = createApp({
 		upd.items = []
 		this.fetchDataFromAPI()
 		nextTick().then(() => {
-			console.log("scrolling")
-			window.scrollTo({ top: 0, behavior: 'smooth'});
+				const scrollDiv = document.getElementById("selection");
+				window.scrollTo({ top: scrollDiv.offsetTop, behavior: 'smooth'});
 		})
 	    },
 	    fetchDataFromAPI() {
@@ -39,21 +39,19 @@ const app = createApp({
 		}).then(function(response) { return response.json(); })
 		.then(function(json) {
 			upd.transactionstage = 2
-			let msg = "transactid"
-			let accname = "klb"
-			let accibn = "BE"
+			upd.paymsg = "transactid"
 			let qrepc = [
 				"BCD",
 				"002",
 				"1",
 				"SCT",
 				"",
-				"${accname}",
-				"${accibn}",
+				"${upd.ibanname}",
+				"${upd.ibannr}",
 				`EUR${upd.transactiontable.total}`,
 				"",
 				"",
-				msg.substr(0,100),
+				upd.paymsg.substr(0,100),
 				"",
 			]
 			var qrcode = new QRCode({
@@ -80,6 +78,10 @@ const app = createApp({
 	    },
 	    confirmPayment() {
 		this.reset();
+	    },
+            addItem(item) {
+			this.filter  = ''
+			this.transaction.push({'id':item.id,'amount':1,'name':item.name,'ms':Date.now()});
 	    },
 	    handleKeyPress(event) {
 		if (event.code.startsWith('Digit') || event.code.startsWith('Numpad')) {
@@ -131,9 +133,15 @@ const app = createApp({
 
 	const member = ref("")
 	const filter = ref("")
+
+	const paymsg = ref("")
+	const ibannr = ref("be")
+	const ibanname = ref("klb")
+
 	const showmemberinput = ref(false)
 	const iconsize = ref(48)
 	const transaction = ref([])
+	
 
 	const transactionstage = ref(0)
 	
@@ -146,8 +154,10 @@ const app = createApp({
 		if (filter.value.length > 2 && list.length == 1) {
 			//if the filter has 3 or more char and the list is one item exactly, then we can select it
 			//this enables barcode scanning to continiously import 
+			let item = list[0]
 			filter.value  = ''
-			transaction.value.push({'id':list[0].id,'amount':1});
+			transaction.value.push({'id':item.id,'amount':1,'name':item.name,'ms':Date.now()});
+			
 			list = items.value
 		}
 		return list
@@ -167,7 +177,12 @@ const app = createApp({
 		}
 		return {"total":total,"table":tt}
 	})
-	
+        const last = computed(() => {
+		if (transaction.value.length > 0) {
+			return transaction.value[transaction.value.length-1]
+		}
+		return {}
+	})	
 
 	const qrcode = ref("")
 
@@ -181,8 +196,12 @@ const app = createApp({
 		transactionstage,
 		items,
 		itemtable,
+		paymsg,
+		ibannr,
+		ibanname,
 		qrcode,
-		showmemberinput
+		showmemberinput,
+		last
 	}
 
       }

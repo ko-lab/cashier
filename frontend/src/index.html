@@ -42,6 +42,7 @@
 	      </ul>
 	    </div>
 	    <div class="d-flex">
+<span class="me-2" v-if="transaction.length > 0" :style='"font-size:"+iconsize/24+"rem;"' >Last: {{last.name}}</span>
 <!--<input  type="text" inputmode="numeric" pattern="\d*"  v-model="filter" class="form-control me-2 ms-2" id="filterinput" ></input>-->
 <!--<span class="me-2" :style="`font-size: ${iconsize}`" >{{transactionstage}}</span>-->
 <span class="me-2" :style='"font-size:"+iconsize/24+"rem;"' >{{filter}}</span>
@@ -71,7 +72,7 @@
 	<div class="row row-cols-auto page" id="selection">
 	  <template v-for="(item, index) in itemtable">
 	  <div class="col" style="width: 12rem;">
-		<div class="card mt-4 rounded"  @click="transaction.push({'id':item.id,'amount':1});filter = ''" v-bind:data-productid="item.id" >
+		<div class="card mt-4 rounded"  @click="addItem(item)" v-bind:data-productid="item.id" >
 		  <img  :src="`./img/${item.img}`" style="object-fit:contain;"  src="" class="card-img-top rounded" alt="...">
 		  <div class="card-img-overlay ">
 			<span v-if="member" class="cardprice">{{item.price.member}}€</span>
@@ -138,7 +139,11 @@
 	</div>
 	<div class="row page" id="pay" v-show="transactionstage > 1"  :key="transactionstage">
 	  <div class="col-1"></div>
-	  <div class="col-5 pt-3" v-html="qrcode" id="qrcode">
+	  <div class="col-5 pt-3">
+		<div v-html="qrcode" id="qrcode"></div>
+		<div>Total: {{transactiontable.total}}</div>
+		<div>IBAN: {{ibannr}}</div>
+		<div>Structured : {{paymsg}}</div>
 	  </div>
 	  <div class="col-6 p-3" id="finish">
 		<h1>Finish the transaction</h1>
