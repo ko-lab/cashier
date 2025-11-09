@@ -2,5 +2,11 @@
 __pycache__/
 *.egg-info/
 
+frontend/node_modules/
+dest/
+api/
+frontend/assets/img/
+
+
 # used by pyenv
 .python-version

@@ -1,0 +1,81 @@
+/* CSS HEX
+--prussian-blue: #0b3954ff;
+--teal: #087e8bff;
+--columbia-blue: #bfd7eaff;
+--bittersweet: #ff5a5fff;
+--fire-engine-red: #c81d25ff;
+*/
+/* CSS HSL */
+:root {
+--prussian-blue: hsla(202, 77%, 19%, 1);
+--teal: hsla(186, 89%, 29%, 1);
+--columbia-blue: hsla(207, 51%, 83%, 1);
+--bittersweet: hsla(358, 100%, 68%, 1);
+--fire-engine-red: hsla(357, 75%, 45%, 1);
+}
+
+body {
+	background-color: hsla(202, 77%, 19%, 1);
+}
+
+#memberpopup {
+	position: absolute;
+	width:80vw;
+	min-height:20px;
+	padding:10px;
+	position:absolute;
+	top:50%;
+	left:10vw;
+	background-color: #efefefcc;
+	border-radius:10px;
+	border: 1px solid #33333333;
+}
+
+#navbar {
+	background-color: hsla(202, 77%, 10%, 1) !important;
+}
+
+.card {
+	color: hsla(202, 77%, 96%, 1) !important;
+	background-color: hsla(202, 77%, 14%, 1) !important;
+}
+
+.cardname {
+  font-size: 1rem !important;
+
+}
+.cardean {
+}
+
+.cardbottom {
+  background-color: hsla(202, 77%, 14%, 0.8) !important;
+  display: inline-block !important;
+  position: absolute; 
+  bottom: 0px !important;
+  left: 0px !important;
+  width: 100% !important;
+  text-align: center;
+}
+
+.cardprice {
+  font-size: 2rem !important;
+  display: inline-block !important;
+  position: absolute;
+  right: -10px !important;
+  top: -10px !important; 
+  background-color: hsla(357, 50%, 45%, 1) !important;
+  padding:5px;
+  border-radius:60px;
+  text-align:center;
+  min-width:60px;
+}
+.page {
+	padding-top:92px;
+	min-height: 100vh !important;
+	width:100vw !important;
+}
+
+#total {
+
+	background-color: hsla(202, 77%, 17%, 1);
+}

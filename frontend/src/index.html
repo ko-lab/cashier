@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Kobar</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet" >
+    <link href="css/kobar.css" rel="stylesheet" >
+    
+  </head>
+  <body id="body">
+	<nav class="navbar  fixed-top  navbar-expand-lg bg-body-tertiary" id="navbar" data-bs-theme="dark">
+	  <div class="container-fluid">
+	    <a class="navbar-brand" href="#">Ko-Bar</a>
+	    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+	      <span class="navbar-toggler-icon"></span>
+	    </button>
+	    <div class="collapse navbar-collapse" id="navbarNav">
+	      <ul class="navbar-nav">
+		<li class="nav-item">
+		  <a class="nav-link" aria-current="page" href="#selection">
+
+<icon bi="house-fill" :sz="iconsize"></icon>
+(S)elect
+</a>
+		</li>
+		<li class="nav-item ">
+		  <a class="nav-link ms-3" href="#total">
+
+<icon bi="card-list" :sz="iconsize"></icon>
+(T)otal
+</a>
+		</li>
+		<li class="nav-item" v-show="transactionstage > 1">
+		  <a class="nav-link ms-3"  href="#pay">
+
+<icon bi="credit-card" :sz="iconsize"></icon>
+(P)ay
+</a>
+
+		</li>
+	      </ul>
+	    </div>
+	    <div class="d-flex">
+<!--<input  type="text" inputmode="numeric" pattern="\d*"  v-model="filter" class="form-control me-2 ms-2" id="filterinput" ></input>-->
+<!--<span class="me-2" :style="`font-size: ${iconsize}`" >{{transactionstage}}</span>-->
+<span class="me-2" :style='"font-size:"+iconsize/24+"rem;"' >{{filter}}</span>
+<icon bi="zoom-out" :addClass="me-2"  @click="iconsize -= 4" :sz="iconsize" ></icon>
+<icon bi="zoom-in" :addClass="me-5" @click="iconsize+=4" :sz="iconsize" ></icon>
+
+<icon bi="x-circle" :sz="iconsize" color="red" @click="reset()"></icon>
+
+<icon bi="person-check" v-if="member!=''" @click="member = '';showmemberinput = false" :sz="iconsize" color="lightgreen" ></icon>
+<icon bi="person-fill-slash" v-if="member==''" @click="showmemberinput = true" :sz="iconsize" color="orange" ></icon>
+
+<a class="ms-2" href="#total">
+<svg class="ms-2" viewBox="0 0 96 96" :width="iconsize" :height="iconsize" fill="white">
+  <use xlink:href="./img/bootstrap-icons.svg#cart" x="0" y="32" width="64" height="64"/>
+  <g v-if="transaction.length>0">
+	<circle cx="50" cy="35" r=30 fill="red"></circle>
+  	<text y="48" x="48" text-anchor="middle" ><tspan font-size="40">{{transaction.length}}<tspan></text>
+  </g>
+</svg>
+</a>
+
+	    </div>
+	  </div>
+	</nav>
+    <div class="container-fluid" id="app">
+
+	<div class="row row-cols-auto page" id="selection">
+	  <template v-for="(item, index) in itemtable">
+	  <div class="col" style="width: 12rem;">
+		<div class="card mt-4 rounded"  @click="transaction.push({'id':item.id,'amount':1});filter = ''" v-bind:data-productid="item.id" >
+		  <img  :src="`./img/${item.img}`" style="object-fit:contain;"  src="" class="card-img-top rounded" alt="...">
+		  <div class="card-img-overlay ">
+			<span v-if="member" class="cardprice">{{item.price.member}}€</span>
+			<span v-else class="cardprice" >{{item.price.nonmember}}€</span>
+		  </div>
+		  <div class="card-img-overlay">
+			<div class="cardbottom rounded-bottom">
+				<span class="cardname">{{item.name}}</span>			
+				<br>
+				<small class="cardean">{{item.ean}}</small>
+			</div>
+		  </div>
+		</div>
+	  </div>
+	 </template>
+	</div>
+	<div id="memberpopup" v-show="showmemberinput">
+		<div class="input-group">
+			<input  type="text" inputmode="numeric" pattern="\d*"  v-model="member" class="form-control" id="memberinput" ></input>
+			<button @click="showmemberinput = false" class="btn btn-success">Close</button>
+		</div>
+	</div>
+	<div class="row page" id="total">
+	  <div class="col">
+		<h3>Estimated Bill</h3>
+		<table class="table table-dark table-stripped">
+		  <thead>
+		    <tr>
+		      <th scope="col">Remove</th>
+		      <th scope="col">#</th>
+		      <th scope="col">Item</th>
+		      <th scope="col">Price</th>
+		    </tr>
+		  </thead>
+		  <tbody>
+    		  <tr v-for="(t,i) in transactiontable.table" >
+      			<th scope="row" @click="transaction.splice(i,1)">
+<icon bi="cart-x-fill" :sz="iconsize/1.2" color="red" @click="transaction=[]"></icon>
+
+			</th>
+      			<td scope="row">
+
+<icon bi="dash-circle-fill" :sz="iconsize/1.2" color="white" @click="transaction[t.tlid].amount--"></icon>
+<span class="m-4" :width="iconsize*3" style="font-size:x-large;">{{t.count}}</span>
+<icon bi="plus-circle-fill" :sz="iconsize/1.2" color="white" @click="transaction[t.tlid].amount++"></icon>
+</td>
+      			<td scope="row">{{t.item}}</td>
+      			<td scope="row">{{t.price}}€ x {{amount}} = {{t.total}}€</td>
+		  </tr>
+		  <tr>
+      			<td scope="row" colspan=3>Total</td>
+      			<td scope="row" >{{transactiontable.total}}€</td>
+		  </tr>
+
+		  <tr v-if="transactiontable.total > 0">
+      			<td scope="row" colspan=3></td>
+      			<td scope="row" ><button @click="fetchPayment" class="btn btn-primary">
+<icon bi="credit-card" :sz="iconsize" color="white" ></icon>
+		  Pay</button></td>
+		  </tr>
+
+		</table>
+	  </div>
+	</div>
+	<div class="row page" id="pay" v-show="transactionstage > 1"  :key="transactionstage">
+	  <div class="col-1"></div>
+	  <div class="col-5 pt-3" v-html="qrcode" id="qrcode">
+	  </div>
+	  <div class="col-6 p-3" id="finish">
+		<h1>Finish the transaction</h1>
+		<p>Please pay the transaction with instant payment (flitsoverschijving) for verification. Not executing a flits payment might result in an investigation</p>
+		<p>Smile, you are being monitored and recorded for verification purposes</p>
+		<button @click="confirmPayment()"  v-show="transactionstage > 2"  class="btn btn-success">Confirm Payment</button>
+	  </div>
+	</div>
+    </div>
+    <script src="js/bootstrap.bundle.min.js" ></script>
+    <script src="js/qrcode.min.js" ></script>
+<script type="importmap">
+  {
+    "imports": {
+      "vue":"./js/vue.esm-browser.prod.js"
+    }
+  }
+</script>
+
+<script type="module" src="js/kobar.js">
+</script>
+
+
+  </body>
+</html>
