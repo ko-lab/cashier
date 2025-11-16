@@ -8,7 +8,7 @@ name = "cashier"
 version = "1.0.0"
 description = "A sample Python project"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { file = "LICENSE.txt" }
 keywords = ["ko-lab", "cashier", "tools"]
 authors = [
@@ -33,6 +33,12 @@ classifiers = [
 dependencies = [
   "fastapi==0.121.0",
   "SQLAlchemy==2.0.44",
+  "python_multipart==0.0.20",
+  "sqlmodel==0.0.27",
+  "pydantic-settings (>=2.12.0,<3.0.0)",
+  "uvicorn (>=0.38.0,<0.39.0)",
+  "pytest (>=9.0.1,<10.0.0)",
+  "httpx (>=0.28.1,<0.29.0)",
 ]
 
 [project.optional-dependencies]
@@ -51,7 +57,7 @@ test = ["coverage"]
 # This is configuration specific to the `setuptools` build backend.
 # If you are using a different build backend, you will need to change this.
 [tool.setuptools]
-packages = [ "cashier" ]
+packages = ["cashier"]
 # If there are data files included in your packages that need to be
 # installed, specify them here.
 #package-data = { "sample" = ["*.dat"] }
