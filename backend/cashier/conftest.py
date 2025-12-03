@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import StaticPool
 from sqlmodel import create_engine, SQLModel, Session
 
-from cashier.core.db.config import get_session
+from cashier.dependencies import get_session
 from cashier.main import app
 from cashier.models.products import Product
 
@@ -31,7 +31,9 @@ def client_fixture(session: Session):
 
 @pytest.fixture(name="data", autouse=True)
 def data_fixture(session: Session):
-    products = [Product(name='Product Test 1', price=10.0, member_price=0.2, ean='2052552', img=None)]
+    products = [
+        Product(name='Product Test 1', price=10.0, member_price=0.2, ean='2052552', img=None),
+    ]
     for product in products:
         session.add(product)
         session.commit()

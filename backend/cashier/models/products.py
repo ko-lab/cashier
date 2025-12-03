@@ -1,6 +1,11 @@
+from pydantic import UUID4
 import uuid
-
 from sqlmodel import Field, SQLModel
+
+__all__ = [
+    'Product',
+    'ProductPublic',
+]
 
 class ProductBase(SQLModel):
     name: str = Field(nullable=False)
@@ -11,8 +16,7 @@ class ProductBase(SQLModel):
 
 
 class Product(ProductBase, table=True):
-    id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
-
+    id: UUID4 = Field(default_factory=uuid.uuid4, primary_key=True)
 
 class ProductPublic(ProductBase):
-    id: uuid.UUID
+    id: UUID4 = Field(default_factory=uuid.uuid4, primary_key=True)
