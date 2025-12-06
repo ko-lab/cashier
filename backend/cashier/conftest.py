@@ -1,8 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import StaticPool
-from sqlmodel import create_engine, SQLModel, Session
+from sqlmodel import SQLModel, Session
 
+from cashier.core import build_engine
 from cashier.dependencies import get_session
 from cashier.main import app
 from cashier.models.products import Product
@@ -10,9 +10,7 @@ from cashier.models.products import Product
 
 @pytest.fixture(name="session", autouse=True)
 def session_fixture():
-    engine = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
+    engine = build_engine("sqlite://")
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
         yield session
