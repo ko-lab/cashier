@@ -9,3 +9,6 @@ frontend/assets/img/
 
 # used by pyenv
 .python-version
+
+# SQLite3 databases
+*.db
