@@ -42,7 +42,7 @@ export function updateCartQuantity(
     return filtered;
   }
 
-  return [...filtered, { productId, quantity: nextQuantity }];
+  return [...filtered, { productId, quantity: nextQuantity, isMemberPrice }];
 }
 
 export function buildCartSummary(

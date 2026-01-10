@@ -8,6 +8,12 @@ import {
   toTransactionItems,
   updateCartQuantity
 } from "./domain/cart";
+import {
+  filterProductsByQuery,
+  formatPriceMode,
+  getSelectedItems,
+  getUnselectedProducts
+} from "./domain/productSection";
 
 type View = "cart" | "checkout";
 
@@ -72,36 +78,20 @@ export default function App() {
 
   const summary = useMemo(() => buildCartSummary(products, cart), [products, cart]);
 
-  const filteredProducts = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) {
-      return products;
-    }
-    return products.filter((product) =>
-      product.name.toLowerCase().includes(query)
-    );
-  }, [products, searchQuery]);
+  const filteredProducts = useMemo(
+    () => filterProductsByQuery(products, searchQuery),
+    [products, searchQuery]
+  );
 
-  const selectedCartItems = useMemo(() => {
-    const filteredMap = new Map(filteredProducts.map((product) => [product.id, product]));
-    return cart
-      .filter((item) => filteredMap.has(item.productId))
-      .map((item) => ({
-        ...item,
-        product: filteredMap.get(item.productId)!
-      }));
-  }, [cart, filteredProducts]);
+  const selectedCartItems = useMemo(
+    () => getSelectedItems(products, cart, searchQuery),
+    [products, cart, searchQuery]
+  );
 
-  const unselectedFilteredProducts = useMemo(() => {
-    const selectedIdsForMode = new Set(
-      cart
-        .filter((item) => item.isMemberPrice === defaultIsMemberPrice)
-        .map((item) => item.productId)
-    );
-    return filteredProducts.filter(
-      (product) => !selectedIdsForMode.has(product.id)
-    );
-  }, [filteredProducts, cart, defaultIsMemberPrice]);
+  const unselectedFilteredProducts = useMemo(
+    () => getUnselectedProducts(products, cart, searchQuery, defaultIsMemberPrice),
+    [products, cart, searchQuery, defaultIsMemberPrice]
+  );
 
   useEffect(() => {
     if (!transaction) {
@@ -191,8 +181,6 @@ export default function App() {
   };
 
   const totalLabel = currencyFormatter.format(summary.total);
-  const formatPriceMode = (isMember: boolean) =>
-    isMember ? "(member price)" : "(regular price)";
   const getQuantity = (productId: string, isMemberPrice: boolean) =>
     cart.find(
       (item) =>
@@ -277,62 +265,56 @@ export default function App() {
                       Selected
                     </p>
                     <div className="mt-3 flex flex-col gap-4">
-                      {selectedCartItems.map((item) => {
-                        const unitPrice = item.isMemberPrice
-                          ? item.product.priceMember
-                          : item.product.priceNonMember;
-
-                        return (
-                          <div
-                            key={`${item.productId}-${item.isMemberPrice}`}
-                            className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 pb-3 last:border-b-0 dark:border-white/10"
-                          >
-                            <div>
-                              <p className="font-medium">
-                                {item.product.name}{" "}
-                                <span className="text-xs uppercase text-slate-500">
-                                  {formatPriceMode(item.isMemberPrice)}
-                                </span>
-                              </p>
-                              <p className="text-sm text-slate-500 dark:text-slate-300">
-                                {currencyFormatter.format(unitPrice)} - stock{" "}
-                                {item.product.inventoryCount}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleQuantityChange(
-                                    item.product.id,
-                                    -1,
-                                    item.isMemberPrice
-                                  )
-                                }
-                                className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
-                              >
-                                -
-                              </button>
-                              <span className="w-6 text-center text-sm font-semibold">
-                                {item.quantity}
+                      {selectedCartItems.map((item) => (
+                        <div
+                          key={`${item.productId}-${item.isMemberPrice}`}
+                          className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 pb-3 last:border-b-0 dark:border-white/10"
+                        >
+                          <div>
+                            <p className="font-medium">
+                              {item.name}{" "}
+                              <span className="text-xs uppercase text-slate-500">
+                                {formatPriceMode(item.isMemberPrice)}
                               </span>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleQuantityChange(
-                                    item.product.id,
-                                    1,
-                                    item.isMemberPrice
-                                  )
-                                }
-                                className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
-                              >
-                                +
-                              </button>
-                            </div>
+                            </p>
+                            <p className="text-sm text-slate-500 dark:text-slate-300">
+                              {currencyFormatter.format(item.unitPrice)} - stock{" "}
+                              {item.inventoryCount}
+                            </p>
                           </div>
-                        );
-                      })}
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleQuantityChange(
+                                  item.productId,
+                                  -1,
+                                  item.isMemberPrice
+                                )
+                              }
+                              className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
+                            >
+                              -
+                            </button>
+                            <span className="w-6 text-center text-sm font-semibold">
+                              {item.quantity}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleQuantityChange(
+                                  item.productId,
+                                  1,
+                                  item.isMemberPrice
+                                )
+                              }
+                              className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -342,9 +324,6 @@ export default function App() {
                   </p>
                 )}
                 {unselectedFilteredProducts.map((product) => {
-                  if (!product.active) {
-                    return null;
-                  }
                   const unitPrice = defaultIsMemberPrice
                     ? product.priceMember
                     : product.priceNonMember;
