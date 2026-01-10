@@ -84,11 +84,11 @@ export default function App() {
   }, [products, searchQuery]);
 
   const selectedProducts = useMemo(() => {
-    return products.filter(
+    return filteredProducts.filter(
       (product) =>
         (cart.find((item) => item.productId === product.id)?.quantity ?? 0) > 0
     );
-  }, [products, cart]);
+  }, [filteredProducts, cart]);
 
   const unselectedFilteredProducts = useMemo(() => {
     const selectedIds = new Set(selectedProducts.map((product) => product.id));
