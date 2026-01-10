@@ -10,3 +10,4 @@ apps/**/dist/
 apps/**/.vite/
 coverage/
 *.log
+apps/backend/data/transactions.*

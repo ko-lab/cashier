@@ -70,22 +70,16 @@ export function createTransactionService(
         items: lineItems
       };
 
-      const transactions = await transactionStore.listTransactions();
-      transactions.push(transaction);
-      await transactionStore.saveTransactions(transactions);
+      await transactionStore.create(transaction);
 
       return transaction;
     },
     async finalizeTransaction(id, status) {
-      const transactions = await transactionStore.listTransactions();
-      const transaction = transactions.find((entry) => entry.id === id);
+      const transaction = await transactionStore.updateStatus(id, status);
 
       if (!transaction) {
         throw new ORPCError("NOT_FOUND", { data: { message: "Transaction not found" } });
       }
-
-      transaction.status = status;
-      await transactionStore.saveTransactions(transactions);
 
       return transaction;
     }

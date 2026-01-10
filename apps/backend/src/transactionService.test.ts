@@ -26,7 +26,6 @@ describe("transaction service", () => {
   beforeEach(async () => {
     dataDir = await mkdtemp(path.join(tmpdir(), "pos-data-"));
     await writeJson(path.join(dataDir, "products.json"), products);
-    await writeJson(path.join(dataDir, "transactions.json"), []);
   });
 
   afterEach(async () => {
@@ -45,9 +44,8 @@ describe("transaction service", () => {
     expect(transaction.status).toBe("pending");
     expect(transaction.total).toBe(2);
 
-    const saved = await transactionStore.listTransactions();
-    expect(saved).toHaveLength(1);
-    expect(saved[0].id).toBe(transaction.id);
+    const saved = await transactionStore.getById(transaction.id);
+    expect(saved?.id).toBe(transaction.id);
   });
 
   it("finalizes a transaction", async () => {
@@ -62,8 +60,8 @@ describe("transaction service", () => {
     const finalized = await service.finalizeTransaction(transaction.id, "completed");
     expect(finalized.status).toBe("completed");
 
-    const saved = await transactionStore.listTransactions();
-    expect(saved[0].status).toBe("completed");
+    const saved = await transactionStore.getById(transaction.id);
+    expect(saved?.status).toBe("completed");
   });
 
   it("rejects unknown products", async () => {
