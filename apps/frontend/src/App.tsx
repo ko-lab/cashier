@@ -25,6 +25,7 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<{ productId: string; quantity: number }[]>([]);
   const [isMemberPrice, setIsMemberPrice] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [view, setView] = useState<View>("cart");
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -71,6 +72,16 @@ export default function App() {
     () => buildCartSummary(products, cart, isMemberPrice),
     [products, cart, isMemberPrice]
   );
+
+  const filteredProducts = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) {
+      return products;
+    }
+    return products.filter((product) =>
+      product.name.toLowerCase().includes(query)
+    );
+  }, [products, searchQuery]);
 
   useEffect(() => {
     if (!transaction) {
@@ -190,11 +201,20 @@ export default function App() {
           <section className="grid gap-6 lg:grid-cols-[2fr,1fr]">
             <div className="rounded-2xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
               <h2 className="text-lg font-semibold">Products</h2>
+              <div className="mt-4">
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search products"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                />
+              </div>
               <div className="mt-4 flex flex-col gap-4">
-                {products.length === 0 && (
+                {filteredProducts.length === 0 && (
                   <p className="text-sm text-slate-500">No products configured.</p>
                 )}
-                {products.map((product) => {
+                {filteredProducts.map((product) => {
                   if (!product.active) {
                     return null;
                   }
