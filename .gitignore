@@ -5,6 +5,7 @@ node_modules/
 .idea/
 .env
 .env.*
+!.env.example
 apps/**/dist/
 apps/**/.vite/
 coverage/
