@@ -83,6 +83,18 @@ export default function App() {
     );
   }, [products, searchQuery]);
 
+  const selectedProducts = useMemo(() => {
+    return products.filter(
+      (product) =>
+        (cart.find((item) => item.productId === product.id)?.quantity ?? 0) > 0
+    );
+  }, [products, cart]);
+
+  const unselectedFilteredProducts = useMemo(() => {
+    const selectedIds = new Set(selectedProducts.map((product) => product.id));
+    return filteredProducts.filter((product) => !selectedIds.has(product.id));
+  }, [filteredProducts, selectedProducts]);
+
   useEffect(() => {
     if (!transaction) {
       setQrDataUrl(null);
@@ -211,10 +223,62 @@ export default function App() {
                 />
               </div>
               <div className="mt-4 flex flex-col gap-4">
-                {filteredProducts.length === 0 && (
-                  <p className="text-sm text-slate-500">No products configured.</p>
+                {selectedProducts.length > 0 && (
+                  <div className="rounded-xl border border-dashed border-slate-400/60 px-4 py-3 dark:border-slate-500">
+                    <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-300">
+                      Selected
+                    </p>
+                    <div className="mt-3 flex flex-col gap-4">
+                      {selectedProducts.map((product) => {
+                        const unitPrice = isMemberPrice
+                          ? product.priceMember
+                          : product.priceNonMember;
+                        const quantity =
+                          cart.find((item) => item.productId === product.id)?.quantity ?? 0;
+
+                        return (
+                          <div
+                            key={product.id}
+                            className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 pb-3 last:border-b-0 dark:border-white/10"
+                          >
+                            <div>
+                              <p className="font-medium">{product.name}</p>
+                              <p className="text-sm text-slate-500 dark:text-slate-300">
+                                {currencyFormatter.format(unitPrice)} - stock{" "}
+                                {product.inventoryCount}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() => handleQuantityChange(product.id, -1)}
+                                className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
+                              >
+                                -
+                              </button>
+                              <span className="w-6 text-center text-sm font-semibold">
+                                {quantity}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleQuantityChange(product.id, 1)}
+                                className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 )}
-                {filteredProducts.map((product) => {
+                {unselectedFilteredProducts.length === 0 && selectedProducts.length === 0 && (
+                  <p className="text-sm text-slate-500">
+                    {products.length === 0 ? "No products configured." : "No products match search."}
+                  </p>
+                )}
+                {unselectedFilteredProducts.map((product) => {
                   if (!product.active) {
                     return null;
                   }
