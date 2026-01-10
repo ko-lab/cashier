@@ -1,0 +1,25 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: "4000"
+      DATA_DIR: /app/apps/backend/data
+    volumes:
+      - backend-data:/app/apps/backend/data
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:4000/rpc
+    depends_on:
+      - backend
+
+volumes:
+  backend-data:
