@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import QRCode from "qrcode";
+import QRCode from "qrcode-svg";
 import { client } from "./api/client";
 import type { Product, Transaction } from "@shared/models";
 import {
@@ -28,7 +28,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [view, setView] = useState<View>("cart");
   const [transaction, setTransaction] = useState<Transaction | null>(null);
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [qrSvg, setQrSvg] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusMessage | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDark, setIsDark] = useState(() => {
@@ -97,14 +97,40 @@ export default function App() {
 
   useEffect(() => {
     if (!transaction) {
-      setQrDataUrl(null);
+      setQrSvg(null);
       return;
     }
 
-    const payload = `KO-LAB POS|${transaction.id}|${transaction.total.toFixed(2)}`;
-    QRCode.toDataURL(payload, { margin: 1, width: 220 })
-      .then((url) => setQrDataUrl(url))
-      .catch(() => setQrDataUrl(null));
+    const ibanName = import.meta.env.VITE_IBAN_NAME ?? "KO-LAB";
+    const ibanNumber = import.meta.env.VITE_IBAN ?? "BE00000000000000";
+    const payMessage = transaction.id;
+    const amount = transaction.total.toFixed(2);
+    const payload = [
+      "BCD",
+      "002",
+      "1",
+      "SCT",
+      "",
+      `${ibanName}`,
+      `${ibanNumber}`,
+      `EUR${amount}`,
+      "",
+      "",
+      payMessage.substring(0, 100),
+      ""
+    ].join("\n");
+
+    const qr = new QRCode({
+      content: payload,
+      padding: 4,
+      width: 256,
+      height: 256,
+      color: "#000000",
+      background: "#ffffff",
+      ecl: "H"
+    });
+
+    setQrSvg(qr.svg());
   }, [transaction]);
 
   const handleQuantityChange = (productId: string, delta: number) => {
@@ -355,8 +381,12 @@ export default function App() {
                 Scan the QR code and pay the total. When done, press "I paid".
               </p>
               <div className="mt-6 flex flex-col items-center gap-4 rounded-2xl border border-dashed border-slate-400/60 p-6 dark:border-slate-500">
-                {qrDataUrl ? (
-                  <img src={qrDataUrl} alt="Payment QR" className="h-56 w-56" />
+                {qrSvg ? (
+                  <div
+                    className="h-56 w-56"
+                    aria-label="Payment QR"
+                    dangerouslySetInnerHTML={{ __html: qrSvg }}
+                  />
                 ) : (
                   <div className="h-56 w-56 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
                 )}
