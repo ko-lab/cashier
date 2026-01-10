@@ -69,5 +69,12 @@ export function toTransactionItems(cart: CartItem[]): CartItem[] {
 }
 
 export function sortProducts(products: Product[]): Product[] {
-  return [...products].sort((a, b) => a.name.localeCompare(b.name));
+  return [...products].sort((a, b) => {
+    const aInStock = a.inventoryCount > 0 ? 1 : 0;
+    const bInStock = b.inventoryCount > 0 ? 1 : 0;
+    if (aInStock !== bInStock) {
+      return bInStock - aInStock;
+    }
+    return a.name.localeCompare(b.name);
+  });
 }
