@@ -93,9 +93,15 @@ export default function App() {
   }, [cart, filteredProducts]);
 
   const unselectedFilteredProducts = useMemo(() => {
-    const selectedIds = new Set(cart.map((item) => item.productId));
-    return filteredProducts.filter((product) => !selectedIds.has(product.id));
-  }, [filteredProducts, cart]);
+    const selectedIdsForMode = new Set(
+      cart
+        .filter((item) => item.isMemberPrice === defaultIsMemberPrice)
+        .map((item) => item.productId)
+    );
+    return filteredProducts.filter(
+      (product) => !selectedIdsForMode.has(product.id)
+    );
+  }, [filteredProducts, cart, defaultIsMemberPrice]);
 
   useEffect(() => {
     if (!transaction) {
