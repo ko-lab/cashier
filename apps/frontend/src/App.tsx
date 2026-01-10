@@ -26,9 +26,7 @@ export default function App() {
   const [cart, setCart] = useState<
     { productId: string; quantity: number; isMemberPrice: boolean }[]
   >([]);
-  const [priceModeByProductId, setPriceModeByProductId] = useState<
-    Record<string, boolean>
-  >({});
+  const [defaultIsMemberPrice, setDefaultIsMemberPrice] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [view, setView] = useState<View>("cart");
   const [transaction, setTransaction] = useState<Transaction | null>(null);
@@ -84,16 +82,20 @@ export default function App() {
     );
   }, [products, searchQuery]);
 
-  const selectedProducts = useMemo(() => {
-    return filteredProducts.filter((product) =>
-      cart.some((item) => item.productId === product.id)
-    );
-  }, [filteredProducts, cart]);
+  const selectedCartItems = useMemo(() => {
+    const filteredMap = new Map(filteredProducts.map((product) => [product.id, product]));
+    return cart
+      .filter((item) => filteredMap.has(item.productId))
+      .map((item) => ({
+        ...item,
+        product: filteredMap.get(item.productId)!
+      }));
+  }, [cart, filteredProducts]);
 
   const unselectedFilteredProducts = useMemo(() => {
-    const selectedIds = new Set(selectedProducts.map((product) => product.id));
+    const selectedIds = new Set(cart.map((item) => item.productId));
     return filteredProducts.filter((product) => !selectedIds.has(product.id));
-  }, [filteredProducts, selectedProducts]);
+  }, [filteredProducts, cart]);
 
   useEffect(() => {
     if (!transaction) {
@@ -231,7 +233,28 @@ export default function App() {
         {view === "cart" ? (
           <section className="grid gap-6 lg:grid-cols-[2fr,1fr]">
             <div className="rounded-2xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
-              <h2 className="text-lg font-semibold">Products</h2>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <h2 className="text-lg font-semibold">Products</h2>
+                <div className="flex items-center gap-3 rounded-full border border-slate-200 px-3 py-1 text-xs uppercase tracking-wide text-slate-600 dark:border-slate-700 dark:text-slate-200">
+                  <span>{defaultIsMemberPrice ? "Member price" : "Regular price"}</span>
+                  <button
+                    type="button"
+                    onClick={() => setDefaultIsMemberPrice((value) => !value)}
+                    className={`relative h-6 w-12 rounded-full transition ${
+                      defaultIsMemberPrice
+                        ? "bg-accent-light dark:bg-accent-dark"
+                        : "bg-slate-300 dark:bg-slate-700"
+                    }`}
+                    aria-pressed={defaultIsMemberPrice}
+                  >
+                    <span
+                      className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${
+                        defaultIsMemberPrice ? "left-7" : "left-1"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
               <div className="mt-4">
                 <input
                   type="search"
@@ -242,57 +265,42 @@ export default function App() {
                 />
               </div>
               <div className="mt-4 flex flex-col gap-4">
-                {selectedProducts.length > 0 && (
+                {selectedCartItems.length > 0 && (
                   <div className="rounded-xl border border-dashed border-slate-400/60 px-4 py-3 dark:border-slate-500">
                     <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-300">
                       Selected
                     </p>
                     <div className="mt-3 flex flex-col gap-4">
-                      {selectedProducts.map((product) => {
-                        const isMemberPrice =
-                          priceModeByProductId[product.id] ?? false;
-                        const unitPrice = isMemberPrice
-                          ? product.priceMember
-                          : product.priceNonMember;
-                        const quantity = getQuantity(product.id, isMemberPrice);
+                      {selectedCartItems.map((item) => {
+                        const unitPrice = item.isMemberPrice
+                          ? item.product.priceMember
+                          : item.product.priceNonMember;
 
                         return (
                           <div
-                            key={product.id}
+                            key={`${item.productId}-${item.isMemberPrice}`}
                             className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 pb-3 last:border-b-0 dark:border-white/10"
                           >
                             <div>
                               <p className="font-medium">
-                                {product.name}{" "}
+                                {item.product.name}{" "}
                                 <span className="text-xs uppercase text-slate-500">
-                                  {formatPriceMode(isMemberPrice)}
+                                  {formatPriceMode(item.isMemberPrice)}
                                 </span>
                               </p>
                               <p className="text-sm text-slate-500 dark:text-slate-300">
                                 {currencyFormatter.format(unitPrice)} - stock{" "}
-                                {product.inventoryCount}
+                                {item.product.inventoryCount}
                               </p>
                             </div>
                             <div className="flex items-center gap-3">
                               <button
                                 type="button"
                                 onClick={() =>
-                                  setPriceModeByProductId((current) => ({
-                                    ...current,
-                                    [product.id]: !isMemberPrice
-                                  }))
-                                }
-                                className="rounded-full border border-slate-300 px-3 py-1 text-xs uppercase tracking-wide text-slate-600 transition hover:border-slate-500 dark:border-slate-600 dark:text-slate-200"
-                              >
-                                {isMemberPrice ? "Member" : "Regular"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
                                   handleQuantityChange(
-                                    product.id,
+                                    item.product.id,
                                     -1,
-                                    isMemberPrice
+                                    item.isMemberPrice
                                   )
                                 }
                                 className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
@@ -300,15 +308,15 @@ export default function App() {
                                 -
                               </button>
                               <span className="w-6 text-center text-sm font-semibold">
-                                {quantity}
+                                {item.quantity}
                               </span>
                               <button
                                 type="button"
                                 onClick={() =>
                                   handleQuantityChange(
-                                    product.id,
+                                    item.product.id,
                                     1,
-                                    isMemberPrice
+                                    item.isMemberPrice
                                   )
                                 }
                                 className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
@@ -322,7 +330,7 @@ export default function App() {
                     </div>
                   </div>
                 )}
-                {unselectedFilteredProducts.length === 0 && selectedProducts.length === 0 && (
+                {unselectedFilteredProducts.length === 0 && selectedCartItems.length === 0 && (
                   <p className="text-sm text-slate-500">
                     {products.length === 0 ? "No products configured." : "No products match search."}
                   </p>
@@ -331,12 +339,10 @@ export default function App() {
                   if (!product.active) {
                     return null;
                   }
-                  const isMemberPrice =
-                    priceModeByProductId[product.id] ?? false;
-                  const unitPrice = isMemberPrice
+                  const unitPrice = defaultIsMemberPrice
                     ? product.priceMember
                     : product.priceNonMember;
-                  const quantity = getQuantity(product.id, isMemberPrice);
+                  const quantity = getQuantity(product.id, defaultIsMemberPrice);
 
                   return (
                     <div
@@ -347,7 +353,7 @@ export default function App() {
                         <p className="font-medium">
                           {product.name}{" "}
                           <span className="text-xs uppercase text-slate-500">
-                            {formatPriceMode(isMemberPrice)}
+                            {formatPriceMode(defaultIsMemberPrice)}
                           </span>
                         </p>
                         <p className="text-sm text-slate-500 dark:text-slate-300">
@@ -358,19 +364,7 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() =>
-                            setPriceModeByProductId((current) => ({
-                              ...current,
-                              [product.id]: !isMemberPrice
-                            }))
-                          }
-                          className="rounded-full border border-slate-300 px-3 py-1 text-xs uppercase tracking-wide text-slate-600 transition hover:border-slate-500 dark:border-slate-600 dark:text-slate-200"
-                        >
-                          {isMemberPrice ? "Member" : "Regular"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleQuantityChange(product.id, -1, isMemberPrice)
+                            handleQuantityChange(product.id, -1, defaultIsMemberPrice)
                           }
                           className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
                         >
@@ -380,7 +374,7 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() =>
-                            handleQuantityChange(product.id, 1, isMemberPrice)
+                            handleQuantityChange(product.id, 1, defaultIsMemberPrice)
                           }
                           className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
                         >
