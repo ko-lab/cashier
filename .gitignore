@@ -1,0 +1,11 @@
+node_modules/
+.pnpm-store/
+.DS_Store
+.vscode/
+.idea/
+.env
+.env.*
+apps/**/dist/
+apps/**/.vite/
+coverage/
+*.log

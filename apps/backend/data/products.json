@@ -1,0 +1,26 @@
+[
+  {
+    "id": "cola",
+    "name": "Cola",
+    "priceMember": 1.0,
+    "priceNonMember": 1.5,
+    "inventoryCount": 24,
+    "active": true
+  },
+  {
+    "id": "sparkling-water",
+    "name": "Sparkling Water",
+    "priceMember": 0.7,
+    "priceNonMember": 1.0,
+    "inventoryCount": 18,
+    "active": true
+  },
+  {
+    "id": "chips",
+    "name": "Chips",
+    "priceMember": 1.2,
+    "priceNonMember": 1.8,
+    "inventoryCount": 10,
+    "active": true
+  }
+]
