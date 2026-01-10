@@ -38,10 +38,9 @@ describe("transaction service", () => {
     const transactionStore = createTransactionStore(dataDir);
     const service = createTransactionService(productStore, transactionStore);
 
-    const transaction = await service.startTransaction(
-      [{ productId: "cola", quantity: 2 }],
-      true
-    );
+    const transaction = await service.startTransaction([
+      { productId: "cola", quantity: 2, isMemberPrice: true }
+    ]);
 
     expect(transaction.status).toBe("pending");
     expect(transaction.total).toBe(2);
@@ -56,10 +55,9 @@ describe("transaction service", () => {
     const transactionStore = createTransactionStore(dataDir);
     const service = createTransactionService(productStore, transactionStore);
 
-    const transaction = await service.startTransaction(
-      [{ productId: "cola", quantity: 1 }],
-      false
-    );
+    const transaction = await service.startTransaction([
+      { productId: "cola", quantity: 1, isMemberPrice: false }
+    ]);
 
     const finalized = await service.finalizeTransaction(transaction.id, "completed");
     expect(finalized.status).toBe("completed");
@@ -74,7 +72,9 @@ describe("transaction service", () => {
     const service = createTransactionService(productStore, transactionStore);
 
     await expect(
-      service.startTransaction([{ productId: "unknown", quantity: 1 }], false)
+      service.startTransaction([
+        { productId: "unknown", quantity: 1, isMemberPrice: false }
+      ])
     ).rejects.toBeInstanceOf(ORPCError);
   });
 });

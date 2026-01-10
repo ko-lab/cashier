@@ -23,10 +23,12 @@ const products: Product[] = [
 
 describe("cart domain", () => {
   it("updates quantities and removes zero", () => {
-    const cart = updateCartQuantity([], "cola", 1);
-    expect(cart).toEqual([{ productId: "cola", quantity: 1 }]);
+    const cart = updateCartQuantity([], "cola", 1, true);
+    expect(cart).toEqual([
+      { productId: "cola", quantity: 1, isMemberPrice: true }
+    ]);
 
-    const updated = updateCartQuantity(cart, "cola", -1);
+    const updated = updateCartQuantity(cart, "cola", -1, true);
     expect(updated).toEqual([]);
   });
 
@@ -34,10 +36,9 @@ describe("cart domain", () => {
     const summary = buildCartSummary(
       products,
       [
-        { productId: "cola", quantity: 2 },
-        { productId: "chips", quantity: 1 }
-      ],
-      true
+        { productId: "cola", quantity: 2, isMemberPrice: true },
+        { productId: "chips", quantity: 1, isMemberPrice: true }
+      ]
     );
 
     expect(summary.total).toBe(4);
@@ -45,7 +46,9 @@ describe("cart domain", () => {
   });
 
   it("calculates non-member totals", () => {
-    const summary = buildCartSummary(products, [{ productId: "cola", quantity: 3 }], false);
+    const summary = buildCartSummary(products, [
+      { productId: "cola", quantity: 3, isMemberPrice: false }
+    ]);
     expect(summary.total).toBe(4.5);
   });
 });

@@ -20,7 +20,7 @@ const router = {
   },
   transaction: {
     start: api.transaction.start.handler(async ({ input }) =>
-      transactionService.startTransaction(input.items, input.isMemberPrice)
+      transactionService.startTransaction(input.items)
     ),
     finalize: api.transaction.finalize.handler(async ({ input }) =>
       transactionService.finalizeTransaction(input.id, input.status)

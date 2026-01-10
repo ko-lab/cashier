@@ -3,6 +3,7 @@ import type { Product } from "@shared/models";
 export type CartItem = {
   productId: string;
   quantity: number;
+  isMemberPrice: boolean;
 };
 
 export type CartLine = {
@@ -11,6 +12,7 @@ export type CartLine = {
   quantity: number;
   unitPrice: number;
   lineTotal: number;
+  isMemberPrice: boolean;
 };
 
 export type CartSummary = {
@@ -21,11 +23,20 @@ export type CartSummary = {
 export function updateCartQuantity(
   cart: CartItem[],
   productId: string,
-  delta: number
+  delta: number,
+  isMemberPrice: boolean
 ): CartItem[] {
-  const existing = cart.find((item) => item.productId === productId);
+  const existing = cart.find(
+    (item) =>
+      item.productId === productId && item.isMemberPrice === isMemberPrice
+  );
   const nextQuantity = (existing?.quantity ?? 0) + delta;
-  const filtered = cart.filter((item) => item.productId !== productId);
+  const filtered = cart.filter(
+    (item) =>
+      !(
+        item.productId === productId && item.isMemberPrice === isMemberPrice
+      )
+  );
 
   if (nextQuantity <= 0) {
     return filtered;
@@ -37,7 +48,6 @@ export function updateCartQuantity(
 export function buildCartSummary(
   products: Product[],
   cart: CartItem[],
-  isMemberPrice: boolean
 ): CartSummary {
   const productMap = new Map(products.map((product) => [product.id, product]));
   const items = cart
@@ -46,7 +56,9 @@ export function buildCartSummary(
       if (!product || !product.active) {
         return null;
       }
-      const unitPrice = isMemberPrice ? product.priceMember : product.priceNonMember;
+      const unitPrice = item.isMemberPrice
+        ? product.priceMember
+        : product.priceNonMember;
       const lineTotal = Number((unitPrice * item.quantity).toFixed(2));
 
       return {
@@ -54,7 +66,8 @@ export function buildCartSummary(
         name: product.name,
         quantity: item.quantity,
         unitPrice,
-        lineTotal
+        lineTotal,
+        isMemberPrice: item.isMemberPrice
       };
     })
     .filter((item): item is CartLine => item !== null);

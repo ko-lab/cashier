@@ -23,8 +23,12 @@ const currencyFormatter = new Intl.NumberFormat("en-GB", {
 
 export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [cart, setCart] = useState<{ productId: string; quantity: number }[]>([]);
-  const [isMemberPrice, setIsMemberPrice] = useState(false);
+  const [cart, setCart] = useState<
+    { productId: string; quantity: number; isMemberPrice: boolean }[]
+  >([]);
+  const [priceModeByProductId, setPriceModeByProductId] = useState<
+    Record<string, boolean>
+  >({});
   const [searchQuery, setSearchQuery] = useState("");
   const [view, setView] = useState<View>("cart");
   const [transaction, setTransaction] = useState<Transaction | null>(null);
@@ -68,10 +72,7 @@ export default function App() {
     };
   }, []);
 
-  const summary = useMemo(
-    () => buildCartSummary(products, cart, isMemberPrice),
-    [products, cart, isMemberPrice]
-  );
+  const summary = useMemo(() => buildCartSummary(products, cart), [products, cart]);
 
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -84,9 +85,8 @@ export default function App() {
   }, [products, searchQuery]);
 
   const selectedProducts = useMemo(() => {
-    return filteredProducts.filter(
-      (product) =>
-        (cart.find((item) => item.productId === product.id)?.quantity ?? 0) > 0
+    return filteredProducts.filter((product) =>
+      cart.some((item) => item.productId === product.id)
     );
   }, [filteredProducts, cart]);
 
@@ -133,8 +133,14 @@ export default function App() {
     setQrSvg(qr.svg());
   }, [transaction]);
 
-  const handleQuantityChange = (productId: string, delta: number) => {
-    setCart((current) => updateCartQuantity(current, productId, delta));
+  const handleQuantityChange = (
+    productId: string,
+    delta: number,
+    isMemberPrice: boolean
+  ) => {
+    setCart((current) =>
+      updateCartQuantity(current, productId, delta, isMemberPrice)
+    );
   };
 
   const startCheckout = async () => {
@@ -143,8 +149,7 @@ export default function App() {
 
     try {
       const response = await client.transaction.start({
-        items: toTransactionItems(cart),
-        isMemberPrice
+        items: toTransactionItems(cart)
       });
       setTransaction(response);
       setView("checkout");
@@ -178,6 +183,13 @@ export default function App() {
   };
 
   const totalLabel = currencyFormatter.format(summary.total);
+  const formatPriceMode = (isMember: boolean) =>
+    isMember ? "(member price)" : "(regular price)";
+  const getQuantity = (productId: string, isMemberPrice: boolean) =>
+    cart.find(
+      (item) =>
+        item.productId === productId && item.isMemberPrice === isMemberPrice
+    )?.quantity ?? 0;
 
   return (
     <div className="min-h-screen px-6 py-8">
@@ -237,11 +249,12 @@ export default function App() {
                     </p>
                     <div className="mt-3 flex flex-col gap-4">
                       {selectedProducts.map((product) => {
+                        const isMemberPrice =
+                          priceModeByProductId[product.id] ?? false;
                         const unitPrice = isMemberPrice
                           ? product.priceMember
                           : product.priceNonMember;
-                        const quantity =
-                          cart.find((item) => item.productId === product.id)?.quantity ?? 0;
+                        const quantity = getQuantity(product.id, isMemberPrice);
 
                         return (
                           <div
@@ -249,7 +262,12 @@ export default function App() {
                             className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 pb-3 last:border-b-0 dark:border-white/10"
                           >
                             <div>
-                              <p className="font-medium">{product.name}</p>
+                              <p className="font-medium">
+                                {product.name}{" "}
+                                <span className="text-xs uppercase text-slate-500">
+                                  {formatPriceMode(isMemberPrice)}
+                                </span>
+                              </p>
                               <p className="text-sm text-slate-500 dark:text-slate-300">
                                 {currencyFormatter.format(unitPrice)} - stock{" "}
                                 {product.inventoryCount}
@@ -258,7 +276,25 @@ export default function App() {
                             <div className="flex items-center gap-3">
                               <button
                                 type="button"
-                                onClick={() => handleQuantityChange(product.id, -1)}
+                                onClick={() =>
+                                  setPriceModeByProductId((current) => ({
+                                    ...current,
+                                    [product.id]: !isMemberPrice
+                                  }))
+                                }
+                                className="rounded-full border border-slate-300 px-3 py-1 text-xs uppercase tracking-wide text-slate-600 transition hover:border-slate-500 dark:border-slate-600 dark:text-slate-200"
+                              >
+                                {isMemberPrice ? "Member" : "Regular"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleQuantityChange(
+                                    product.id,
+                                    -1,
+                                    isMemberPrice
+                                  )
+                                }
                                 className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
                               >
                                 -
@@ -268,7 +304,13 @@ export default function App() {
                               </span>
                               <button
                                 type="button"
-                                onClick={() => handleQuantityChange(product.id, 1)}
+                                onClick={() =>
+                                  handleQuantityChange(
+                                    product.id,
+                                    1,
+                                    isMemberPrice
+                                  )
+                                }
                                 className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
                               >
                                 +
@@ -289,10 +331,12 @@ export default function App() {
                   if (!product.active) {
                     return null;
                   }
+                  const isMemberPrice =
+                    priceModeByProductId[product.id] ?? false;
                   const unitPrice = isMemberPrice
                     ? product.priceMember
                     : product.priceNonMember;
-                  const quantity = cart.find((item) => item.productId === product.id)?.quantity ?? 0;
+                  const quantity = getQuantity(product.id, isMemberPrice);
 
                   return (
                     <div
@@ -300,7 +344,12 @@ export default function App() {
                       className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 pb-3 last:border-b-0 dark:border-white/10"
                     >
                       <div>
-                        <p className="font-medium">{product.name}</p>
+                        <p className="font-medium">
+                          {product.name}{" "}
+                          <span className="text-xs uppercase text-slate-500">
+                            {formatPriceMode(isMemberPrice)}
+                          </span>
+                        </p>
                         <p className="text-sm text-slate-500 dark:text-slate-300">
                           {currencyFormatter.format(unitPrice)} - stock {product.inventoryCount}
                         </p>
@@ -308,7 +357,21 @@ export default function App() {
                       <div className="flex items-center gap-3">
                         <button
                           type="button"
-                          onClick={() => handleQuantityChange(product.id, -1)}
+                          onClick={() =>
+                            setPriceModeByProductId((current) => ({
+                              ...current,
+                              [product.id]: !isMemberPrice
+                            }))
+                          }
+                          className="rounded-full border border-slate-300 px-3 py-1 text-xs uppercase tracking-wide text-slate-600 transition hover:border-slate-500 dark:border-slate-600 dark:text-slate-200"
+                        >
+                          {isMemberPrice ? "Member" : "Regular"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleQuantityChange(product.id, -1, isMemberPrice)
+                          }
                           className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
                         >
                           -
@@ -316,7 +379,9 @@ export default function App() {
                         <span className="w-6 text-center text-sm font-semibold">{quantity}</span>
                         <button
                           type="button"
-                          onClick={() => handleQuantityChange(product.id, 1)}
+                          onClick={() =>
+                            handleQuantityChange(product.id, 1, isMemberPrice)
+                          }
                           className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
                         >
                           +
@@ -329,31 +394,16 @@ export default function App() {
             </div>
             <aside className="flex flex-col gap-4 rounded-2xl border border-black/10 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
               <h2 className="text-lg font-semibold">Summary</h2>
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-2 text-sm dark:border-slate-700">
-                <span className="font-medium">Member prices</span>
-                <button
-                  type="button"
-                  onClick={() => setIsMemberPrice((value) => !value)}
-                  className={`relative h-7 w-14 rounded-full transition ${
-                    isMemberPrice
-                      ? "bg-accent-light dark:bg-accent-dark"
-                      : "bg-slate-300 dark:bg-slate-700"
-                  }`}
-                  aria-pressed={isMemberPrice}
-                >
-                  <span
-                    className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${
-                      isMemberPrice ? "left-8" : "left-1"
-                    }`}
-                  />
-                </button>
-              </div>
               <div className="flex flex-col gap-3 text-sm text-slate-600 dark:text-slate-300">
                 {summary.items.length === 0 && <span>No items selected.</span>}
                 {summary.items.map((item) => (
-                  <div key={item.productId} className="flex items-center justify-between">
+                  <div
+                    key={`${item.productId}-${item.isMemberPrice}`}
+                    className="flex items-center justify-between"
+                  >
                     <span>
-                      {item.name} x {item.quantity}
+                      {item.name} {formatPriceMode(item.isMemberPrice)} x{" "}
+                      {item.quantity}
                     </span>
                     <span>{currencyFormatter.format(item.lineTotal)}</span>
                   </div>
@@ -420,16 +470,25 @@ export default function App() {
               <h2 className="text-lg font-semibold">This transaction</h2>
               <div className="mt-4 flex flex-col gap-3 text-sm text-slate-600 dark:text-slate-300">
                 {transaction?.items.map((item) => (
-                  <div key={item.productId} className="flex items-center justify-between">
+                  <div
+                    key={`${item.productId}-${item.isMemberPrice}`}
+                    className="flex items-center justify-between"
+                  >
                     <span>
-                      {item.name} x {item.quantity}
+                      {item.name} {formatPriceMode(item.isMemberPrice)} x{" "}
+                      {item.quantity}
                     </span>
                     <span>{currencyFormatter.format(item.lineTotal)}</span>
                   </div>
                 ))}
               </div>
               <div className="mt-4 border-t border-black/10 pt-4 text-sm text-slate-500 dark:border-white/10 dark:text-slate-400">
-                {transaction?.isMemberPrice ? "Member pricing" : "Guest pricing"}
+                {transaction?.items.some((item) => item.isMemberPrice) &&
+                transaction?.items.some((item) => !item.isMemberPrice)
+                  ? "Mixed pricing applied"
+                  : transaction?.items.some((item) => item.isMemberPrice)
+                    ? "Member pricing applied"
+                    : "Regular pricing applied"}
               </div>
             </aside>
           </section>

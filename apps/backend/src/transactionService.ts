@@ -12,8 +12,7 @@ import type { TransactionStore } from "./transactionStore";
 
 function buildTransactionItems(
   products: Product[],
-  items: CartItemInput[],
-  isMemberPrice: boolean
+  items: CartItemInput[]
 ): TransactionItem[] {
   const productMap = new Map(products.map((product) => [product.id, product]));
 
@@ -25,13 +24,16 @@ function buildTransactionItems(
       });
     }
 
-    const unitPrice = isMemberPrice ? product.priceMember : product.priceNonMember;
+    const unitPrice = item.isMemberPrice
+      ? product.priceMember
+      : product.priceNonMember;
     return {
       productId: product.id,
       name: product.name,
       quantity: item.quantity,
       unitPrice,
-      lineTotal: Number((unitPrice * item.quantity).toFixed(2))
+      lineTotal: Number((unitPrice * item.quantity).toFixed(2)),
+      isMemberPrice: item.isMemberPrice
     };
   });
 }
@@ -43,10 +45,7 @@ function sumTotal(items: TransactionItem[]): number {
 }
 
 export type TransactionService = {
-  startTransaction: (
-    items: CartItemInput[],
-    isMemberPrice: boolean
-  ) => Promise<Transaction>;
+  startTransaction: (items: CartItemInput[]) => Promise<Transaction>;
   finalizeTransaction: (
     id: string,
     status: Exclude<TransactionStatus, "pending">
@@ -58,16 +57,15 @@ export function createTransactionService(
   transactionStore: TransactionStore
 ): TransactionService {
   return {
-    async startTransaction(items, isMemberPrice) {
+    async startTransaction(items) {
       const products = await productStore.listProducts();
-      const lineItems = buildTransactionItems(products, items, isMemberPrice);
+      const lineItems = buildTransactionItems(products, items);
       const total = sumTotal(lineItems);
 
       const transaction: Transaction = {
         id: randomUUID(),
         createdAt: new Date().toISOString(),
         status: "pending",
-        isMemberPrice,
         total,
         items: lineItems
       };

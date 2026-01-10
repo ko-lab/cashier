@@ -11,7 +11,8 @@ export const ProductSchema = z.object({
 
 export const CartItemInputSchema = z.object({
   productId: z.string().min(1),
-  quantity: z.number().int().min(1)
+  quantity: z.number().int().min(1),
+  isMemberPrice: z.boolean()
 });
 
 export const TransactionStatusSchema = z.enum(["pending", "completed", "canceled"]);
@@ -21,21 +22,20 @@ export const TransactionItemSchema = z.object({
   name: z.string().min(1),
   quantity: z.number().int().min(1),
   unitPrice: z.number().nonnegative(),
-  lineTotal: z.number().nonnegative()
+  lineTotal: z.number().nonnegative(),
+  isMemberPrice: z.boolean()
 });
 
 export const TransactionSchema = z.object({
   id: z.string().min(1),
   createdAt: z.string().min(1),
   status: TransactionStatusSchema,
-  isMemberPrice: z.boolean(),
   total: z.number().nonnegative(),
   items: z.array(TransactionItemSchema)
 });
 
 export const StartTransactionInputSchema = z.object({
-  items: z.array(CartItemInputSchema).min(1),
-  isMemberPrice: z.boolean()
+  items: z.array(CartItemInputSchema).min(1)
 });
 
 export const FinalizeTransactionInputSchema = z.object({
