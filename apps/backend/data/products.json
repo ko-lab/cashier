@@ -1,26 +1,114 @@
 [
   {
-    "id": "cola",
-    "name": "Cola",
-    "priceMember": 1.0,
-    "priceNonMember": 1.5,
-    "inventoryCount": 24,
+    "id": "pils",
+    "name": "Pils",
+    "priceMember": 1.5,
+    "priceNonMember": 2.5,
+    "inventoryCount": 0,
     "active": true
   },
   {
-    "id": "sparkling-water",
-    "name": "Sparkling Water",
-    "priceMember": 0.7,
-    "priceNonMember": 1.0,
-    "inventoryCount": 18,
+    "id": "bier",
+    "name": "Bier",
+    "priceMember": 3.0,
+    "priceNonMember": 4.0,
+    "inventoryCount": 0,
+    "active": true
+  },
+  {
+    "id": "bier-0-75cl",
+    "name": "Bier(0.75cl)",
+    "priceMember": 6.0,
+    "priceNonMember": 9.0,
+    "inventoryCount": 0,
+    "active": true
+  },
+  {
+    "id": "alcoholvrij-bier",
+    "name": "Alcoholvrij bier",
+    "priceMember": 3.0,
+    "priceNonMember": 4.0,
+    "inventoryCount": 0,
+    "active": true
+  },
+  {
+    "id": "club-mate-50cl",
+    "name": "Club mate(50cl)",
+    "priceMember": 3.0,
+    "priceNonMember": 4.0,
+    "inventoryCount": 0,
+    "active": true
+  },
+  {
+    "id": "miomio-50cl",
+    "name": "Miomio(50cl)",
+    "priceMember": 3.0,
+    "priceNonMember": 4.0,
+    "inventoryCount": 0,
+    "active": true
+  },
+  {
+    "id": "ice-tea",
+    "name": "Ice-Tea",
+    "priceMember": 2.0,
+    "priceNonMember": 3.0,
+    "inventoryCount": 0,
+    "active": true
+  },
+  {
+    "id": "cola",
+    "name": "Cola",
+    "priceMember": 2.0,
+    "priceNonMember": 3.0,
+    "inventoryCount": 0,
+    "active": true
+  },
+  {
+    "id": "fanta",
+    "name": "Fanta",
+    "priceMember": 2.0,
+    "priceNonMember": 3.0,
+    "inventoryCount": 0,
+    "active": true
+  },
+  {
+    "id": "7up",
+    "name": "7up",
+    "priceMember": 2.0,
+    "priceNonMember": 3.0,
+    "inventoryCount": 0,
+    "active": true
+  },
+  {
+    "id": "water",
+    "name": "Water",
+    "priceMember": 1.0,
+    "priceNonMember": 2.0,
+    "inventoryCount": 0,
+    "active": true
+  },
+  {
+    "id": "thee",
+    "name": "Thee",
+    "priceMember": 0.25,
+    "priceNonMember": 0.5,
+    "inventoryCount": 0,
     "active": true
   },
   {
     "id": "chips",
     "name": "Chips",
-    "priceMember": 1.2,
-    "priceNonMember": 1.8,
-    "inventoryCount": 10,
+    "priceMember": 1.5,
+    "priceNonMember": 2.0,
+    "inventoryCount": 0,
+    "active": true
+  },
+  {
+    "id": "leo",
+    "name": "Leo",
+    "priceMember": 1.5,
+    "priceNonMember": 2.0,
+    "inventoryCount": 0,
     "active": true
   }
 ]
