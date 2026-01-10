@@ -199,25 +199,6 @@ export default function App() {
             </button>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium">Member prices</span>
-              <button
-                type="button"
-                onClick={() => setIsMemberPrice((value) => !value)}
-                className={`relative h-7 w-14 rounded-full transition ${
-                  isMemberPrice
-                    ? "bg-accent-light dark:bg-accent-dark"
-                    : "bg-slate-300 dark:bg-slate-700"
-                }`}
-                aria-pressed={isMemberPrice}
-              >
-                <span
-                  className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${
-                    isMemberPrice ? "left-8" : "left-1"
-                  }`}
-                />
-              </button>
-            </div>
             <div className="text-sm text-slate-500 dark:text-slate-300">
               {loading ? "Loading..." : "Ready"}
             </div>
@@ -348,6 +329,25 @@ export default function App() {
             </div>
             <aside className="flex flex-col gap-4 rounded-2xl border border-black/10 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
               <h2 className="text-lg font-semibold">Summary</h2>
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-2 text-sm dark:border-slate-700">
+                <span className="font-medium">Member prices</span>
+                <button
+                  type="button"
+                  onClick={() => setIsMemberPrice((value) => !value)}
+                  className={`relative h-7 w-14 rounded-full transition ${
+                    isMemberPrice
+                      ? "bg-accent-light dark:bg-accent-dark"
+                      : "bg-slate-300 dark:bg-slate-700"
+                  }`}
+                  aria-pressed={isMemberPrice}
+                >
+                  <span
+                    className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${
+                      isMemberPrice ? "left-8" : "left-1"
+                    }`}
+                  />
+                </button>
+              </div>
               <div className="flex flex-col gap-3 text-sm text-slate-600 dark:text-slate-300">
                 {summary.items.length === 0 && <span>No items selected.</span>}
                 {summary.items.map((item) => (
