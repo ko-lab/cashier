@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode-svg";
 import { client } from "./api/client";
-import type { Product, Transaction } from "@shared/models";
+import type { PriceCategory, Product, Transaction } from "@shared/models";
 import {
   buildCartSummary,
   sortProducts,
@@ -14,6 +14,7 @@ import {
   getSelectedItems,
   getUnselectedProducts
 } from "./domain/productSection";
+import { getUnitPrice } from "./domain/pricing";
 
 type View = "cart" | "checkout";
 
@@ -29,6 +30,7 @@ const currencyFormatter = new Intl.NumberFormat("en-GB", {
 
 export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [priceCategories, setPriceCategories] = useState<PriceCategory[]>([]);
   const [cart, setCart] = useState<
     { productId: string; quantity: number; isMemberPrice: boolean }[]
   >([]);
@@ -56,7 +58,8 @@ export default function App() {
       .list()
       .then((data) => {
         if (isMounted) {
-          setProducts(sortProducts(data));
+          setProducts(sortProducts(data.products));
+          setPriceCategories(data.priceCategories);
           setStatus(null);
         }
       })
@@ -76,7 +79,10 @@ export default function App() {
     };
   }, []);
 
-  const summary = useMemo(() => buildCartSummary(products, cart), [products, cart]);
+  const summary = useMemo(
+    () => buildCartSummary(products, priceCategories, cart),
+    [products, priceCategories, cart]
+  );
 
   const filteredProducts = useMemo(
     () => filterProductsByQuery(products, searchQuery),
@@ -84,8 +90,8 @@ export default function App() {
   );
 
   const selectedCartItems = useMemo(
-    () => getSelectedItems(products, cart, searchQuery),
-    [products, cart, searchQuery]
+    () => getSelectedItems(products, priceCategories, cart, searchQuery),
+    [products, priceCategories, cart, searchQuery]
   );
 
   const unselectedFilteredProducts = useMemo(
@@ -324,9 +330,11 @@ export default function App() {
                   </p>
                 )}
                 {unselectedFilteredProducts.map((product) => {
-                  const unitPrice = defaultIsMemberPrice
-                    ? product.priceMember
-                    : product.priceNonMember;
+                  const unitPrice = getUnitPrice(
+                    product,
+                    priceCategories,
+                    defaultIsMemberPrice
+                  );
                   const quantity = getQuantity(product.id, defaultIsMemberPrice);
 
                   return (

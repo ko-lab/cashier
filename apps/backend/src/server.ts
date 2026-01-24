@@ -16,7 +16,7 @@ const transactionService = createTransactionService(productStore, transactionSto
 
 const router = {
   product: {
-    list: api.product.list.handler(async () => productStore.listProducts())
+    list: api.product.list.handler(async () => productStore.listCatalog())
   },
   transaction: {
     start: api.transaction.start.handler(async ({ input }) =>

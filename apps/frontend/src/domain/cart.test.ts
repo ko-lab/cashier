@@ -1,21 +1,34 @@
 import { describe, expect, it } from "vitest";
-import type { Product } from "@shared/models";
+import type { PriceCategory, Product } from "@shared/models";
 import { buildCartSummary, updateCartQuantity } from "./cart";
+
+const priceCategories: PriceCategory[] = [
+  {
+    id: "snack",
+    name: "Snack",
+    priceMember: 1,
+    priceNonMember: 1.5
+  },
+  {
+    id: "crisps",
+    name: "Crisps",
+    priceMember: 2,
+    priceNonMember: 2.5
+  }
+];
 
 const products: Product[] = [
   {
     id: "cola",
     name: "Cola",
-    priceMember: 1,
-    priceNonMember: 1.5,
+    priceCategoryId: "snack",
     inventoryCount: 10,
     active: true
   },
   {
     id: "chips",
     name: "Chips",
-    priceMember: 2,
-    priceNonMember: 2.5,
+    priceCategoryId: "crisps",
     inventoryCount: 5,
     active: true
   }
@@ -35,6 +48,7 @@ describe("cart domain", () => {
   it("calculates member totals", () => {
     const summary = buildCartSummary(
       products,
+      priceCategories,
       [
         { productId: "cola", quantity: 2, isMemberPrice: true },
         { productId: "chips", quantity: 1, isMemberPrice: true }
@@ -46,7 +60,7 @@ describe("cart domain", () => {
   });
 
   it("calculates non-member totals", () => {
-    const summary = buildCartSummary(products, [
+    const summary = buildCartSummary(products, priceCategories, [
       { productId: "cola", quantity: 3, isMemberPrice: false }
     ]);
     expect(summary.total).toBe(4.5);

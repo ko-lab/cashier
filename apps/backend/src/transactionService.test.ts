@@ -7,14 +7,22 @@ import { createProductStore } from "./productStore";
 import { createTransactionStore } from "./transactionStore";
 import { createTransactionService } from "./transactionService";
 import { writeJson } from "./storage";
-import type { Product } from "../../../shared/models";
+import type { PriceCategory, Product } from "../../../shared/models";
+
+const priceCategories: PriceCategory[] = [
+  {
+    id: "beer",
+    name: "Beer",
+    priceMember: 3,
+    priceNonMember: 4
+  }
+];
 
 const products: Product[] = [
   {
     id: "cola",
     name: "Cola",
-    priceMember: 1,
-    priceNonMember: 1.5,
+    priceCategoryId: "beer",
     inventoryCount: 10,
     active: true
   }
@@ -25,7 +33,10 @@ describe("transaction service", () => {
 
   beforeEach(async () => {
     dataDir = await mkdtemp(path.join(tmpdir(), "pos-data-"));
-    await writeJson(path.join(dataDir, "products.json"), products);
+    await writeJson(path.join(dataDir, "products.json"), {
+      products,
+      priceCategories
+    });
   });
 
   afterEach(async () => {
@@ -42,7 +53,7 @@ describe("transaction service", () => {
     ]);
 
     expect(transaction.status).toBe("pending");
-    expect(transaction.total).toBe(2);
+    expect(transaction.total).toBe(6);
 
     const saved = await transactionStore.getById(transaction.id);
     expect(saved?.id).toBe(transaction.id);

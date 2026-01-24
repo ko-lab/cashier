@@ -1,4 +1,5 @@
-import type { Product } from "@shared/models";
+import type { PriceCategory, Product } from "@shared/models";
+import { getUnitPrice } from "./pricing";
 
 export type CartItem = {
   productId: string;
@@ -47,6 +48,7 @@ export function updateCartQuantity(
 
 export function buildCartSummary(
   products: Product[],
+  priceCategories: PriceCategory[],
   cart: CartItem[],
 ): CartSummary {
   const productMap = new Map(products.map((product) => [product.id, product]));
@@ -56,9 +58,7 @@ export function buildCartSummary(
       if (!product || !product.active) {
         return null;
       }
-      const unitPrice = item.isMemberPrice
-        ? product.priceMember
-        : product.priceNonMember;
+      const unitPrice = getUnitPrice(product, priceCategories, item.isMemberPrice);
       const lineTotal = Number((unitPrice * item.quantity).toFixed(2));
 
       return {

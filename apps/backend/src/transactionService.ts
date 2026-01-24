@@ -2,6 +2,7 @@ import { ORPCError } from "@orpc/server";
 import { randomUUID } from "node:crypto";
 import type {
   CartItemInput,
+  PriceCategory,
   Product,
   Transaction,
   TransactionItem,
@@ -12,9 +13,13 @@ import type { TransactionStore } from "./transactionStore";
 
 function buildTransactionItems(
   products: Product[],
+  priceCategories: PriceCategory[],
   items: CartItemInput[]
 ): TransactionItem[] {
   const productMap = new Map(products.map((product) => [product.id, product]));
+  const categoryMap = new Map(
+    priceCategories.map((category) => [category.id, category])
+  );
 
   return items.map((item) => {
     const product = productMap.get(item.productId);
@@ -24,9 +29,16 @@ function buildTransactionItems(
       });
     }
 
+    const category = categoryMap.get(product.priceCategoryId);
+    if (!category) {
+      throw new ORPCError("BAD_REQUEST", {
+        data: { message: `Unknown price category: ${product.priceCategoryId}` }
+      });
+    }
+
     const unitPrice = item.isMemberPrice
-      ? product.priceMember
-      : product.priceNonMember;
+      ? category.priceMember
+      : category.priceNonMember;
     return {
       productId: product.id,
       name: product.name,
@@ -58,8 +70,12 @@ export function createTransactionService(
 ): TransactionService {
   return {
     async startTransaction(items) {
-      const products = await productStore.listProducts();
-      const lineItems = buildTransactionItems(products, items);
+      const catalog = await productStore.listCatalog();
+      const lineItems = buildTransactionItems(
+        catalog.products,
+        catalog.priceCategories,
+        items
+      );
       const total = sumTotal(lineItems);
 
       const transaction: Transaction = {

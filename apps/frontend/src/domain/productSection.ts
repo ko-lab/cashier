@@ -1,5 +1,6 @@
-import type { Product } from "@shared/models";
+import type { PriceCategory, Product } from "@shared/models";
 import type { CartItem } from "./cart";
+import { getUnitPrice } from "./pricing";
 
 export type SelectedItemView = {
   productId: string;
@@ -29,6 +30,7 @@ export function filterProductsByQuery(
 
 export function getSelectedItems(
   products: Product[],
+  priceCategories: PriceCategory[],
   cart: CartItem[],
   searchQuery: string
 ): SelectedItemView[] {
@@ -41,9 +43,7 @@ export function getSelectedItems(
     .filter((item) => filteredMap.has(item.productId))
     .map((item) => {
       const product = filteredMap.get(item.productId)!;
-      const unitPrice = item.isMemberPrice
-        ? product.priceMember
-        : product.priceNonMember;
+      const unitPrice = getUnitPrice(product, priceCategories, item.isMemberPrice);
 
       return {
         productId: item.productId,

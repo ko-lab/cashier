@@ -2,14 +2,14 @@ import { oc } from "@orpc/contract";
 import * as z from "zod";
 import {
   FinalizeTransactionInputSchema,
-  ProductSchema,
+  ProductCatalogSchema,
   StartTransactionInputSchema,
   TransactionSchema
 } from "./models";
 
 export const listProductsContract = oc
   .input(z.void())
-  .output(z.array(ProductSchema));
+  .output(ProductCatalogSchema);
 
 export const startTransactionContract = oc
   .input(StartTransactionInputSchema)

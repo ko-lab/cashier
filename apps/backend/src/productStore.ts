@@ -1,17 +1,20 @@
 import path from "node:path";
-import { readJson } from "./storage";
-import type { Product } from "../../../shared/models";
+import { readJson } from "./storage.ts";
+import type { ProductCatalog } from "../../../shared/models.ts";
 
 export type ProductStore = {
-  listProducts: () => Promise<Product[]>;
+  listCatalog: () => Promise<ProductCatalog>;
 };
 
 export function createProductStore(dataDir: string): ProductStore {
   const productsPath = path.join(dataDir, "products.json");
 
   return {
-    async listProducts() {
-      return readJson<Product[]>(productsPath, []);
+    async listCatalog() {
+      return readJson<ProductCatalog>(productsPath, {
+        products: [],
+        priceCategories: []
+      });
     }
   };
 }

@@ -10,9 +10,6 @@ COPY shared/package.json shared/package.json
 
 RUN pnpm install --frozen-lockfile --filter @spacier/backend...
 
-COPY shared shared
-COPY apps/backend apps/backend
-
 ENV PORT=4000
 EXPOSE 4000
 

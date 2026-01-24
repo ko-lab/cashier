@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Product } from "@shared/models";
+import type { PriceCategory, Product } from "@shared/models";
 import { updateCartQuantity } from "./cart";
 import {
   formatPriceMode,
@@ -7,20 +7,27 @@ import {
   getUnselectedProducts
 } from "./productSection";
 
+const priceCategories: PriceCategory[] = [
+  {
+    id: "snack",
+    name: "Snack",
+    priceMember: 1,
+    priceNonMember: 1.5
+  }
+];
+
 const products: Product[] = [
   {
     id: "cola",
     name: "Cola",
-    priceMember: 1,
-    priceNonMember: 1.5,
+    priceCategoryId: "snack",
     inventoryCount: 10,
     active: true
   },
   {
     id: "chips",
     name: "Chips",
-    priceMember: 2,
-    priceNonMember: 2.5,
+    priceCategoryId: "snack",
     inventoryCount: 5,
     active: true
   }
@@ -31,7 +38,7 @@ describe("product section view", () => {
     const cartOnce = updateCartQuantity([], "cola", 1, false);
     const cartTwice = updateCartQuantity(cartOnce, "cola", 1, false);
 
-    const selected = getSelectedItems(products, cartTwice, "");
+    const selected = getSelectedItems(products, priceCategories, cartTwice, "");
 
     expect(selected).toHaveLength(1);
     expect(selected[0].quantity).toBe(2);
@@ -50,7 +57,12 @@ describe("product section view", () => {
     expect(availableForMember.map((product) => product.id)).toContain("cola");
 
     const cartWithMember = updateCartQuantity(cartRegular, "cola", 1, true);
-    const selected = getSelectedItems(products, cartWithMember, "");
+    const selected = getSelectedItems(
+      products,
+      priceCategories,
+      cartWithMember,
+      ""
+    );
     expect(selected).toHaveLength(2);
 
     const memberEntry = selected.find((item) => item.isMemberPrice);

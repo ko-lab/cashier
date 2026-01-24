@@ -1,290 +1,312 @@
-[
-  {
-    "id": "gen-pils",
-    "name": "Gen Pils",
-    "priceMember": 1.5,
-    "priceNonMember": 1.5,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "gen-speciaal-bier",
-    "name": "Gen Speciaal Bier",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "club-mate-original",
-    "name": "Club Mate Original",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "club-mate-granat",
-    "name": "Club Mate Granat",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "club-mate-zero",
-    "name": "Club Mate Zero",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "club-mate-winter",
-    "name": "Club Mate Winter",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "gen-alcohol-vrij",
-    "name": "Gen Alcohol Vrij",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "desperados-virgin",
-    "name": "Desperados Virgin",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "cola-25cl",
-    "name": "Cola 25cl",
-    "priceMember": 1.5,
-    "priceNonMember": 1.5,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "cola-37cl",
-    "name": "Cola 37cl",
-    "priceMember": 2.5,
-    "priceNonMember": 2.5,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "cola-zero-37cl",
-    "name": "Cola Zero 37cl",
-    "priceMember": 2.5,
-    "priceNonMember": 2.5,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "sprite-zero-33cl",
-    "name": "Sprite Zero 33cl",
-    "priceMember": 2.5,
-    "priceNonMember": 2.5,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "fruitsap",
-    "name": "Fruitsap",
-    "priceMember": 2.0,
-    "priceNonMember": 2.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "bruiswater-50cl",
-    "name": "Bruiswater 50cl",
-    "priceMember": 1.0,
-    "priceNonMember": 1.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "water-50cl",
-    "name": "Water 50cl",
-    "priceMember": 1.0,
-    "priceNonMember": 1.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "twix",
-    "name": "Twix",
-    "priceMember": 1.5,
-    "priceNonMember": 1.5,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "mars",
-    "name": "Mars",
-    "priceMember": 1.5,
-    "priceNonMember": 1.5,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "snickers",
-    "name": "Snickers",
-    "priceMember": 1.5,
-    "priceNonMember": 1.5,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "kitkat",
-    "name": "KitKat",
-    "priceMember": 1.5,
-    "priceNonMember": 1.5,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "ipa-super-8",
-    "name": "Ipa Super 8",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "mio-mio-rood",
-    "name": "Mio Mio Rood",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "jupiler-25",
-    "name": "Jupiler - 25",
-    "priceMember": 1.5,
-    "priceNonMember": 1.5,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "stella-artois-25cl",
-    "name": "Stella Artois - 25 cl",
-    "priceMember": 1.5,
-    "priceNonMember": 1.5,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "super-8-yona-nature",
-    "name": "Super 8 YONA Nature",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "grimbergen-prestige",
-    "name": "Grimbergen prestige",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "triple-karmeliet",
-    "name": "Triple Karmeliet",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "leffe-winter",
-    "name": "Leffe Winter",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "brugge-tripel",
-    "name": "Brugge tripel",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "super-8-yona-blood",
-    "name": "Super 8 YONA Blood",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "mio-mio-groen",
-    "name": "Mio Mio Groen",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "mio-mio-orange",
-    "name": "Mio Mio Orange",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "leffe-blonde",
-    "name": "Leffe blonde",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "free-brew-raspberry",
-    "name": "Free Brew Raspberry",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "free-brew-blood",
-    "name": "Free brew blood",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "free-brew-lemon",
-    "name": "Free brew lemon",
-    "priceMember": 3.0,
-    "priceNonMember": 3.0,
-    "inventoryCount": 0,
-    "active": true
-  },
-  {
-    "id": "ice-tea",
-    "name": "Ice Tea",
-    "priceMember": 2.5,
-    "priceNonMember": 2.5,
-    "inventoryCount": 0,
-    "active": true
-  }
-]
+{
+  "priceCategories": [
+    {
+      "id": "pils",
+      "name": "Pils",
+      "priceMember": 1.5,
+      "priceNonMember": 1.5
+    },
+    {
+      "id": "soft-small",
+      "name": "Soft drink small",
+      "priceMember": 1.5,
+      "priceNonMember": 1.5
+    },
+    {
+      "id": "soft-medium",
+      "name": "Soft drink medium",
+      "priceMember": 2.5,
+      "priceNonMember": 2.5
+    },
+    {
+      "id": "juice",
+      "name": "Juice",
+      "priceMember": 2.0,
+      "priceNonMember": 2.0
+    },
+    {
+      "id": "water",
+      "name": "Water",
+      "priceMember": 1.0,
+      "priceNonMember": 1.0
+    },
+    {
+      "id": "snack",
+      "name": "Snack",
+      "priceMember": 1.5,
+      "priceNonMember": 1.5
+    },
+    {
+      "id": "special-beer",
+      "name": "Special beer",
+      "priceMember": 3.0,
+      "priceNonMember": 3.0
+    },
+    {
+      "id": "beer",
+      "name": "Beer",
+      "priceMember": 3.0,
+      "priceNonMember": 4.0
+    },
+    {
+      "id": "premium-drink",
+      "name": "Premium drink",
+      "priceMember": 3.0,
+      "priceNonMember": 3.0
+    }
+  ],
+  "products": [
+    {
+      "id": "gen-pils",
+      "name": "Gen Pils",
+      "priceCategoryId": "pils",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "gen-speciaal-bier",
+      "name": "Gen Speciaal Bier",
+      "priceCategoryId": "special-beer",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "club-mate-original",
+      "name": "Club Mate Original",
+      "priceCategoryId": "premium-drink",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "club-mate-granat",
+      "name": "Club Mate Granat",
+      "priceCategoryId": "premium-drink",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "club-mate-zero",
+      "name": "Club Mate Zero",
+      "priceCategoryId": "premium-drink",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "club-mate-winter",
+      "name": "Club Mate Winter",
+      "priceCategoryId": "premium-drink",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "gen-alcohol-vrij",
+      "name": "Gen Alcohol Vrij",
+      "priceCategoryId": "special-beer",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "desperados-virgin",
+      "name": "Desperados Virgin",
+      "priceCategoryId": "premium-drink",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "cola-25cl",
+      "name": "Cola 25cl",
+      "priceCategoryId": "soft-small",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "cola-37cl",
+      "name": "Cola 37cl",
+      "priceCategoryId": "soft-medium",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "cola-zero-37cl",
+      "name": "Cola Zero 37cl",
+      "priceCategoryId": "soft-medium",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "sprite-zero-33cl",
+      "name": "Sprite Zero 33cl",
+      "priceCategoryId": "soft-medium",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "fruitsap",
+      "name": "Fruitsap",
+      "priceCategoryId": "juice",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "bruiswater-50cl",
+      "name": "Bruiswater 50cl",
+      "priceCategoryId": "water",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "water-50cl",
+      "name": "Water 50cl",
+      "priceCategoryId": "water",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "twix",
+      "name": "Twix",
+      "priceCategoryId": "snack",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "mars",
+      "name": "Mars",
+      "priceCategoryId": "snack",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "snickers",
+      "name": "Snickers",
+      "priceCategoryId": "snack",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "kitkat",
+      "name": "KitKat",
+      "priceCategoryId": "snack",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "ipa-super-8",
+      "name": "Ipa Super 8",
+      "priceCategoryId": "beer",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "mio-mio-rood",
+      "name": "Mio Mio Rood",
+      "priceCategoryId": "premium-drink",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "jupiler-25",
+      "name": "Jupiler - 25",
+      "priceCategoryId": "pils",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "stella-artois-25cl",
+      "name": "Stella Artois - 25 cl",
+      "priceCategoryId": "pils",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "super-8-yona-nature",
+      "name": "Super 8 YONA Nature",
+      "priceCategoryId": "beer",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "grimbergen-prestige",
+      "name": "Grimbergen prestige",
+      "priceCategoryId": "beer",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "triple-karmeliet",
+      "name": "Triple Karmeliet",
+      "priceCategoryId": "beer",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "leffe-winter",
+      "name": "Leffe Winter",
+      "priceCategoryId": "beer",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "brugge-tripel",
+      "name": "Brugge tripel",
+      "priceCategoryId": "beer",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "super-8-yona-blood",
+      "name": "Super 8 YONA Blood",
+      "priceCategoryId": "beer",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "mio-mio-groen",
+      "name": "Mio Mio Groen",
+      "priceCategoryId": "premium-drink",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "mio-mio-orange",
+      "name": "Mio Mio Orange",
+      "priceCategoryId": "premium-drink",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "leffe-blonde",
+      "name": "Leffe blonde",
+      "priceCategoryId": "beer",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "free-brew-raspberry",
+      "name": "Free Brew Raspberry",
+      "priceCategoryId": "premium-drink",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "free-brew-blood",
+      "name": "Free brew blood",
+      "priceCategoryId": "premium-drink",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "free-brew-lemon",
+      "name": "Free brew lemon",
+      "priceCategoryId": "premium-drink",
+      "inventoryCount": 0,
+      "active": true
+    },
+    {
+      "id": "ice-tea",
+      "name": "Ice Tea",
+      "priceCategoryId": "soft-medium",
+      "inventoryCount": 0,
+      "active": true
+    }
+  ]
+}

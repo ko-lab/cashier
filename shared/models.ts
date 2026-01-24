@@ -1,12 +1,23 @@
 import * as z from "zod";
 
-export const ProductSchema = z.object({
+export const PriceCategorySchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   priceMember: z.number().nonnegative(),
-  priceNonMember: z.number().nonnegative(),
+  priceNonMember: z.number().nonnegative()
+});
+
+export const ProductSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  priceCategoryId: z.string().min(1),
   inventoryCount: z.number().int().nonnegative(),
   active: z.boolean()
+});
+
+export const ProductCatalogSchema = z.object({
+  products: z.array(ProductSchema),
+  priceCategories: z.array(PriceCategorySchema)
 });
 
 export const CartItemInputSchema = z.object({
@@ -44,6 +55,8 @@ export const FinalizeTransactionInputSchema = z.object({
 });
 
 export type Product = z.infer<typeof ProductSchema>;
+export type PriceCategory = z.infer<typeof PriceCategorySchema>;
+export type ProductCatalog = z.infer<typeof ProductCatalogSchema>;
 export type CartItemInput = z.infer<typeof CartItemInputSchema>;
 export type TransactionStatus = z.infer<typeof TransactionStatusSchema>;
 export type TransactionItem = z.infer<typeof TransactionItemSchema>;
