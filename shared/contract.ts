@@ -5,7 +5,7 @@ import {
   ProductCatalogSchema,
   StartTransactionInputSchema,
   TransactionSchema
-} from "./models";
+} from "./models.ts";
 
 export const listProductsContract = oc
   .input(z.void())

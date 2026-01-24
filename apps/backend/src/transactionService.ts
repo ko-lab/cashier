@@ -7,9 +7,9 @@ import type {
   Transaction,
   TransactionItem,
   TransactionStatus
-} from "../../../shared/models";
-import type { ProductStore } from "./productStore";
-import type { TransactionStore } from "./transactionStore";
+} from "../../../shared/models.ts";
+import type { ProductStore } from "./productStore.ts";
+import type { TransactionStore } from "./transactionStore.ts";
 
 function buildTransactionItems(
   products: Product[],

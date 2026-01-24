@@ -2,10 +2,10 @@ import { createServer } from "node:http";
 import { fileURLToPath } from "node:url";
 import { implement } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/node";
-import { contract } from "../../../shared/contract";
-import { createProductStore } from "./productStore";
-import { createTransactionStore } from "./transactionStore";
-import { createTransactionService } from "./transactionService";
+import { contract } from "../../../shared/contract.ts";
+import { createProductStore } from "./productStore.ts";
+import { createTransactionStore } from "./transactionStore.ts";
+import { createTransactionService } from "./transactionService.ts";
 
 const api = implement(contract);
 const defaultDataDir = fileURLToPath(new URL("../data/", import.meta.url));

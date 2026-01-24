@@ -1,7 +1,7 @@
 import path from "node:path";
 import { mkdirSync } from "node:fs";
 import Database from "better-sqlite3";
-import type { Transaction, TransactionStatus } from "../../../shared/models";
+import type { Transaction, TransactionStatus } from "../../../shared/models.ts";
 
 export type TransactionStore = {
   create: (transaction: Transaction) => Promise<void>;

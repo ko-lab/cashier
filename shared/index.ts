@@ -1,2 +1,2 @@
-export * from "./contract";
-export * from "./models";
+export * from "./contract.ts";
+export * from "./models.ts";

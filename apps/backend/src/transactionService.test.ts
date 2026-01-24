@@ -3,11 +3,11 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { ORPCError } from "@orpc/server";
-import { createProductStore } from "./productStore";
-import { createTransactionStore } from "./transactionStore";
-import { createTransactionService } from "./transactionService";
-import { writeJson } from "./storage";
-import type { PriceCategory, Product } from "../../../shared/models";
+import { createProductStore } from "./productStore.ts";
+import { createTransactionStore } from "./transactionStore.ts";
+import { createTransactionService } from "./transactionService.ts";
+import { writeJson } from "./storage.ts";
+import type { PriceCategory, Product } from "../../../shared/models.ts";
 
 const priceCategories: PriceCategory[] = [
   {
