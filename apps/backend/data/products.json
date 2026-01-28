@@ -4,55 +4,55 @@
       "id": "pils",
       "name": "Pils",
       "priceMember": 1.5,
-      "priceNonMember": 1.5
+      "priceNonMember": 2.5
     },
     {
       "id": "soft-small",
       "name": "Soft drink small",
       "priceMember": 1.5,
-      "priceNonMember": 1.5
+      "priceNonMember": 2.5
     },
     {
       "id": "soft-medium",
       "name": "Soft drink medium",
       "priceMember": 2.5,
-      "priceNonMember": 2.5
+      "priceNonMember": 3.5
     },
     {
       "id": "juice",
       "name": "Juice",
       "priceMember": 2.0,
-      "priceNonMember": 2.0
+      "priceNonMember": 3.0
     },
     {
       "id": "water",
       "name": "Water",
       "priceMember": 1.0,
-      "priceNonMember": 1.0
+      "priceNonMember": 2.0
     },
     {
       "id": "snack",
       "name": "Snack",
       "priceMember": 1.5,
-      "priceNonMember": 1.5
+      "priceNonMember": 2.5
     },
     {
       "id": "special-beer",
       "name": "Special beer",
       "priceMember": 3.0,
-      "priceNonMember": 3.0
+      "priceNonMember": 4.5
     },
     {
       "id": "beer",
       "name": "Beer",
       "priceMember": 3.0,
-      "priceNonMember": 4.0
+      "priceNonMember": 4.5
     },
     {
       "id": "premium-drink",
       "name": "Premium drink",
       "priceMember": 3.0,
-      "priceNonMember": 3.0
+      "priceNonMember": 4.5
     }
   ],
   "products": [
