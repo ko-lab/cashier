@@ -12,8 +12,8 @@ export function createProductStore(dataDir: string): ProductStore {
   return {
     async listCatalog() {
       return readJson<ProductCatalog>(productsPath, {
-        products: [],
-        priceCategories: []
+        products: {},
+        priceCategories: {}
       });
     }
   };

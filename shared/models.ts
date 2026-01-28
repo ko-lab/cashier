@@ -1,4 +1,4 @@
-import * as z from "zod";
+import * as z from "zod/v4";
 
 export const PriceCategorySchema = z.object({
   id: z.string().min(1),
@@ -16,8 +16,8 @@ export const ProductSchema = z.object({
 });
 
 export const ProductCatalogSchema = z.object({
-  products: z.array(ProductSchema),
-  priceCategories: z.array(PriceCategorySchema)
+  products: z.record(z.string(), ProductSchema),
+  priceCategories: z.record(z.string(), PriceCategorySchema)
 });
 
 export const CartItemInputSchema = z.object({

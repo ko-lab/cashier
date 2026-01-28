@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -9,28 +9,27 @@ import { createTransactionService } from "./transactionService.ts";
 import { writeJson } from "./storage.ts";
 import type { PriceCategory, Product } from "../../../shared/models.ts";
 
-const priceCategories: PriceCategory[] = [
-  {
+const priceCategories: Record<string, PriceCategory> = {
+  "beer": {
     id: "beer",
     name: "Beer",
     priceMember: 3,
     priceNonMember: 4
   }
-];
+};
 
-const products: Product[] = [
-  {
+const products: Record<string, Product> = {
+  "cola": {
     id: "cola",
     name: "Cola",
     priceCategoryId: "beer",
     inventoryCount: 10,
     active: true
   }
-];
+}
 
 describe("transaction service", () => {
   let dataDir: string;
-
   beforeEach(async () => {
     dataDir = await mkdtemp(path.join(tmpdir(), "pos-data-"));
     await writeJson(path.join(dataDir, "products.json"), {

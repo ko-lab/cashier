@@ -58,8 +58,8 @@ export default function App() {
       .list()
       .then((data) => {
         if (isMounted) {
-          setProducts(sortProducts(data.products));
-          setPriceCategories(data.priceCategories);
+          setProducts(sortProducts(Object.values(data.products)));
+          setPriceCategories(Object.values(data.priceCategories));
           setStatus(null);
         }
       })

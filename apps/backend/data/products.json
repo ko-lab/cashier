@@ -1,312 +1,312 @@
 {
-  "priceCategories": [
-    {
+  "priceCategories": {
+    "pils": {
       "id": "pils",
       "name": "Pils",
       "priceMember": 1.5,
       "priceNonMember": 2.5
     },
-    {
+    "soft-small": {
       "id": "soft-small",
       "name": "Soft drink small",
       "priceMember": 1.5,
       "priceNonMember": 2.5
     },
-    {
+    "soft-medium": {
       "id": "soft-medium",
       "name": "Soft drink medium",
       "priceMember": 2.5,
       "priceNonMember": 3.5
     },
-    {
+    "juice": {
       "id": "juice",
       "name": "Juice",
       "priceMember": 2.0,
       "priceNonMember": 3.0
     },
-    {
+    "water": {
       "id": "water",
       "name": "Water",
       "priceMember": 1.0,
       "priceNonMember": 2.0
     },
-    {
+    "snack": {
       "id": "snack",
       "name": "Snack",
       "priceMember": 1.5,
       "priceNonMember": 2.5
     },
-    {
+    "special": {
       "id": "special-beer",
       "name": "Special beer",
       "priceMember": 3.0,
       "priceNonMember": 4.5
     },
-    {
+    "beer": {
       "id": "beer",
       "name": "Beer",
       "priceMember": 3.0,
       "priceNonMember": 4.5
     },
-    {
+    "premium-drink": {
       "id": "premium-drink",
       "name": "Premium drink",
       "priceMember": 3.0,
       "priceNonMember": 4.5
     }
-  ],
-  "products": [
-    {
+  },
+  "products": {
+    "gen-pils": {
       "id": "gen-pils",
       "name": "Gen Pils",
       "priceCategoryId": "pils",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "gen-speciaal-bier": {
       "id": "gen-speciaal-bier",
       "name": "Gen Speciaal Bier",
       "priceCategoryId": "special-beer",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "club-mate-original": {
       "id": "club-mate-original",
       "name": "Club Mate Original",
       "priceCategoryId": "premium-drink",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "club-mate-granat": {
       "id": "club-mate-granat",
       "name": "Club Mate Granat",
       "priceCategoryId": "premium-drink",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "club-mate-zero": {
       "id": "club-mate-zero",
       "name": "Club Mate Zero",
       "priceCategoryId": "premium-drink",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "club-mate-winter": {
       "id": "club-mate-winter",
       "name": "Club Mate Winter",
       "priceCategoryId": "premium-drink",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "gen-alcohol-vrij": {
       "id": "gen-alcohol-vrij",
       "name": "Gen Alcohol Vrij",
       "priceCategoryId": "special-beer",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "desperados-virgin": {
       "id": "desperados-virgin",
       "name": "Desperados Virgin",
       "priceCategoryId": "premium-drink",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "cola-25cl": {
       "id": "cola-25cl",
       "name": "Cola 25cl",
       "priceCategoryId": "soft-small",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "cola-37cl": {
       "id": "cola-37cl",
       "name": "Cola 37cl",
       "priceCategoryId": "soft-medium",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "cola-zero-37cl": {
       "id": "cola-zero-37cl",
       "name": "Cola Zero 37cl",
       "priceCategoryId": "soft-medium",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "sprite-zero-33cl": {
       "id": "sprite-zero-33cl",
       "name": "Sprite Zero 33cl",
       "priceCategoryId": "soft-medium",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "fruitsap": {
       "id": "fruitsap",
       "name": "Fruitsap",
       "priceCategoryId": "juice",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "bruiswater-50cl": {
       "id": "bruiswater-50cl",
       "name": "Bruiswater 50cl",
       "priceCategoryId": "water",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "water-50cl": {
       "id": "water-50cl",
       "name": "Water 50cl",
       "priceCategoryId": "water",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "twix": {
       "id": "twix",
       "name": "Twix",
       "priceCategoryId": "snack",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "mars": {
       "id": "mars",
       "name": "Mars",
       "priceCategoryId": "snack",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "snickers": {
       "id": "snickers",
       "name": "Snickers",
       "priceCategoryId": "snack",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "kitkat": {
       "id": "kitkat",
       "name": "KitKat",
       "priceCategoryId": "snack",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "ipa-super-8": {
       "id": "ipa-super-8",
       "name": "Ipa Super 8",
       "priceCategoryId": "beer",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "mio-mio-rood": {
       "id": "mio-mio-rood",
       "name": "Mio Mio Rood",
       "priceCategoryId": "premium-drink",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "jupiler-25": {
       "id": "jupiler-25",
       "name": "Jupiler - 25",
       "priceCategoryId": "pils",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "stella-artois-25cl": {
       "id": "stella-artois-25cl",
       "name": "Stella Artois - 25 cl",
       "priceCategoryId": "pils",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "super-8-yona-nature": {
       "id": "super-8-yona-nature",
       "name": "Super 8 YONA Nature",
       "priceCategoryId": "beer",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "grimbergen-prestige": {
       "id": "grimbergen-prestige",
       "name": "Grimbergen prestige",
       "priceCategoryId": "beer",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "triple-karmeliet": {
       "id": "triple-karmeliet",
       "name": "Triple Karmeliet",
       "priceCategoryId": "beer",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "leffe-winter": {
       "id": "leffe-winter",
       "name": "Leffe Winter",
       "priceCategoryId": "beer",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "brugge-tripel": {
       "id": "brugge-tripel",
       "name": "Brugge tripel",
       "priceCategoryId": "beer",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "super-8-yona-blood": {
       "id": "super-8-yona-blood",
       "name": "Super 8 YONA Blood",
       "priceCategoryId": "beer",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "mio-mio-groen": {
       "id": "mio-mio-groen",
       "name": "Mio Mio Groen",
       "priceCategoryId": "premium-drink",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "mio-mio-orange": {
       "id": "mio-mio-orange",
       "name": "Mio Mio Orange",
       "priceCategoryId": "premium-drink",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "leffe-blonde": {
       "id": "leffe-blonde",
       "name": "Leffe blonde",
       "priceCategoryId": "beer",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "free-brew-raspberry": {
       "id": "free-brew-raspberry",
       "name": "Free Brew Raspberry",
       "priceCategoryId": "premium-drink",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "free-brew-blood": {
       "id": "free-brew-blood",
       "name": "Free brew blood",
       "priceCategoryId": "premium-drink",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "free-brew-lemon": {
       "id": "free-brew-lemon",
       "name": "Free brew lemon",
       "priceCategoryId": "premium-drink",
       "inventoryCount": 0,
       "active": true
     },
-    {
+    "ice-tea": {
       "id": "ice-tea",
       "name": "Ice Tea",
       "priceCategoryId": "soft-medium",
       "inventoryCount": 0,
       "active": true
     }
-  ]
+  }
 }

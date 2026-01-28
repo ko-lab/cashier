@@ -72,8 +72,8 @@ export function createTransactionService(
     async startTransaction(items) {
       const catalog = await productStore.listCatalog();
       const lineItems = buildTransactionItems(
-        catalog.products,
-        catalog.priceCategories,
+        Object.values(catalog.products),
+        Object.values(catalog.priceCategories),
         items
       );
       const total = sumTotal(lineItems);
