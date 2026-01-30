@@ -6,6 +6,7 @@
     "node": ">=24"
   },
   "scripts": {
+    "start": "pnpm -r start",
     "dev": "pnpm -r dev",
     "dev:all": "pnpm --filter @spacier/backend dev & pnpm --filter @spacier/frontend dev",
     "build": "pnpm -r build",
