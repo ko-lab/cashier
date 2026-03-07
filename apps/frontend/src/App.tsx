@@ -29,6 +29,8 @@ type StatusMessage = {
   text: string;
 };
 
+const QR_SIZE = 224;
+
 const currencyFormatter =
   typeof Intl !== "undefined" && typeof Intl.NumberFormat === "function"
     ? new Intl.NumberFormat("en-GB", {
@@ -40,6 +42,12 @@ const currencyFormatter =
           return `EUR ${value.toFixed(2)}`;
         }
       };
+
+function scrollToTop(): void {
+  if (typeof window !== "undefined") {
+    window.scrollTo(0, 0);
+  }
+}
 
 function readStoredTheme(): boolean {
   try {
@@ -104,7 +112,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [view, setView] = useState<View>("cart");
   const [transaction, setTransaction] = useState<Transaction | null>(null);
-  const [qrSvg, setQrSvg] = useState<string | null>(null);
+  const [qrImageSrc, setQrImageSrc] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusMessage | null>(null);
   const [loading, setLoading] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
@@ -181,7 +189,7 @@ export default function App() {
 
   useEffect(() => {
     if (!transaction) {
-      setQrSvg(null);
+      setQrImageSrc(null);
       return;
     }
 
@@ -207,14 +215,17 @@ export default function App() {
     const qr = new QRCode({
       content: payload,
       padding: 4,
-      width: 256,
-      height: 256,
+      width: QR_SIZE,
+      height: QR_SIZE,
       color: "#000000",
       background: "#ffffff",
       ecl: "H"
     });
 
-    setQrSvg(qr.svg());
+    const qrSvg = qr.svg();
+    setQrImageSrc(
+      `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrSvg)}`
+    );
   }, [transaction]);
 
   const handleQuantityChange = (
@@ -237,6 +248,7 @@ export default function App() {
       });
       setTransaction(response);
       setView("checkout");
+      scrollToTop();
     } catch {
       setStatus({ tone: "error", text: "Could not start transaction." });
     } finally {
@@ -255,6 +267,9 @@ export default function App() {
       setCart([]);
       setTransaction(null);
       setView("cart");
+      if (status === "completed") {
+        scrollToTop();
+      }
       setStatus({
         tone: "info",
         text: status === "completed" ? "Thanks for paying!" : "Transaction cancelled."
@@ -396,67 +411,67 @@ export default function App() {
   return (
     <div className="min-h-screen px-6 py-8">
       <div className="mx-auto flex max-w-4xl flex-col gap-8">
-        <header className="flex flex-col gap-4 rounded-2xl border border-black/10 bg-white/70 p-6 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.4em] text-slate-500 dark:text-slate-300">
-                KO-LAB {uiMode === "pos" ? "POS" : "ADMIN"}
-              </p>
-              <h1 className="text-2xl font-semibold">
-                {uiMode === "pos" ? "Fridge Checkout" : "Stupid Admin Panel"}
-              </h1>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setUiMode((current) => (current === "pos" ? "admin" : "pos"));
-                  setAdminError(null);
-                }}
-                className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
-              >
-                {uiMode === "pos" ? "Open admin panel" : "Back to checkout"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsDark((value) => !value)}
-                className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
-              >
-                {isDark ? "Light mode" : "Dark mode"}
-              </button>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="text-sm text-slate-500 dark:text-slate-300">
-              {isBusy ? "Loading..." : "Ready"}
-            </div>
+        <header className="sticky top-0 z-30 rounded-2xl border border-black/10 bg-white/80 p-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/80">
+          <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
+            <h1 className="text-base font-semibold">Fridge Checkout</h1>
+            <button
+              type="button"
+              onClick={() => setIsDark((value) => !value)}
+              className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
+            >
+              {isDark ? "Light mode" : "Dark mode"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setUiMode((current) => (current === "pos" ? "admin" : "pos"));
+                setAdminError(null);
+              }}
+              className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
+            >
+              {uiMode === "pos" ? "Admin panel" : "Back to checkout"}
+            </button>
             {uiMode === "admin" && adminTransactions && (
               <button
                 type="button"
                 onClick={lockAdminPanel}
-                className="rounded-full border border-slate-300 px-4 py-2 text-xs uppercase tracking-wide text-slate-600 transition hover:border-slate-500 dark:border-slate-600 dark:text-slate-300"
+                className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:text-slate-300"
               >
-                Refresh (back to login)
+                Refresh
               </button>
             )}
+            {uiMode === "pos" && view === "cart" && (
+              <>
+                <span className="text-sm font-semibold">{totalLabel}</span>
+                <button
+                  type="button"
+                  onClick={startCheckout}
+                  disabled={summary.items.length === 0 || isBusy}
+                  className="rounded-full bg-accent-light px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
+                >
+                  Checkout
+                </button>
+              </>
+            )}
           </div>
-          {uiMode === "pos" && status && (
-            <div
-              className={`rounded-lg px-4 py-2 text-sm ${
-                status.tone === "error"
-                  ? "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200"
-                  : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
-              }`}
-            >
-              {status.text}
-            </div>
-          )}
-          {uiMode === "admin" && adminError && (
-            <div className="rounded-lg bg-rose-100 px-4 py-2 text-sm text-rose-700 dark:bg-rose-500/20 dark:text-rose-200">
-              {adminError}
-            </div>
-          )}
         </header>
+
+        {uiMode === "pos" && status && (
+          <div
+            className={`rounded-lg px-4 py-2 text-sm ${
+              status.tone === "error"
+                ? "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200"
+                : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
+            }`}
+          >
+            {status.text}
+          </div>
+        )}
+        {uiMode === "admin" && adminError && (
+          <div className="rounded-lg bg-rose-100 px-4 py-2 text-sm text-rose-700 dark:bg-rose-500/20 dark:text-rose-200">
+            {adminError}
+          </div>
+        )}
 
         {uiMode === "admin" ? (
           <section className="rounded-2xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
@@ -667,7 +682,7 @@ export default function App() {
             )}
           </section>
         ) : view === "cart" ? (
-          <section className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+          <section>
             <div className="rounded-2xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <h2 className="text-lg font-semibold">Products</h2>
@@ -819,55 +834,25 @@ export default function App() {
                 })}
               </div>
             </div>
-            <aside className="flex flex-col gap-4 rounded-2xl border border-black/10 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
-              <h2 className="text-lg font-semibold">Summary</h2>
-              <div className="flex flex-col gap-3 text-sm text-slate-600 dark:text-slate-300">
-                {summary.items.length === 0 && <span>No items selected.</span>}
-                {summary.items.map((item) => (
-                  <div
-                    key={`${item.productId}-${item.isMemberPrice}`}
-                    className="flex items-center justify-between"
-                  >
-                    <span>
-                      {item.name} {formatPriceMode(item.isMemberPrice)} x{" "}
-                      {item.quantity}
-                    </span>
-                    <span>{currencyFormatter.format(item.lineTotal)}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-2 flex items-center justify-between border-t border-black/10 pt-4 text-lg font-semibold dark:border-white/10">
-                <span>Total</span>
-                <span>{totalLabel}</span>
-              </div>
-              <button
-                type="button"
-                onClick={startCheckout}
-                disabled={summary.items.length === 0 || isBusy}
-                className="mt-2 rounded-xl bg-accent-light px-4 py-3 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
-              >
-                Show QR + Pay
-              </button>
-            </aside>
           </section>
         ) : (
-          <section className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+          <section className="flex flex-col gap-6">
             <div className="rounded-2xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
               <h2 className="text-lg font-semibold">Pay at the fridge</h2>
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-300">
                 Scan the QR code and pay the total. When done, press "I paid".
               </p>
-              <div className="mt-6 flex flex-col items-center gap-4 rounded-2xl border border-dashed border-slate-400/60 p-6 dark:border-slate-500">
-                {qrSvg ? (
-                  <div
-                    className="h-56 w-56"
-                    aria-label="Payment QR"
-                    dangerouslySetInnerHTML={{ __html: qrSvg }}
+              <div className="mt-6 rounded-2xl border border-dashed border-slate-400/60 p-6 text-center dark:border-slate-500">
+                {qrImageSrc ? (
+                  <img
+                    className="mx-auto block h-56 w-56 rounded bg-white"
+                    src={qrImageSrc}
+                    alt="Payment QR"
                   />
                 ) : (
-                  <div className="h-56 w-56 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
+                  <div className="mx-auto h-56 w-56 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
                 )}
-                <div className="text-center">
+                <div className="mt-4">
                   <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
                     Amount due
                   </p>

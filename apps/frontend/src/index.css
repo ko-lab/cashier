@@ -14,6 +14,13 @@ body {
   min-height: 100vh;
 }
 
+img[alt="Payment QR"] {
+  display: block;
+  width: 14rem;
+  height: 14rem;
+  max-width: 100%;
+}
+
 /* Safari 10 fallback: Tailwind's modern rgb/opacity syntax is not fully supported. */
 .bg-base-light { background-color: #f7f4ef; }
 .bg-accent-light { background-color: #e07a5f; }
