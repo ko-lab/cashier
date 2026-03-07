@@ -6,6 +6,7 @@ import { contract } from "../../../shared/contract.ts";
 import { createProductStore } from "./productStore.ts";
 import { createTransactionStore } from "./transactionStore.ts";
 import { createTransactionService } from "./transactionService.ts";
+import { createAdminService } from "./adminService.ts";
 
 const api = implement(contract);
 const defaultDataDir = fileURLToPath(new URL("../data/", import.meta.url));
@@ -13,6 +14,10 @@ const dataDir = process.env.DATA_DIR ?? defaultDataDir;
 const productStore = createProductStore(dataDir);
 const transactionStore = createTransactionStore(dataDir);
 const transactionService = createTransactionService(productStore, transactionStore);
+const adminService = createAdminService({
+  transactionStore,
+  adminPanelPassword: process.env.ADMIN_PANEL_PASSWORD
+});
 
 const router = {
   product: {
@@ -24,6 +29,11 @@ const router = {
     ),
     finalize: api.transaction.finalize.handler(async ({ input }) =>
       transactionService.finalizeTransaction(input.id, input.status)
+    )
+  },
+  admin: {
+    exportTransactions: api.admin.exportTransactions.handler(async ({ input }) =>
+      adminService.exportTransactions(input.password)
     )
   }
 };

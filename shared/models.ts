@@ -54,6 +54,14 @@ export const FinalizeTransactionInputSchema = z.object({
   status: TransactionStatusSchema.exclude(["pending"])
 });
 
+export const AdminExportTransactionsInputSchema = z.object({
+  password: z.string().min(1)
+});
+
+export const AdminExportTransactionsOutputSchema = z.object({
+  transactions: z.array(TransactionSchema)
+});
+
 export type Product = z.infer<typeof ProductSchema>;
 export type PriceCategory = z.infer<typeof PriceCategorySchema>;
 export type ProductCatalog = z.infer<typeof ProductCatalogSchema>;
@@ -63,3 +71,9 @@ export type TransactionItem = z.infer<typeof TransactionItemSchema>;
 export type Transaction = z.infer<typeof TransactionSchema>;
 export type StartTransactionInput = z.infer<typeof StartTransactionInputSchema>;
 export type FinalizeTransactionInput = z.infer<typeof FinalizeTransactionInputSchema>;
+export type AdminExportTransactionsInput = z.infer<
+  typeof AdminExportTransactionsInputSchema
+>;
+export type AdminExportTransactionsOutput = z.infer<
+  typeof AdminExportTransactionsOutputSchema
+>;

@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode-svg";
 import { client } from "./api/client";
-import type { PriceCategory, Product, Transaction } from "@shared/models";
+import type {
+  PriceCategory,
+  Product,
+  Transaction,
+  TransactionStatus
+} from "@shared/models";
 import {
   buildCartSummary,
   sortProducts,
@@ -17,6 +22,7 @@ import {
 import { getUnitPrice } from "./domain/pricing";
 
 type View = "cart" | "checkout";
+type UiMode = "pos" | "admin";
 
 type StatusMessage = {
   tone: "error" | "info";
@@ -29,6 +35,7 @@ const currencyFormatter = new Intl.NumberFormat("en-GB", {
 });
 
 export default function App() {
+  const [uiMode, setUiMode] = useState<UiMode>("pos");
   const [products, setProducts] = useState<Product[]>([]);
   const [priceCategories, setPriceCategories] = useState<PriceCategory[]>([]);
   const [cart, setCart] = useState<
@@ -41,6 +48,17 @@ export default function App() {
   const [qrSvg, setQrSvg] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusMessage | null>(null);
   const [loading, setLoading] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminTransactions, setAdminTransactions] = useState<Transaction[] | null>(
+    null
+  );
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminError, setAdminError] = useState<string | null>(null);
+  const [adminStatusFilter, setAdminStatusFilter] = useState<
+    "all" | TransactionStatus
+  >("all");
+  const [adminFromDate, setAdminFromDate] = useState("");
+  const [adminToDate, setAdminToDate] = useState("");
   const [isDark, setIsDark] = useState(() => {
     const stored = localStorage.getItem("theme");
     return stored ? stored === "dark" : false;
@@ -187,11 +205,89 @@ export default function App() {
   };
 
   const totalLabel = currencyFormatter.format(summary.total);
+  const adminFilteredTransactions = useMemo(() => {
+    if (!adminTransactions) {
+      return [];
+    }
+
+    return adminTransactions.filter((transaction) => {
+      if (
+        adminStatusFilter !== "all" &&
+        transaction.status !== adminStatusFilter
+      ) {
+        return false;
+      }
+
+      const date = new Date(transaction.createdAt);
+      if (!Number.isFinite(date.getTime())) {
+        return false;
+      }
+
+      if (adminFromDate) {
+        const fromDate = new Date(`${adminFromDate}T00:00:00.000Z`);
+        if (date < fromDate) {
+          return false;
+        }
+      }
+
+      if (adminToDate) {
+        const toDate = new Date(`${adminToDate}T23:59:59.999Z`);
+        if (date > toDate) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [adminTransactions, adminStatusFilter, adminFromDate, adminToDate]);
+
+  const adminTotals = useMemo(() => {
+    return adminFilteredTransactions.reduce(
+      (accumulator, transaction) => {
+        accumulator.count += 1;
+        accumulator.amount += transaction.total;
+        accumulator[transaction.status] += 1;
+        return accumulator;
+      },
+      { count: 0, amount: 0, pending: 0, completed: 0, canceled: 0 }
+    );
+  }, [adminFilteredTransactions]);
+
+  const isBusy = loading || adminLoading;
+
   const getQuantity = (productId: string, isMemberPrice: boolean) =>
     cart.find(
       (item) =>
         item.productId === productId && item.isMemberPrice === isMemberPrice
     )?.quantity ?? 0;
+
+  const loadAdminTransactions = async () => {
+    setAdminError(null);
+    setAdminLoading(true);
+    try {
+      const response = await client.admin.exportTransactions({
+        password: adminPassword
+      });
+      setAdminTransactions(response.transactions);
+      setAdminPassword("");
+      setAdminStatusFilter("all");
+      setAdminFromDate("");
+      setAdminToDate("");
+    } catch {
+      setAdminError("Invalid password or admin panel unavailable.");
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  const lockAdminPanel = () => {
+    setAdminTransactions(null);
+    setAdminPassword("");
+    setAdminError(null);
+    setAdminStatusFilter("all");
+    setAdminFromDate("");
+    setAdminToDate("");
+  };
 
   return (
     <div className="min-h-screen px-6 py-8">
@@ -200,24 +296,47 @@ export default function App() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-[0.4em] text-slate-500 dark:text-slate-300">
-                KO-LAB POS
+                KO-LAB {uiMode === "pos" ? "POS" : "ADMIN"}
               </p>
-              <h1 className="text-2xl font-semibold">Fridge Checkout</h1>
+              <h1 className="text-2xl font-semibold">
+                {uiMode === "pos" ? "Fridge Checkout" : "Stupid Admin Panel"}
+              </h1>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsDark((value) => !value)}
-              className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
-            >
-              {isDark ? "Light mode" : "Dark mode"}
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setUiMode((current) => (current === "pos" ? "admin" : "pos"));
+                  setAdminError(null);
+                }}
+                className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
+              >
+                {uiMode === "pos" ? "Open admin panel" : "Back to checkout"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsDark((value) => !value)}
+                className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
+              >
+                {isDark ? "Light mode" : "Dark mode"}
+              </button>
+            </div>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="text-sm text-slate-500 dark:text-slate-300">
-              {loading ? "Loading..." : "Ready"}
+              {isBusy ? "Loading..." : "Ready"}
             </div>
+            {uiMode === "admin" && adminTransactions && (
+              <button
+                type="button"
+                onClick={lockAdminPanel}
+                className="rounded-full border border-slate-300 px-4 py-2 text-xs uppercase tracking-wide text-slate-600 transition hover:border-slate-500 dark:border-slate-600 dark:text-slate-300"
+              >
+                Lock admin panel
+              </button>
+            )}
           </div>
-          {status && (
+          {uiMode === "pos" && status && (
             <div
               className={`rounded-lg px-4 py-2 text-sm ${
                 status.tone === "error"
@@ -228,9 +347,171 @@ export default function App() {
               {status.text}
             </div>
           )}
+          {uiMode === "admin" && adminError && (
+            <div className="rounded-lg bg-rose-100 px-4 py-2 text-sm text-rose-700 dark:bg-rose-500/20 dark:text-rose-200">
+              {adminError}
+            </div>
+          )}
         </header>
 
-        {view === "cart" ? (
+        {uiMode === "admin" ? (
+          <section className="rounded-2xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
+            {!adminTransactions ? (
+              <form
+                className="mx-auto flex w-full max-w-md flex-col gap-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void loadAdminTransactions();
+                }}
+              >
+                <h2 className="text-lg font-semibold">Unlock transaction export</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-300">
+                  Submit admin password to retrieve `transactions.json` in-memory.
+                </p>
+                <input
+                  type="password"
+                  value={adminPassword}
+                  onChange={(event) => setAdminPassword(event.target.value)}
+                  placeholder="Admin password"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                  autoComplete="current-password"
+                />
+                <button
+                  type="submit"
+                  disabled={adminLoading || adminPassword.length === 0}
+                  className="rounded-xl bg-accent-light px-4 py-3 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
+                >
+                  {adminLoading ? "Unlocking..." : "Load transactions"}
+                </button>
+              </form>
+            ) : (
+              <div className="flex flex-col gap-6">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Total tx</p>
+                    <p className="mt-2 text-xl font-semibold">{adminTotals.count}</p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">
+                      Completed
+                    </p>
+                    <p className="mt-2 text-xl font-semibold">{adminTotals.completed}</p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Canceled</p>
+                    <p className="mt-2 text-xl font-semibold">{adminTotals.canceled}</p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">
+                      Total amount
+                    </p>
+                    <p className="mt-2 text-xl font-semibold">
+                      {currencyFormatter.format(adminTotals.amount)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-4">
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-xs uppercase tracking-wide text-slate-500">
+                      Status
+                    </span>
+                    <select
+                      value={adminStatusFilter}
+                      onChange={(event) =>
+                        setAdminStatusFilter(
+                          event.target.value as "all" | TransactionStatus
+                        )
+                      }
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                    >
+                      <option value="all">All</option>
+                      <option value="pending">Pending</option>
+                      <option value="completed">Completed</option>
+                      <option value="canceled">Canceled</option>
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-xs uppercase tracking-wide text-slate-500">
+                      From
+                    </span>
+                    <input
+                      type="date"
+                      value={adminFromDate}
+                      onChange={(event) => setAdminFromDate(event.target.value)}
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-xs uppercase tracking-wide text-slate-500">To</span>
+                    <input
+                      type="date"
+                      value={adminToDate}
+                      onChange={(event) => setAdminToDate(event.target.value)}
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                    />
+                  </label>
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAdminStatusFilter("all");
+                        setAdminFromDate("");
+                        setAdminToDate("");
+                      }}
+                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600"
+                    >
+                      Reset filters
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+                  <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
+                    <thead className="bg-slate-50 dark:bg-slate-800/40">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-semibold">ID</th>
+                        <th className="px-3 py-2 text-left font-semibold">Date</th>
+                        <th className="px-3 py-2 text-left font-semibold">Status</th>
+                        <th className="px-3 py-2 text-right font-semibold">Total</th>
+                        <th className="px-3 py-2 text-right font-semibold">Items</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                      {adminFilteredTransactions.map((entry) => (
+                        <tr key={entry.id}>
+                          <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">
+                            {entry.id}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2">
+                            {new Date(entry.createdAt).toLocaleString()}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2">{entry.status}</td>
+                          <td className="whitespace-nowrap px-3 py-2 text-right">
+                            {currencyFormatter.format(entry.total)}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2 text-right">
+                            {entry.items.length}
+                          </td>
+                        </tr>
+                      ))}
+                      {adminFilteredTransactions.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="px-3 py-6 text-center text-slate-500 dark:text-slate-300"
+                          >
+                            No transactions match current filters.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </section>
+        ) : view === "cart" ? (
           <section className="grid gap-6 lg:grid-cols-[2fr,1fr]">
             <div className="rounded-2xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
               <div className="flex flex-wrap items-center justify-between gap-4">
@@ -324,9 +605,12 @@ export default function App() {
                     </div>
                   </div>
                 )}
-                {unselectedFilteredProducts.length === 0 && selectedCartItems.length === 0 && (
+                {unselectedFilteredProducts.length === 0 &&
+                  selectedCartItems.length === 0 && (
                   <p className="text-sm text-slate-500">
-                    {products.length === 0 ? "No products configured." : "No products match search."}
+                    {products.length === 0
+                      ? "No products configured."
+                      : "No products match search."}
                   </p>
                 )}
                 {unselectedFilteredProducts.map((product) => {
@@ -350,7 +634,8 @@ export default function App() {
                           </span>
                         </p>
                         <p className="text-sm text-slate-500 dark:text-slate-300">
-                          {currencyFormatter.format(unitPrice)} - stock {product.inventoryCount}
+                          {currencyFormatter.format(unitPrice)} - stock{" "}
+                          {product.inventoryCount}
                         </p>
                       </div>
                       <div className="flex items-center gap-3">
@@ -403,7 +688,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={startCheckout}
-                disabled={summary.items.length === 0 || loading}
+                disabled={summary.items.length === 0 || isBusy}
                 className="mt-2 rounded-xl bg-accent-light px-4 py-3 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
               >
                 Show QR + Pay
@@ -438,7 +723,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => finalize("completed")}
-                  disabled={loading}
+                  disabled={isBusy}
                   className="rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50"
                 >
                   I paid
@@ -446,7 +731,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => finalize("canceled")}
-                  disabled={loading}
+                  disabled={isBusy}
                   className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-500 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200"
                 >
                   Cancel

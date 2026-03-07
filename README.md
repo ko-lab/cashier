@@ -24,6 +24,12 @@ Update the values in `apps/frontend/.env.local` if needed.
 pnpm dev:all
 ```
 
+To enable the simple admin panel export endpoint, set a backend password first:
+
+```bash
+export ADMIN_PANEL_PASSWORD="change-me"
+```
+
 Frontend runs on Vite, backend runs on oRPC. Data is stored under `apps/backend/data/` (including `transactions.sqlite`).
 
 ## Testing
