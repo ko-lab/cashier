@@ -15,8 +15,8 @@ The shortcomings of this are:
 
 So in order to improve on the situation above, we want to have some POS or cashier system. As you can see from the explanation above there is a few things that we want from this system:
 ### First milestone: help users with calc, make QR, log data
-- so in the first milestone, there is no deposits, so accounts are not that important yet.
-- So in this first milestone, the idea is that we have a website - which will be loaded on a PC next to the fridge - which will allow to 'Make a transation'.
+- So in the first milestone, there is no deposits, so accounts are not that important yet.
+- The idea is that we have a website - which will be loaded on a PC next to the fridge - which will allow to 'Make a transation'.
  - This transaction just means a list of products that was bought and paid for.
  - The system just helps with transation by giving a QR code and a total amount to be paid, but it does not check anything, it trusts the user to pay when the QR code is shown.
    - Problem here is that people can change their mind, or maybe they accidentally clicked
