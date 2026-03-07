@@ -1,0 +1,9 @@
+node_modules
+.pnpm-store
+.git
+.gitignored
+apps/**/node_modules
+apps/**/dist
+apps/**/.vite
+coverage
+*.log

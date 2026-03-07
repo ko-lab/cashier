@@ -1,33 +1,28 @@
 services:
   backend:
-    image: node:24-bookworm
-    working_dir: /workspace
-    command: >
-      bash -lc "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @spacier/backend start"
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
     environment:
       PORT: "4000"
-      DATA_DIR: /workspace/apps/backend/data
+      DATA_DIR: /app/apps/backend/data
       ADMIN_PANEL_PASSWORD: ${ADMIN_PANEL_PASSWORD}
     volumes:
-      - ../:/workspace
-      - backend-data:/workspace/apps/backend/data
+      - backend-data:/app/apps/backend/data
     ports:
       - "4000:4000"
     restart: unless-stopped
 
   frontend:
-    image: node:24-bookworm
-    working_dir: /workspace
-    command: >
-      bash -lc "corepack enable && pnpm install --frozen-lockfile && VITE_API_URL=${VITE_API_URL:-http://backend:4000/rpc} pnpm --filter @spacier/frontend build && pnpm --filter @spacier/frontend start --host 0.0.0.0 --port 4173"
-    environment:
-      VITE_IBAN: ${VITE_IBAN}
-      VITE_IBAN_NAME: ${VITE_IBAN_NAME}
-      VITE_API_URL: ${VITE_API_URL:-http://backend:4000/rpc}
+    build:
+      context: ..
+      dockerfile: infra/frontend.Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://backend:4000/rpc}
+        VITE_IBAN: ${VITE_IBAN}
+        VITE_IBAN_NAME: ${VITE_IBAN_NAME}
     depends_on:
       - backend
-    volumes:
-      - ../:/workspace
     ports:
       - "4173:4173"
     restart: unless-stopped
