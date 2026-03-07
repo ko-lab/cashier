@@ -13,3 +13,45 @@
 body {
   min-height: 100vh;
 }
+
+/* Safari 10 fallback: Tailwind's modern rgb/opacity syntax is not fully supported. */
+.bg-base-light { background-color: #f7f4ef; }
+.bg-accent-light { background-color: #e07a5f; }
+.bg-white\/70 { background-color: rgba(255, 255, 255, 0.7); }
+.bg-white\/80 { background-color: rgba(255, 255, 255, 0.8); }
+.bg-white\/90 { background-color: rgba(255, 255, 255, 0.9); }
+.text-slate-900 { color: #0f172a; }
+.text-slate-700 { color: #334155; }
+.text-slate-600 { color: #475569; }
+.text-slate-500 { color: #64748b; }
+.border-slate-200 { border-color: #e2e8f0; }
+.border-slate-300 { border-color: #cbd5e1; }
+.bg-slate-50 { background-color: #f8fafc; }
+.bg-emerald-100 { background-color: #d1fae5; }
+.text-emerald-700 { color: #047857; }
+.bg-rose-100 { background-color: #ffe4e6; }
+.text-rose-700 { color: #be123c; }
+
+.dark .dark\:bg-base-dark { background-color: #1b1a17; }
+.dark .dark\:bg-accent-dark { background-color: #f2cc8f; }
+.dark .dark\:bg-white\/5 { background-color: rgba(255, 255, 255, 0.05); }
+.dark .dark\:bg-slate-900 { background-color: #0f172a; }
+.dark .dark\:bg-slate-800\/40 { background-color: rgba(30, 41, 59, 0.4); }
+.dark .dark\:bg-slate-700 { background-color: #334155; }
+.dark .dark\:bg-emerald-500\/20 { background-color: rgba(16, 185, 129, 0.2); }
+.dark .dark\:bg-rose-500\/20 { background-color: rgba(244, 63, 94, 0.2); }
+.dark .dark\:text-slate-100 { color: #f1f5f9; }
+.dark .dark\:text-slate-200 { color: #e2e8f0; }
+.dark .dark\:text-slate-300 { color: #cbd5e1; }
+.dark .dark\:text-slate-400 { color: #94a3b8; }
+.dark .dark\:text-slate-900 { color: #0f172a; }
+.dark .dark\:text-emerald-200 { color: #a7f3d0; }
+.dark .dark\:text-rose-200 { color: #fecdd3; }
+.dark .dark\:border-white\/10 { border-color: rgba(255, 255, 255, 0.1); }
+.dark .dark\:border-slate-500 { border-color: #64748b; }
+.dark .dark\:border-slate-600 { border-color: #475569; }
+.dark .dark\:border-slate-700 { border-color: #334155; }
+.dark .dark\:hover\:border-slate-300:hover { border-color: #cbd5e1; }
+.dark .dark\:divide-slate-700 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #334155;
+}

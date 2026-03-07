@@ -29,10 +29,69 @@ type StatusMessage = {
   text: string;
 };
 
-const currencyFormatter = new Intl.NumberFormat("en-GB", {
-  style: "currency",
-  currency: "EUR"
-});
+const currencyFormatter =
+  typeof Intl !== "undefined" && typeof Intl.NumberFormat === "function"
+    ? new Intl.NumberFormat("en-GB", {
+        style: "currency",
+        currency: "EUR"
+      })
+    : {
+        format(value: number) {
+          return `EUR ${value.toFixed(2)}`;
+        }
+      };
+
+function readStoredTheme(): boolean {
+  try {
+    const stored = localStorage.getItem("theme");
+    return stored ? stored === "dark" : false;
+  } catch {
+    return false;
+  }
+}
+
+function persistTheme(isDark: boolean): void {
+  try {
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+  } catch {
+    // Ignore storage failures (e.g., old/private Safari)
+  }
+}
+
+function csvEscape(value: string | number | boolean): string {
+  const text = String(value);
+  if (text.includes(",") || text.includes("\"") || text.includes("\n")) {
+    return `"${text.replace(/"/g, "\"\"")}"`;
+  }
+  return text;
+}
+
+function buildTransactionsCsv(transactions: Transaction[]): string {
+  const header = [
+    "id",
+    "createdAt",
+    "status",
+    "total",
+    "itemCount",
+    "items"
+  ];
+  const lines = transactions.map((transaction) => {
+    const itemsSummary = transaction.items
+      .map((item) => `${item.name} x${item.quantity}`)
+      .join(" | ");
+    return [
+      transaction.id,
+      transaction.createdAt,
+      transaction.status,
+      transaction.total.toFixed(2),
+      transaction.items.length,
+      itemsSummary
+    ]
+      .map(csvEscape)
+      .join(",");
+  });
+  return [header.join(","), ...lines].join("\n");
+}
 
 export default function App() {
   const [uiMode, setUiMode] = useState<UiMode>("pos");
@@ -57,16 +116,14 @@ export default function App() {
   const [adminStatusFilter, setAdminStatusFilter] = useState<
     "all" | TransactionStatus
   >("all");
+  const [adminProductFilter, setAdminProductFilter] = useState("all");
   const [adminFromDate, setAdminFromDate] = useState("");
   const [adminToDate, setAdminToDate] = useState("");
-  const [isDark, setIsDark] = useState(() => {
-    const stored = localStorage.getItem("theme");
-    return stored ? stored === "dark" : false;
-  });
+  const [isDark, setIsDark] = useState(readStoredTheme);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
-    localStorage.setItem("theme", isDark ? "dark" : "light");
+    persistTheme(isDark);
   }, [isDark]);
 
   useEffect(() => {
@@ -81,9 +138,14 @@ export default function App() {
           setStatus(null);
         }
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (isMounted) {
-          setStatus({ tone: "error", text: "Failed to load products." });
+          const message =
+            error instanceof Error ? error.message : String(error);
+          setStatus({
+            tone: "error",
+            text: `Failed to load products: ${message}`
+          });
         }
       })
       .finally(() => {
@@ -217,6 +279,12 @@ export default function App() {
       ) {
         return false;
       }
+      if (
+        adminProductFilter !== "all" &&
+        !transaction.items.some((item) => item.productId === adminProductFilter)
+      ) {
+        return false;
+      }
 
       const date = new Date(transaction.createdAt);
       if (!Number.isFinite(date.getTime())) {
@@ -239,7 +307,27 @@ export default function App() {
 
       return true;
     });
-  }, [adminTransactions, adminStatusFilter, adminFromDate, adminToDate]);
+  }, [
+    adminTransactions,
+    adminStatusFilter,
+    adminProductFilter,
+    adminFromDate,
+    adminToDate
+  ]);
+
+  const adminProductOptions = useMemo(() => {
+    const lookup = new Map<string, string>();
+    for (const transaction of adminTransactions ?? []) {
+      for (const item of transaction.items) {
+        if (!lookup.has(item.productId)) {
+          lookup.set(item.productId, item.name);
+        }
+      }
+    }
+    return [...lookup.entries()]
+      .sort((a, b) => a[1].localeCompare(b[1]))
+      .map(([id, name]) => ({ id, name }));
+  }, [adminTransactions]);
 
   const adminTotals = useMemo(() => {
     return adminFilteredTransactions.reduce(
@@ -271,6 +359,7 @@ export default function App() {
       setAdminTransactions(response.transactions);
       setAdminPassword("");
       setAdminStatusFilter("all");
+      setAdminProductFilter("all");
       setAdminFromDate("");
       setAdminToDate("");
     } catch {
@@ -285,8 +374,23 @@ export default function App() {
     setAdminPassword("");
     setAdminError(null);
     setAdminStatusFilter("all");
+    setAdminProductFilter("all");
     setAdminFromDate("");
     setAdminToDate("");
+  };
+
+  const downloadAdminCsv = () => {
+    const csv = buildTransactionsCsv(adminFilteredTransactions);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    link.href = url;
+    link.download = `transactions-${timestamp}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -332,7 +436,7 @@ export default function App() {
                 onClick={lockAdminPanel}
                 className="rounded-full border border-slate-300 px-4 py-2 text-xs uppercase tracking-wide text-slate-600 transition hover:border-slate-500 dark:border-slate-600 dark:text-slate-300"
               >
-                Lock admin panel
+                Refresh (back to login)
               </button>
             )}
           </div>
@@ -411,7 +515,25 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-4">
+                <div className="flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={lockAdminPanel}
+                    className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:border-slate-500 dark:border-slate-600"
+                  >
+                    Refresh
+                  </button>
+                  <button
+                    type="button"
+                    onClick={downloadAdminCsv}
+                    disabled={adminFilteredTransactions.length === 0}
+                    className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600"
+                  >
+                    Download CSV (filtered)
+                  </button>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
                   <label className="flex flex-col gap-2 text-sm">
                     <span className="text-xs uppercase tracking-wide text-slate-500">
                       Status
@@ -429,6 +551,23 @@ export default function App() {
                       <option value="pending">Pending</option>
                       <option value="completed">Completed</option>
                       <option value="canceled">Canceled</option>
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-xs uppercase tracking-wide text-slate-500">
+                      Product
+                    </span>
+                    <select
+                      value={adminProductFilter}
+                      onChange={(event) => setAdminProductFilter(event.target.value)}
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                    >
+                      <option value="all">All</option>
+                      {adminProductOptions.map((product) => (
+                        <option key={product.id} value={product.id}>
+                          {product.name}
+                        </option>
+                      ))}
                     </select>
                   </label>
                   <label className="flex flex-col gap-2 text-sm">
@@ -455,7 +594,23 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => {
+                        const today = new Date();
+                        const to = today.toISOString().slice(0, 10);
+                        const from = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                        setAdminFromDate(from.toISOString().slice(0, 10));
+                        setAdminToDate(to);
+                      }}
+                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600"
+                    >
+                      Last 24h
+                    </button>
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={() => {
                         setAdminStatusFilter("all");
+                        setAdminProductFilter("all");
                         setAdminFromDate("");
                         setAdminToDate("");
                       }}

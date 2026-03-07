@@ -4,8 +4,67 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>KO-LAB POS</title>
+    <script>
+      (function () {
+        // iOS 10 Safari can miss this global, but some bundled code references it.
+        if (typeof window.TransformStream === "undefined") {
+          window.TransformStream = function TransformStream() {
+            this.readable = {};
+            this.writable = {};
+          };
+        }
+      })();
+    </script>
   </head>
   <body class="bg-base-light text-slate-900 dark:bg-base-dark dark:text-slate-100">
+    <script nomodule>
+      (function () {
+        var originalImport = window.System && window.System.import;
+        var queued = [];
+        var polyfillRequested = false;
+
+        function queueImport(src) {
+          queued.push(src);
+        }
+
+        if (!window.System) {
+          window.System = { import: queueImport };
+        } else if (!window.System.import) {
+          window.System.import = queueImport;
+        }
+
+        function flushLegacyQueue() {
+          var hasRealSystem =
+            window.System &&
+            typeof window.System.import === "function" &&
+            window.System.import !== queueImport;
+
+          if (!hasRealSystem) {
+            if (!polyfillRequested) {
+              var polyfill = document.getElementById("vite-legacy-polyfill");
+              if (polyfill && polyfill.src) {
+                polyfillRequested = true;
+                var loader = document.createElement("script");
+                loader.src = polyfill.src;
+                loader.onload = flushLegacyQueue;
+                document.body.appendChild(loader);
+              }
+            }
+            return;
+          }
+
+          while (queued.length > 0) {
+            window.System.import(queued.shift());
+          }
+        }
+
+        if (originalImport && originalImport !== queueImport) {
+          flushLegacyQueue();
+        } else {
+          setTimeout(flushLegacyQueue, 0);
+        }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -3,6 +3,7 @@ services:
     build:
       context: ..
       dockerfile: infra/backend.Dockerfile
+    env-file: ../apps/backend/.env
     environment:
       PORT: "4000"
       DATA_DIR: /app/apps/backend/data

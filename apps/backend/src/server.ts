@@ -40,6 +40,7 @@ const router = {
 
 const rpcHandler = new RPCHandler(router);
 const rpcPrefix = "/rpc";
+const clientLogPath = "/client-log";
 const port = Number(process.env.PORT ?? 4000);
 
 const server = createServer(async (req, res) => {
@@ -50,6 +51,35 @@ const server = createServer(async (req, res) => {
   if (req.method === "OPTIONS") {
     res.statusCode = 204;
     res.end();
+    return;
+  }
+
+  if (req.url?.startsWith(clientLogPath) && req.method === "GET") {
+    const requestUrl = new URL(req.url, "http://localhost");
+    const payload = {
+      title: requestUrl.searchParams.get("title"),
+      message: requestUrl.searchParams.get("message"),
+      href: requestUrl.searchParams.get("href"),
+      ua: requestUrl.searchParams.get("ua"),
+      ts: requestUrl.searchParams.get("ts")
+    };
+    console.log(`[client-log] ${new Date().toISOString()} ${JSON.stringify(payload)}`);
+    res.statusCode = 204;
+    res.end();
+    return;
+  }
+
+  if (req.url === clientLogPath && req.method === "POST") {
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk) => {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    });
+    req.on("end", () => {
+      const body = Buffer.concat(chunks).toString("utf8");
+      console.log(`[client-log] ${new Date().toISOString()} ${body}`);
+      res.statusCode = 204;
+      res.end();
+    });
     return;
   }
 

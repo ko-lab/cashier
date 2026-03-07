@@ -1,9 +1,17 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import legacy from "@vitejs/plugin-legacy";
 import path from "node:path";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    legacy({
+      targets: ["iOS >= 10", "Safari >= 10"],
+      renderLegacyChunks: true,
+      modernPolyfills: true
+    })
+  ],
   resolve: {
     alias: {
       "@shared": path.resolve(__dirname, "../../shared")
@@ -15,6 +23,16 @@ export default defineConfig({
         path.resolve(__dirname),
         path.resolve(__dirname, "../../shared")
       ]
+    },
+    proxy: {
+      "/rpc": "http://localhost:4000",
+      "/client-log": "http://localhost:4000"
+    }
+  },
+  preview: {
+    proxy: {
+      "/rpc": "http://localhost:4000",
+      "/client-log": "http://localhost:4000"
     }
   },
   test: {
