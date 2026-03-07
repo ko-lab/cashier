@@ -1,10 +1,10 @@
 # POS
 This document describes the POS/CASHIER SYSYTEM of KO-LAB Hacker/Makerspace.
 
-## Current situtaion and problems with it
+## Current situation and problems with it
 Currently, we have fridge, and on the fridge, there is a Payconiq QR code. This allows people to pay for the stuff they take.
 The shortcomings of this are:
-- we we need to do manual inventory counting
+- we need to do manual inventory counting
  - we have no idea how much of which item was used on which day
 - people need to do calculation of how much they need to pay
 - if people don't pay, we have no way of easily knowing who or when it was
@@ -47,7 +47,7 @@ So in order to improve on the situation above, we want to have some POS or cashi
 - After the MVP, we want to improve the system in the following ways:
   - we want to these transactions to be verifyable so that they can be used for official accounting
    - This means that either the POS systems needs to be able to get info from the bank account/ payments system, or some UI system needs to be made where admins can "verify a transaction" after they manually check the bank account.
-- This meanse that the backend should support this verififcation, it should allow setting when it was done at least
+- This means that the backend should support this verification, it should allow setting when it was done at least
 
 ### Nice to haves
 - grouping products: add a group/category/tag system so that products that can be used by the users for filtering and by the admins for statistics
