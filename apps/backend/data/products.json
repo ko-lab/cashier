@@ -340,6 +340,41 @@
         "priceCategoryId": "bier",
         "inventoryCount": 60,
         "active": true
+    },
+    "chips": {
+        "id": "chips",
+        "name": "Chips",
+        "priceCategoryId": "snack",
+        "inventoryCount": 9,
+        "active": true
+    },
+    "ole": {
+        "id": "ole",
+        "name": "Ole",
+        "priceCategoryId": "snack",
+        "inventoryCount": 11,
+        "active": true
+    },
+    "cornetto": {
+        "id": "cornetto",
+        "name": "Ijshoorntje",
+        "priceCategoryId": "snack",
+        "inventoryCount": 12,
+        "active": true
+    },
+    "koffie": {
+        "id": "koffie",
+        "name": "Cappuccino",
+        "priceCategoryId": "hot",
+        "inventoryCount": 10,
+        "active": true
+    },
+    "thee": {
+        "id": "thee",
+        "name": "Thee",
+        "priceCategoryId": "hot",
+        "inventoryCount": 20,
+        "active": true
     }
   }
 }
