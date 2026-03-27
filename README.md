@@ -58,7 +58,7 @@ For Dokploy, use:
   - `VITE_IBAN`
   - `VITE_IBAN_NAME`
 - optional env vars:
-  - `VITE_API_URL` (defaults to `https://cashier.ko-lab.space/rpc`)
+  - `VITE_API_URL` (defaults to `https://cashier.ko-lab.be/rpc`)
   - `VITE_APP_VERSION` (defaults to `dev`; set to commit SHA or build timestamp)
 
 The Dokploy compose uses health checks and a named volume (`backend-data`) for SQLite persistence.
@@ -97,14 +97,14 @@ You can deploy this stack either from the Dokploy UI or via Dokploy CLI.
    - `ADMIN_PANEL_PASSWORD`
    - `VITE_IBAN`
    - `VITE_IBAN_NAME`
-   - optional: `VITE_API_URL` (default already points to `https://cashier.ko-lab.space/rpc`)
-6. Expose frontend service on your domain (e.g. `cashier.ko-lab.space`).
+   - optional: `VITE_API_URL` (default already points to `https://cashier.ko-lab.be/rpc`)
+6. Expose frontend service on your domain (e.g. `cashier.ko-lab.be`).
 7. Deploy.
 
 After deploy, verify:
-- Frontend loads at `https://cashier.ko-lab.space`
-- Backend health endpoint works at `https://cashier.ko-lab.space/healthz` if routed, or directly on backend service URL
-- RPC works at `https://cashier.ko-lab.space/rpc`
+- Frontend loads at `https://cashier.ko-lab.be`
+- Backend health endpoint works at `https://cashier.ko-lab.be/healthz` if routed, or directly on backend service URL
+- RPC works at `https://cashier.ko-lab.be/rpc`
 
 #### Option B — Dokploy CLI
 

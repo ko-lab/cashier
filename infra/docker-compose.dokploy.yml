@@ -22,7 +22,7 @@ services:
       context: ..
       dockerfile: infra/frontend.Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL:-https://cashier.ko-lab.space/rpc}
+        VITE_API_URL: ${VITE_API_URL:-https://cashier.ko-lab.be/rpc}
         VITE_IBAN: ${VITE_IBAN}
         VITE_IBAN_NAME: ${VITE_IBAN_NAME}
         VITE_APP_VERSION: ${VITE_APP_VERSION:-dev}
