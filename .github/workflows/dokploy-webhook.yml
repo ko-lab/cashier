@@ -13,6 +13,7 @@ jobs:
       - name: Trigger Dokploy deploy webhook
         env:
           DOKPLOY_WEBHOOK_URL: ${{ secrets.DOKPLOY_WEBHOOK_URL }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
           if [ -z "$DOKPLOY_WEBHOOK_URL" ]; then
             echo "Missing required secret: DOKPLOY_WEBHOOK_URL"
@@ -23,7 +24,7 @@ jobs:
             -X POST \
             -H "Content-Type: application/json" \
             -H "X-GitHub-Event: push" \
-            --data '{"ref":"refs/heads/try2"}' \
+            --data "{\"ref\":\"refs/heads/${REF_NAME}\"}" \
             "$DOKPLOY_WEBHOOK_URL"
 
-          echo "Dokploy webhook triggered for refs/heads/try2."
+          echo "Dokploy webhook triggered for refs/heads/${REF_NAME}."
