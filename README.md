@@ -97,7 +97,7 @@ You can deploy this stack either from the Dokploy UI or via Dokploy CLI.
    - `ADMIN_PANEL_PASSWORD`
    - `VITE_IBAN`
    - `VITE_IBAN_NAME`
-   - optional: `VITE_API_URL` (default already points to `https://wiki.ko-lab.space/rpc`)
+   - optional: `VITE_API_URL` (default is `/rpc` for same-domain routing)
 6. Expose routes on the same domain (`wiki.ko-lab.space`) with path-based routing:
    - Frontend service: host `wiki.ko-lab.space`, path `/`, port `4173`
    - Backend RPC: host `wiki.ko-lab.space`, path `/rpc`, port `4000`
