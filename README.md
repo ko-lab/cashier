@@ -62,6 +62,52 @@ For Dokploy, use:
 
 The Dokploy compose uses health checks and a named volume (`backend-data`) for SQLite persistence.
 
+### Dokploy import guide
+
+You can deploy this stack either from the Dokploy UI or via Dokploy CLI.
+
+#### Option A — Dokploy UI (recommended)
+
+1. Push this repository branch to GitHub/Git provider.
+2. In Dokploy, create a new **Compose** application.
+3. Select this repository and branch.
+4. Set compose file path to:
+
+   ```
+   infra/docker-compose.dokploy.yml
+   ```
+
+5. Add environment variables (from `infra/.env.example`):
+   - `ADMIN_PANEL_PASSWORD`
+   - `VITE_IBAN`
+   - `VITE_IBAN_NAME`
+   - optional: `VITE_API_URL` (default already points to `https://cashier.ko-lab.space/rpc`)
+6. Expose frontend service on your domain (e.g. `cashier.ko-lab.space`).
+7. Deploy.
+
+After deploy, verify:
+- Frontend loads at `https://cashier.ko-lab.space`
+- Backend health endpoint works at `https://cashier.ko-lab.space/healthz` if routed, or directly on backend service URL
+- RPC works at `https://cashier.ko-lab.space/rpc`
+
+#### Option B — Dokploy CLI
+
+If you manage Dokploy through its CLI, use the same compose file and env values:
+
+```bash
+# From repo root
+cp infra/.env.example infra/.env
+# edit infra/.env with real values
+
+# Then deploy using your Dokploy CLI workflow,
+# referencing infra/docker-compose.dokploy.yml
+```
+
+Notes for CLI usage:
+- Keep `infra/.env` out of git (contains secrets).
+- Re-deploy on each new commit/branch update.
+- If you split frontend/backend into separate Dokploy apps later, set `VITE_API_URL` to the backend public `/rpc` URL.
+
 ## Testing
 
 ```bash
