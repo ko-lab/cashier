@@ -34,7 +34,7 @@
       "id": "snack",
       "name": "Snack",
       "priceMember": 1.5,
-      "priceNonMember": 2.5
+      "priceNonMember": 2
     },
     "bier": {
       "id": "bier",
@@ -64,14 +64,14 @@
   "products": {
     "gen-pils": {
       "id": "gen-pils",
-      "name": "Gen Pils",
+      "name": "Generic Pils",
       "priceCategoryId": "pils",
       "inventoryCount": 0,
       "active": true
     },
     "gen-speciaal-bier": {
       "id": "gen-speciaal-bier",
-      "name": "Gen Speciaal Bier",
+      "name": "Generic Speciaal Bier",
       "priceCategoryId": "bier",
       "inventoryCount": 0,
       "active": true
@@ -340,6 +340,13 @@
         "name": "Chips",
         "priceCategoryId": "snack",
         "inventoryCount": 9,
+        "active": true
+    },
+    "gen-snack": {
+        "id": "gen-snack",
+        "name": "Generic snack",
+        "priceCategoryId": "snack",
+        "inventoryCount": -1,
         "active": true
     },
     "ole": {
