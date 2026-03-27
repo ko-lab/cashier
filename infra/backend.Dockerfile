@@ -12,7 +12,7 @@ COPY apps/backend/package.json apps/backend/tsconfig.json apps/backend/
 
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm config set store-dir /pnpm/store && \
-  pnpm install --frozen-lockfile --filter @spacier/backend...
+  pnpm install --frozen-lockfile --prod
 
 COPY shared ./shared
 COPY apps/backend ./apps/backend
