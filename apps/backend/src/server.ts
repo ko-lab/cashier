@@ -91,13 +91,19 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (!req.url || !req.url.startsWith(rpcPrefix)) {
+  if (!req.url) {
     res.statusCode = 404;
     res.end("Not found");
     return;
   }
 
-  req.url = req.url.slice(rpcPrefix.length) || "/";
+  // Support both routing styles:
+  // 1) external /rpc path forwarded as-is
+  // 2) reverse-proxy path stripping (/rpc -> /)
+  if (req.url.startsWith(rpcPrefix)) {
+    req.url = req.url.slice(rpcPrefix.length) || "/";
+  }
+
   const result = await rpcHandler.handle(req, res);
 
   if (!result.matched) {
