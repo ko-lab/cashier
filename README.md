@@ -58,7 +58,7 @@ For Dokploy, use:
   - `VITE_IBAN`
   - `VITE_IBAN_NAME`
 - optional env vars:
-  - `VITE_API_URL` (defaults to `https://wiki.ko-lab.space/rpc`)
+  - `VITE_API_URL` (defaults to `/rpc` for same-domain routing)
   - `VITE_APP_VERSION` (defaults to `dev`; set to commit SHA or build timestamp)
 
 The Dokploy compose is intentionally minimal for Dokploy: no Traefik labels, no host port bindings, and uses external `dokploy-network` + a named volume (`backend-data`) for SQLite persistence.
