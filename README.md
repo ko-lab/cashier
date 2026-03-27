@@ -32,6 +32,37 @@ export ADMIN_PANEL_PASSWORD="change-me"
 
 Frontend runs on Vite, backend runs on oRPC. Data is stored under `apps/backend/data/` (including `transactions.sqlite`).
 
+## Docker / Dokploy (optimized)
+
+This repo includes production-oriented Dockerfiles with faster rebuild characteristics:
+
+- `infra/frontend.Dockerfile`
+  - multi-stage build
+  - static frontend served by nginx (small runtime image)
+  - immutable cache headers for `/assets/*`
+  - `/rpc` and `/client-log` proxied to backend
+- `infra/backend.Dockerfile`
+  - multi-stage build
+  - production-only dependency install
+  - `/healthz` endpoint for container health checks
+
+For local compose:
+
+```bash
+pnpm docker:up
+```
+
+For Dokploy, use:
+
+- compose file: `infra/docker-compose.dokploy.yml`
+- required env vars:
+  - `ADMIN_PANEL_PASSWORD`
+  - `VITE_IBAN`
+  - `VITE_IBAN_NAME`
+  - optional: `VITE_API_URL` (defaults to `/rpc`)
+
+The Dokploy compose uses health checks and a named volume (`backend-data`) for SQLite persistence.
+
 ## Testing
 
 ```bash
