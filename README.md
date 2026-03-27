@@ -58,7 +58,7 @@ For Dokploy, use:
   - `VITE_IBAN`
   - `VITE_IBAN_NAME`
 - optional env vars:
-  - `VITE_API_URL` (defaults to `https://cashier.ko-lab.be/rpc`)
+  - `VITE_API_URL` (defaults to `https://wiki.ko-lab.space/rpc`)
   - `VITE_APP_VERSION` (defaults to `dev`; set to commit SHA or build timestamp)
 
 The Dokploy compose uses health checks and a named volume (`backend-data`) for SQLite persistence.
@@ -97,17 +97,17 @@ You can deploy this stack either from the Dokploy UI or via Dokploy CLI.
    - `ADMIN_PANEL_PASSWORD`
    - `VITE_IBAN`
    - `VITE_IBAN_NAME`
-   - optional: `VITE_API_URL` (default already points to `https://cashier.ko-lab.be/rpc`)
-6. Expose routes on the same domain (`cashier.ko-lab.be`) with path-based routing:
-   - Frontend service: host `cashier.ko-lab.be`, path `/`, port `4173`
-   - Backend RPC: host `cashier.ko-lab.be`, path `/rpc`, port `4000`
-   - Optional backend health: host `cashier.ko-lab.be`, path `/healthz`, port `4000`
+   - optional: `VITE_API_URL` (default already points to `https://wiki.ko-lab.space/rpc`)
+6. Expose routes on the same domain (`wiki.ko-lab.space`) with path-based routing:
+   - Frontend service: host `wiki.ko-lab.space`, path `/`, port `4173`
+   - Backend RPC: host `wiki.ko-lab.space`, path `/rpc`, port `4000`
+   - Optional backend health: host `wiki.ko-lab.space`, path `/healthz`, port `4000`
 7. Deploy.
 
 After deploy, verify:
-- Frontend loads at `https://cashier.ko-lab.be`
-- RPC works at `https://cashier.ko-lab.be/rpc`
-- Health endpoint works at `https://cashier.ko-lab.be/healthz` (if routed)
+- Frontend loads at `https://wiki.ko-lab.space`
+- RPC works at `https://wiki.ko-lab.space/rpc`
+- Health endpoint works at `https://wiki.ko-lab.space/healthz` (if routed)
 
 #### Option B — Dokploy CLI
 
