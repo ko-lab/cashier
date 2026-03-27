@@ -22,17 +22,14 @@ services:
       context: ..
       dockerfile: infra/frontend.Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL:-/rpc}
+        VITE_API_URL: ${VITE_API_URL}
         VITE_IBAN: ${VITE_IBAN}
         VITE_IBAN_NAME: ${VITE_IBAN_NAME}
-    depends_on:
-      backend:
-        condition: service_healthy
     ports:
-      - "4173:8080"
+      - "4173:4173"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/index.html"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:4173/"]
       interval: 10s
       timeout: 3s
       retries: 6

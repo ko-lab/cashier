@@ -19,13 +19,13 @@ services:
       context: ..
       dockerfile: infra/frontend.Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL:-/rpc}
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:4000/rpc}
         VITE_IBAN: ${VITE_IBAN}
         VITE_IBAN_NAME: ${VITE_IBAN_NAME}
     depends_on:
       - backend
     ports:
-      - "4173:8080"
+      - "4173:4173"
     restart: unless-stopped
 
 volumes:

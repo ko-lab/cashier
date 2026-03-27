@@ -37,10 +37,8 @@ Frontend runs on Vite, backend runs on oRPC. Data is stored under `apps/backend/
 This repo includes production-oriented Dockerfiles with faster rebuild characteristics:
 
 - `infra/frontend.Dockerfile`
-  - multi-stage build
-  - static frontend served by nginx (small runtime image)
-  - immutable cache headers for `/assets/*`
-  - `/rpc` and `/client-log` proxied to backend
+  - single container serving built frontend via `vite preview`
+  - minimal moving parts (no extra web server in the container)
 - `infra/backend.Dockerfile`
   - multi-stage build
   - production-only dependency install
@@ -59,7 +57,7 @@ For Dokploy, use:
   - `ADMIN_PANEL_PASSWORD`
   - `VITE_IBAN`
   - `VITE_IBAN_NAME`
-  - optional: `VITE_API_URL` (defaults to `/rpc`)
+  - `VITE_API_URL` (set this to the public backend RPC URL, e.g. `https://api.example.com/rpc`)
 
 The Dokploy compose uses health checks and a named volume (`backend-data`) for SQLite persistence.
 
