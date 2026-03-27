@@ -61,7 +61,7 @@ For Dokploy, use:
   - `VITE_API_URL` (defaults to `https://wiki.ko-lab.space/rpc`)
   - `VITE_APP_VERSION` (defaults to `dev`; set to commit SHA or build timestamp)
 
-The Dokploy compose uses health checks and a named volume (`backend-data`) for SQLite persistence.
+The Dokploy compose is intentionally minimal for Dokploy: no Traefik labels, no host port bindings, and uses external `dokploy-network` + a named volume (`backend-data`) for SQLite persistence.
 
 ### Client auto-refresh on new deploy
 

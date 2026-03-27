@@ -9,13 +9,11 @@ services:
       ADMIN_PANEL_PASSWORD: ${ADMIN_PANEL_PASSWORD}
     volumes:
       - backend-data:/app/apps/backend/data
+    expose:
+      - "4000"
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
-      interval: 10s
-      timeout: 3s
-      retries: 6
-      start_period: 10s
+    networks:
+      - dokploy-network
 
   frontend:
     build:
@@ -26,15 +24,15 @@ services:
         VITE_IBAN: ${VITE_IBAN}
         VITE_IBAN_NAME: ${VITE_IBAN_NAME}
         VITE_APP_VERSION: ${VITE_APP_VERSION:-dev}
-    ports:
-      - "4173:4173"
+    expose:
+      - "4173"
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:4173/"]
-      interval: 10s
-      timeout: 3s
-      retries: 6
-      start_period: 10s
+    networks:
+      - dokploy-network
 
 volumes:
   backend-data:
+
+networks:
+  dokploy-network:
+    external: true
