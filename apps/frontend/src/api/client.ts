@@ -4,8 +4,15 @@ import type { ContractRouterClient } from "@orpc/contract";
 import { contract } from "@shared/contract";
 
 function resolveApiUrl(): string {
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+  const configured = import.meta.env.VITE_API_URL;
+  if (configured) {
+    if (configured.startsWith("http://") || configured.startsWith("https://")) {
+      return configured;
+    }
+    if (configured.startsWith("/") && typeof window !== "undefined") {
+      return `${window.location.origin}${configured}`;
+    }
+    return configured;
   }
   if (typeof window !== "undefined" && window.location?.origin) {
     return `${window.location.origin}/rpc`;
