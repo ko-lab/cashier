@@ -1,0 +1,26 @@
+name: Trigger Dokploy Webhook
+
+on:
+  push:
+    branches:
+      - try2
+  workflow_dispatch:
+
+jobs:
+  trigger-webhook:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Dokploy deploy webhook
+        env:
+          DOKPLOY_WEBHOOK_URL: ${{ secrets.DOKPLOY_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DOKPLOY_WEBHOOK_URL" ]; then
+            echo "Missing required secret: DOKPLOY_WEBHOOK_URL"
+            exit 1
+          fi
+
+          curl --fail --show-error --silent \
+            -X POST \
+            "$DOKPLOY_WEBHOOK_URL"
+
+          echo "Dokploy webhook triggered successfully."
