@@ -32,8 +32,7 @@ export default defineConfig({
   preview: {
     allowedHosts: [
       "cashier.ko-lab.space",
-      "cashier.ko-lab.be",
-      "wiki.ko-lab.space"
+      "cashier.ko-lab.be"
     ],
     proxy: {
       "/rpc": "http://localhost:4000",
