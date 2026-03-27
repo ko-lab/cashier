@@ -36,15 +36,9 @@
       "priceMember": 1.5,
       "priceNonMember": 2.5
     },
-    "special": {
-      "id": "special-beer",
-      "name": "Special beer",
-      "priceMember": 3.0,
-      "priceNonMember": 4.5
-    },
-    "beer": {
-      "id": "beer",
-      "name": "Beer",
+    "bier": {
+      "id": "bier",
+      "name": "Bier",
       "priceMember": 3.0,
       "priceNonMember": 4.5
     },
@@ -78,7 +72,7 @@
     "gen-speciaal-bier": {
       "id": "gen-speciaal-bier",
       "name": "Gen Speciaal Bier",
-      "priceCategoryId": "special-beer",
+      "priceCategoryId": "bier",
       "inventoryCount": 0,
       "active": true
     },
@@ -253,7 +247,7 @@
     "abbaye-oubliee-imperiale": {
         "id": "abbaye-oubliee-imperiale",
         "name": "Abbaye Oubli\u00e9e Imperiale",
-        "priceCategoryId": "special-beer",
+        "priceCategoryId": "bier",
         "inventoryCount": 6,
         "active": true
     },
