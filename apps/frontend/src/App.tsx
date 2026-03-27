@@ -414,32 +414,32 @@ export default function App() {
         <header className="sticky top-0 z-30 rounded-2xl border border-black/10 bg-white/80 p-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/80">
           <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
             <h1 className="text-base font-semibold">Fridge Checkout</h1>
-            <button
-              type="button"
-              onClick={() => setIsDark((value) => !value)}
-              className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
-            >
-              {isDark ? "Light mode" : "Dark mode"}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setUiMode((current) => (current === "pos" ? "admin" : "pos"));
-                setAdminError(null);
-              }}
-              className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
-            >
-              {uiMode === "pos" ? "Admin panel" : "Back to checkout"}
-            </button>
-            {uiMode === "admin" && adminTransactions && (
-              <button
-                type="button"
-                onClick={lockAdminPanel}
-                className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:text-slate-300"
-              >
-                Refresh
-              </button>
-            )}
+            {/*<button*/}
+            {/*  type="button"*/}
+            {/*  onClick={() => setIsDark((value) => !value)}*/}
+            {/*  className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"*/}
+            {/*>*/}
+            {/*  {isDark ? "Light mode" : "Dark mode"}*/}
+            {/*</button>*/}
+            {/*<button*/}
+            {/*  type="button"*/}
+            {/*  onClick={() => {*/}
+            {/*    setUiMode((current) => (current === "pos" ? "admin" : "pos"));*/}
+            {/*    setAdminError(null);*/}
+            {/*  }}*/}
+            {/*  className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"*/}
+            {/*>*/}
+            {/*  {uiMode === "pos" ? "Admin panel" : "Back to checkout"}*/}
+            {/*</button>*/}
+            {/*{uiMode === "admin" && adminTransactions && (*/}
+            {/*  <button*/}
+            {/*    type="button"*/}
+            {/*    onClick={lockAdminPanel}*/}
+            {/*    className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:text-slate-300"*/}
+            {/*  >*/}
+            {/*    Refresh*/}
+            {/*  </button>*/}
+            {/*)}*/}
             {uiMode === "pos" && view === "cart" && (
               <>
                 <span className="text-sm font-semibold">{totalLabel}</span>
