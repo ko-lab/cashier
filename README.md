@@ -57,7 +57,8 @@ For Dokploy, use:
   - `ADMIN_PANEL_PASSWORD`
   - `VITE_IBAN`
   - `VITE_IBAN_NAME`
-  - `VITE_API_URL` (set this to the public backend RPC URL, e.g. `https://api.example.com/rpc`)
+- optional env var:
+  - `VITE_API_URL` (defaults to `https://cashier.ko-lab.space/rpc`)
 
 The Dokploy compose uses health checks and a named volume (`backend-data`) for SQLite persistence.
 
