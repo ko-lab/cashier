@@ -6,15 +6,44 @@ export type ProductStore = {
   listCatalog: () => Promise<ProductCatalog>;
 };
 
+function sanitizeCatalog(catalog: ProductCatalog): ProductCatalog {
+  const nextProducts: ProductCatalog["products"] = {};
+
+  for (const [id, product] of Object.entries(catalog.products ?? {})) {
+    const inventoryCount =
+      Number.isFinite(product.inventoryCount) && product.inventoryCount >= 0
+        ? Math.trunc(product.inventoryCount)
+        : 0;
+
+    if (inventoryCount !== product.inventoryCount) {
+      console.warn(
+        `[catalog-sanitize] adjusted inventoryCount for ${id}: ${product.inventoryCount} -> ${inventoryCount}`
+      );
+    }
+
+    nextProducts[id] = {
+      ...product,
+      inventoryCount
+    };
+  }
+
+  return {
+    products: nextProducts,
+    priceCategories: catalog.priceCategories ?? {}
+  };
+}
+
 export function createProductStore(dataDir: string): ProductStore {
   const productsPath = path.join(dataDir, "products.json");
 
   return {
     async listCatalog() {
-      return readJson<ProductCatalog>(productsPath, {
+      const catalog = await readJson<ProductCatalog>(productsPath, {
         products: {},
         priceCategories: {}
       });
+
+      return sanitizeCatalog(catalog);
     }
   };
 }
