@@ -40,8 +40,8 @@ This repo includes production-oriented Dockerfiles with faster rebuild character
   - single container serving built frontend via `vite preview`
   - minimal moving parts (no extra web server in the container)
 - `infra/backend.Dockerfile`
-  - multi-stage build
-  - production-only dependency install
+  - single-stage runtime build (keeps pnpm workspace resolution simple)
+  - cached dependency install
   - `/healthz` endpoint for container health checks
 
 For local compose:
