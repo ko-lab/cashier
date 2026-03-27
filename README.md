@@ -57,10 +57,26 @@ For Dokploy, use:
   - `ADMIN_PANEL_PASSWORD`
   - `VITE_IBAN`
   - `VITE_IBAN_NAME`
-- optional env var:
+- optional env vars:
   - `VITE_API_URL` (defaults to `https://cashier.ko-lab.space/rpc`)
+  - `VITE_APP_VERSION` (defaults to `dev`; set to commit SHA or build timestamp)
 
 The Dokploy compose uses health checks and a named volume (`backend-data`) for SQLite persistence.
+
+### Client auto-refresh on new deploy
+
+The frontend checks `/version.json` every 60 seconds.
+
+- It compares the server version against `VITE_APP_VERSION` baked into the running app.
+- If versions differ, it reloads automatically **only when safe**:
+  - POS mode
+  - cart view
+  - no selected items
+  - no active transaction/loading
+- If not safe yet, it shows a small notice and refreshes once the page becomes idle.
+
+In Docker builds, `infra/frontend.Dockerfile` writes `dist/version.json` from `VITE_APP_VERSION`.
+Set `VITE_APP_VERSION` in Dokploy/CI to a unique value per deploy (e.g. git SHA).
 
 ### Dokploy import guide
 

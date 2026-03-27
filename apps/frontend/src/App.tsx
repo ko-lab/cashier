@@ -29,7 +29,14 @@ type StatusMessage = {
   text: string;
 };
 
+type VersionPayload = {
+  version?: string;
+};
+
 const QR_SIZE = 224;
+const VERSION_CHECK_INTERVAL_MS = 60_000;
+const APP_VERSION =
+  (import.meta.env.VITE_APP_VERSION as string | undefined) ?? "dev";
 
 const currencyFormatter =
   typeof Intl !== "undefined" && typeof Intl.NumberFormat === "function"
@@ -128,6 +135,7 @@ export default function App() {
   const [adminFromDate, setAdminFromDate] = useState("");
   const [adminToDate, setAdminToDate] = useState("");
   const [isDark, setIsDark] = useState(readStoredTheme);
+  const [updateReady, setUpdateReady] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
@@ -357,6 +365,57 @@ export default function App() {
   }, [adminFilteredTransactions]);
 
   const isBusy = loading || adminLoading;
+  const isSafeToRefresh =
+    uiMode === "pos" && view === "cart" && cart.length === 0 && !isBusy && !transaction;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkVersion = async () => {
+      try {
+        const response = await fetch(`/version.json?t=${Date.now()}`, {
+          cache: "no-store"
+        });
+        if (!response.ok) {
+          return;
+        }
+        const payload = (await response.json()) as VersionPayload;
+        const remoteVersion = payload.version?.trim();
+        if (!remoteVersion || remoteVersion === APP_VERSION) {
+          return;
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (isSafeToRefresh) {
+          window.location.reload();
+          return;
+        }
+
+        setUpdateReady(true);
+      } catch {
+        // Ignore failed version checks (offline, transient errors).
+      }
+    };
+
+    void checkVersion();
+    const intervalId = window.setInterval(() => {
+      void checkVersion();
+    }, VERSION_CHECK_INTERVAL_MS);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, [isSafeToRefresh]);
+
+  useEffect(() => {
+    if (updateReady && isSafeToRefresh) {
+      window.location.reload();
+    }
+  }, [updateReady, isSafeToRefresh]);
 
   const getQuantity = (productId: string, isMemberPrice: boolean) =>
     cart.find(
@@ -470,6 +529,11 @@ export default function App() {
         {uiMode === "admin" && adminError && (
           <div className="rounded-lg bg-rose-100 px-4 py-2 text-sm text-rose-700 dark:bg-rose-500/20 dark:text-rose-200">
             {adminError}
+          </div>
+        )}
+        {updateReady && (
+          <div className="rounded-lg bg-amber-100 px-4 py-2 text-sm text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">
+            Update available. Page will refresh automatically when no items are selected.
           </div>
         )}
 
