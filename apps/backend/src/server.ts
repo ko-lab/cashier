@@ -41,6 +41,7 @@ const router = {
 const rpcHandler = new RPCHandler(router);
 const rpcPrefix = "/rpc";
 const clientLogPath = "/client-log";
+const healthPath = "/healthz";
 const port = Number(process.env.PORT ?? 4000);
 
 const server = createServer(async (req, res) => {
@@ -51,6 +52,13 @@ const server = createServer(async (req, res) => {
   if (req.method === "OPTIONS") {
     res.statusCode = 204;
     res.end();
+    return;
+  }
+
+  if (req.url === healthPath && req.method === "GET") {
+    res.statusCode = 200;
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ ok: true, ts: new Date().toISOString() }));
     return;
   }
 
@@ -83,13 +91,19 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (!req.url || !req.url.startsWith(rpcPrefix)) {
+  if (!req.url) {
     res.statusCode = 404;
     res.end("Not found");
     return;
   }
 
-  req.url = req.url.slice(rpcPrefix.length) || "/";
+  // Support both routing styles:
+  // 1) external /rpc path forwarded as-is
+  // 2) reverse-proxy path stripping (/rpc -> /)
+  if (req.url.startsWith(rpcPrefix)) {
+    req.url = req.url.slice(rpcPrefix.length) || "/";
+  }
+
   const result = await rpcHandler.handle(req, res);
 
   if (!result.matched) {
