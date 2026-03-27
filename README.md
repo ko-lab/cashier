@@ -98,13 +98,16 @@ You can deploy this stack either from the Dokploy UI or via Dokploy CLI.
    - `VITE_IBAN`
    - `VITE_IBAN_NAME`
    - optional: `VITE_API_URL` (default already points to `https://cashier.ko-lab.be/rpc`)
-6. Expose frontend service on your domain (e.g. `cashier.ko-lab.be`).
+6. Expose routes on the same domain (`cashier.ko-lab.be`) with path-based routing:
+   - Frontend service: host `cashier.ko-lab.be`, path `/`, port `4173`
+   - Backend RPC: host `cashier.ko-lab.be`, path `/rpc`, port `4000`
+   - Optional backend health: host `cashier.ko-lab.be`, path `/healthz`, port `4000`
 7. Deploy.
 
 After deploy, verify:
 - Frontend loads at `https://cashier.ko-lab.be`
-- Backend health endpoint works at `https://cashier.ko-lab.be/healthz` if routed, or directly on backend service URL
 - RPC works at `https://cashier.ko-lab.be/rpc`
+- Health endpoint works at `https://cashier.ko-lab.be/healthz` (if routed)
 
 #### Option B — Dokploy CLI
 
