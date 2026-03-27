@@ -7,12 +7,10 @@
   },
   "scripts": {
     "start": "pnpm -r start",
-    "dev": "pnpm -r dev",
-    "dev:all": "pnpm --filter @spacier/backend dev & pnpm --filter @spacier/frontend dev",
+    "dev": "pnpm -r dev --host",
     "build": "pnpm -r build",
     "docker:up": "docker compose -f \"$PWD/infra/docker-compose.yml\" --env-file \"$PWD/infra/.env\" up --build",
     "test": "pnpm -r test",
-    "test:all": "pnpm -r test",
     "test:be": "pnpm --filter @spacier/backend test",
     "test:fe": "pnpm --filter @spacier/frontend test"
   }

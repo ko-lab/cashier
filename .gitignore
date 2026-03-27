@@ -3,7 +3,7 @@ node_modules/
 .DS_Store
 .vscode/
 .idea/
-.env
+apps/backend/.env
 .env.*
 !.env.example
 apps/**/dist/
@@ -11,3 +11,5 @@ apps/**/.vite/
 coverage/
 *.log
 apps/backend/data/transactions.*
+
+.env
