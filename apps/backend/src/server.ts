@@ -45,6 +45,7 @@ const healthPath = "/healthz";
 const port = Number(process.env.PORT ?? 4000);
 
 const server = createServer(async (req, res) => {
+  try {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
@@ -110,6 +111,27 @@ const server = createServer(async (req, res) => {
     res.statusCode = 404;
     res.end("Not found");
   }
+  } catch (error) {
+    console.error(
+      `[server-error] ${new Date().toISOString()} ${req.method ?? "UNKNOWN"} ${req.url ?? ""}`,
+      error
+    );
+    if (!res.headersSent) {
+      res.statusCode = 500;
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ error: "Internal Server Error" }));
+    } else {
+      res.end();
+    }
+  }
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error(`[unhandledRejection] ${new Date().toISOString()}`, reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error(`[uncaughtException] ${new Date().toISOString()}`, error);
 });
 
 server.listen(port, () => {
