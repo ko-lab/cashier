@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode-svg";
 import { client } from "./api/client";
 import type {
@@ -162,6 +162,7 @@ export default function App() {
   const [isDark, setIsDark] = useState(readStoredTheme);
   const [updateReady, setUpdateReady] = useState(false);
   const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
+  const unloadCanceledTransactionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
@@ -282,6 +283,33 @@ export default function App() {
       `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrSvg)}`
     );
   }, [structuredCommunication, transaction]);
+
+  useEffect(() => {
+    if (uiMode !== "pos" || view !== "checkout" || !transaction) {
+      return;
+    }
+
+    const cancelPendingTransactionOnLeave = () => {
+      if (unloadCanceledTransactionIdRef.current === transaction.id) {
+        return;
+      }
+
+      unloadCanceledTransactionIdRef.current = transaction.id;
+      void client.transaction
+        .finalize({ id: transaction.id, status: "canceled" })
+        .catch(() => {
+          // Best-effort cancellation during page unload.
+        });
+    };
+
+    window.addEventListener("pagehide", cancelPendingTransactionOnLeave);
+    window.addEventListener("beforeunload", cancelPendingTransactionOnLeave);
+
+    return () => {
+      window.removeEventListener("pagehide", cancelPendingTransactionOnLeave);
+      window.removeEventListener("beforeunload", cancelPendingTransactionOnLeave);
+    };
+  }, [transaction, uiMode, view]);
 
   const handleQuantityChange = (
     productId: string,
