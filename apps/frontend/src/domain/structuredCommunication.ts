@@ -1,4 +1,10 @@
 export function toStructuredCommunication(transactionId: string): string {
+  const directMatch = transactionId.match(/^\d{12}$/);
+  if (directMatch) {
+    const full = directMatch[0];
+    return `+++${full.slice(0, 3)}/${full.slice(3, 7)}/${full.slice(7)}+++`;
+  }
+
   const base = hashToTenDigits(transactionId);
   const checksumRaw = base % 97;
   const checksum = checksumRaw === 0 ? 97 : checksumRaw;

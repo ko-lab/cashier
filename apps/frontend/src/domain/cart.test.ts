@@ -35,14 +35,16 @@ const products: Product[] = [
 ];
 
 describe("cart domain", () => {
-  it("updates quantities and removes zero", () => {
+  it("updates quantities and keeps zero-quantity entries in place", () => {
     const cart = updateCartQuantity([], "cola", 1, true);
     expect(cart).toEqual([
       { productId: "cola", quantity: 1, isMemberPrice: true }
     ]);
 
     const updated = updateCartQuantity(cart, "cola", -1, true);
-    expect(updated).toEqual([]);
+    expect(updated).toEqual([
+      { productId: "cola", quantity: 0, isMemberPrice: true }
+    ]);
   });
 
   it("calculates member totals", () => {

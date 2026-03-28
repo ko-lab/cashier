@@ -27,23 +27,24 @@ export function updateCartQuantity(
   delta: number,
   isMemberPrice: boolean
 ): CartItem[] {
-  const existing = cart.find(
+  const index = cart.findIndex(
     (item) =>
       item.productId === productId && item.isMemberPrice === isMemberPrice
   );
-  const nextQuantity = (existing?.quantity ?? 0) + delta;
-  const filtered = cart.filter(
-    (item) =>
-      !(
-        item.productId === productId && item.isMemberPrice === isMemberPrice
-      )
-  );
 
-  if (nextQuantity <= 0) {
-    return filtered;
+  if (index >= 0) {
+    const next = [...cart];
+    const current = next[index];
+    const nextQuantity = Math.max(0, current.quantity + delta);
+    next[index] = { ...current, quantity: nextQuantity };
+    return next;
   }
 
-  return [...filtered, { productId, quantity: nextQuantity, isMemberPrice }];
+  if (delta <= 0) {
+    return cart;
+  }
+
+  return [...cart, { productId, quantity: delta, isMemberPrice }];
 }
 
 export function buildCartSummary(

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import QRCode from "qrcode-svg";
 import { client } from "./api/client";
 import type {
@@ -17,8 +17,7 @@ import {
 import {
   filterProductsByQuery,
   formatPriceMode,
-  getSelectedItems,
-  getUnselectedProducts
+  getSelectedItems
 } from "./domain/productSection";
 import { getUnitPrice } from "./domain/pricing";
 import { toStructuredCommunication } from "./domain/structuredCommunication";
@@ -84,6 +83,20 @@ function csvEscape(value: string | number | boolean): string {
   return text;
 }
 
+function formatAdminDate(value: string): string {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString([], {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
 function buildTransactionsCsv(transactions: Transaction[]): string {
   const header = [
     "id",
@@ -111,8 +124,34 @@ function buildTransactionsCsv(transactions: Transaction[]): string {
   return [header.join(","), ...lines].join("\n");
 }
 
+function readInitialUiMode(): UiMode {
+  if (typeof window === "undefined") {
+    return "pos";
+  }
+
+  const value = new URLSearchParams(window.location.search).get("mode");
+  return value === "admin" ? "admin" : "pos";
+}
+
+function readInitialAdminTab(): AdminTab {
+  if (typeof window === "undefined") {
+    return "transactions";
+  }
+
+  const value = new URLSearchParams(window.location.search).get("tab");
+  return value === "stock" ? "stock" : "transactions";
+}
+
+function readAdminUnlockUsername(): string {
+  if (typeof window === "undefined") {
+    return "cashier_admin";
+  }
+
+  return `${window.location.origin}_admin`;
+}
+
 export default function App() {
-  const [uiMode, setUiMode] = useState<UiMode>("pos");
+  const [uiMode, setUiMode] = useState<UiMode>(readInitialUiMode);
   const [products, setProducts] = useState<Product[]>([]);
   const [priceCategories, setPriceCategories] = useState<PriceCategory[]>([]);
   const [cart, setCart] = useState<
@@ -135,20 +174,45 @@ export default function App() {
     "all" | TransactionStatus
   >("all");
   const [adminProductFilter, setAdminProductFilter] = useState("all");
+  const [adminItemQuery, setAdminItemQuery] = useState("");
   const [adminFromDate, setAdminFromDate] = useState("");
   const [adminToDate, setAdminToDate] = useState("");
-  const [adminTab, setAdminTab] = useState<AdminTab>("transactions");
+  const [adminTab, setAdminTab] = useState<AdminTab>(readInitialAdminTab);
   const [adminSessionPassword, setAdminSessionPassword] = useState("");
   const [stockSnapshot, setStockSnapshot] = useState<AdminGetStockOutput | null>(null);
   const [stockDraftByProductId, setStockDraftByProductId] = useState<Record<string, string>>({});
   const [stockNoteByProductId, setStockNoteByProductId] = useState<Record<string, string>>({});
   const [isDark, setIsDark] = useState(readStoredTheme);
   const [updateReady, setUpdateReady] = useState(false);
+  const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
+  const [adminUnlockUsername] = useState(readAdminUnlockUsername);
+  const unloadCanceledTransactionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
     persistTheme(isDark);
   }, [isDark]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    params.delete("mode");
+    params.delete("tab");
+
+    if (uiMode === "admin") {
+      params.set("mode", "admin");
+      if (adminTab === "stock") {
+        params.set("tab", "stock");
+      }
+    }
+
+    const query = params.toString();
+    const nextUrl = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
+    window.history.replaceState(null, "", nextUrl);
+  }, [adminTab, uiMode]);
 
   useEffect(() => {
     let isMounted = true;
@@ -193,14 +257,9 @@ export default function App() {
     [products, searchQuery]
   );
 
-  const selectedCartItems = useMemo(
-    () => getSelectedItems(products, priceCategories, cart, searchQuery),
-    [products, priceCategories, cart, searchQuery]
-  );
-
-  const unselectedFilteredProducts = useMemo(
-    () => getUnselectedProducts(products, cart, searchQuery, defaultIsMemberPrice),
-    [products, cart, searchQuery, defaultIsMemberPrice]
+  const cartItemsForCheckout = useMemo(
+    () => getSelectedItems(products, priceCategories, cart, ""),
+    [products, priceCategories, cart]
   );
 
   const structuredCommunication = useMemo(
@@ -249,6 +308,33 @@ export default function App() {
     );
   }, [structuredCommunication, transaction]);
 
+  useEffect(() => {
+    if (uiMode !== "pos" || view !== "checkout" || !transaction) {
+      return;
+    }
+
+    const cancelPendingTransactionOnLeave = () => {
+      if (unloadCanceledTransactionIdRef.current === transaction.id) {
+        return;
+      }
+
+      unloadCanceledTransactionIdRef.current = transaction.id;
+      void client.transaction
+        .finalize({ id: transaction.id, status: "canceled" })
+        .catch(() => {
+          // Best-effort cancellation during page unload.
+        });
+    };
+
+    window.addEventListener("pagehide", cancelPendingTransactionOnLeave);
+    window.addEventListener("beforeunload", cancelPendingTransactionOnLeave);
+
+    return () => {
+      window.removeEventListener("pagehide", cancelPendingTransactionOnLeave);
+      window.removeEventListener("beforeunload", cancelPendingTransactionOnLeave);
+    };
+  }, [transaction, uiMode, view]);
+
   const handleQuantityChange = (
     productId: string,
     delta: number,
@@ -259,6 +345,13 @@ export default function App() {
     );
   };
 
+  const openCheckoutConfirm = () => {
+    if (!hasCheckoutItems || isBusy) {
+      return;
+    }
+    setShowCheckoutConfirm(true);
+  };
+
   const startCheckout = async () => {
     setStatus(null);
     setLoading(true);
@@ -267,6 +360,7 @@ export default function App() {
       const response = await client.transaction.start({
         items: toTransactionItems(cart)
       });
+      setShowCheckoutConfirm(false);
       setTransaction(response);
       setView("checkout");
       scrollToTop();
@@ -321,6 +415,15 @@ export default function App() {
       ) {
         return false;
       }
+      if (adminItemQuery.trim()) {
+        const query = adminItemQuery.trim().toLowerCase();
+        const hasMatch = transaction.items.some((item) =>
+          `${item.name} ${item.productId}`.toLowerCase().includes(query)
+        );
+        if (!hasMatch) {
+          return false;
+        }
+      }
 
       const date = new Date(transaction.createdAt);
       if (!Number.isFinite(date.getTime())) {
@@ -347,6 +450,7 @@ export default function App() {
     adminTransactions,
     adminStatusFilter,
     adminProductFilter,
+    adminItemQuery,
     adminFromDate,
     adminToDate
   ]);
@@ -378,8 +482,9 @@ export default function App() {
   }, [adminFilteredTransactions]);
 
   const isBusy = loading || adminLoading;
+  const hasCheckoutItems = cart.some((item) => item.quantity > 0);
   const isSafeToRefresh =
-    uiMode === "pos" && view === "cart" && cart.length === 0 && !isBusy && !transaction;
+    uiMode === "pos" && view === "cart" && !hasCheckoutItems && !isBusy && !transaction;
 
   useEffect(() => {
     let isMounted = true;
@@ -436,13 +541,31 @@ export default function App() {
         item.productId === productId && item.isMemberPrice === isMemberPrice
     )?.quantity ?? 0;
 
+  const moveStockInputFocus = (
+    event: KeyboardEvent<HTMLInputElement>,
+    direction: 1 | -1
+  ) => {
+    const inputs = Array.from(
+      document.querySelectorAll<HTMLInputElement>("input[data-stock-input='true']")
+    );
+    const currentIndex = inputs.findIndex((input) => input === event.currentTarget);
+    if (currentIndex < 0) {
+      return;
+    }
+
+    const target = inputs[currentIndex + direction];
+    if (target) {
+      event.preventDefault();
+      target.focus();
+      target.select();
+    }
+  };
+
   const loadStockSnapshot = async (password: string) => {
     const response = await client.admin.getStock({ password });
     setStockSnapshot(response);
     setStockDraftByProductId(
-      Object.fromEntries(
-        response.items.map((item) => [item.productId, String(item.quantity)])
-      )
+      Object.fromEntries(response.items.map((item) => [item.productId, ""]))
     );
   };
 
@@ -473,9 +596,25 @@ export default function App() {
       return;
     }
 
-    const quantity = Number.parseInt(stockDraftByProductId[productId] ?? "", 10);
-    if (!Number.isFinite(quantity) || quantity < 0) {
+    const draftValue = (stockDraftByProductId[productId] ?? "").trim();
+    if (draftValue.length === 0) {
+      return;
+    }
+
+    if (!/^\d+$/.test(draftValue)) {
       setAdminError("Stock must be a non-negative integer.");
+      return;
+    }
+
+    const quantity = Number(draftValue);
+    if (!Number.isSafeInteger(quantity) || quantity < 0) {
+      setAdminError("Stock must be a non-negative integer.");
+      return;
+    }
+
+    const currentQuantity =
+      stockSnapshot?.items.find((item) => item.productId === productId)?.quantity;
+    if (typeof currentQuantity === "number" && currentQuantity === quantity) {
       return;
     }
 
@@ -490,9 +629,7 @@ export default function App() {
       });
       setStockSnapshot(response);
       setStockDraftByProductId(
-        Object.fromEntries(
-          response.items.map((item) => [item.productId, String(item.quantity)])
-        )
+        Object.fromEntries(response.items.map((item) => [item.productId, ""]))
       );
       setStockNoteByProductId((current) => ({ ...current, [productId]: "" }));
     } catch {
@@ -532,7 +669,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen px-6 py-8">
+    <div className="min-h-screen px-3 py-8 sm:px-6">
       <div className="mx-auto flex max-w-4xl flex-col gap-8">
         <header className="sticky top-0 z-30 rounded-2xl border border-black/10 bg-white/80 p-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/80">
           <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
@@ -543,9 +680,20 @@ export default function App() {
                 setUiMode((current) => (current === "pos" ? "admin" : "pos"));
                 setAdminError(null);
               }}
-              className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
+              className={`rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300 ${
+                uiMode === "pos" ? "hidden sm:inline-flex" : "inline-flex"
+              }`}
             >
               {uiMode === "pos" ? "Admin panel" : "Back to checkout"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsDark((value) => !value)}
+              className="rounded-full border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
+              aria-label="Toggle theme"
+              title={isDark ? "Switch to light theme" : "Switch to dark theme"}
+            >
+              {isDark ? "☀️" : "🌙"}
             </button>
             {uiMode === "admin" && adminTransactions && (
               <button
@@ -553,21 +701,20 @@ export default function App() {
                 onClick={lockAdminPanel}
                 className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:text-slate-300"
               >
-                Lock admin
+Logout
               </button>
             )}
             {uiMode === "pos" && view === "cart" && (
-              <>
-                <span className="text-sm font-semibold">{totalLabel}</span>
+              <div className="ml-auto flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={startCheckout}
-                  disabled={summary.items.length === 0 || isBusy}
+                  onClick={openCheckoutConfirm}
+                  disabled={!hasCheckoutItems || isBusy}
                   className="rounded-full bg-accent-light px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
                 >
-                  Checkout
+                  Checkout ({totalLabel})
                 </button>
-              </>
+              </div>
             )}
           </div>
         </header>
@@ -599,17 +746,30 @@ export default function App() {
             {!adminTransactions ? (
               <form
                 className="mx-auto flex w-full max-w-md flex-col gap-4"
+                autoComplete="on"
                 onSubmit={(event) => {
                   event.preventDefault();
                   void loadAdminTransactions();
                 }}
               >
-                <h2 className="text-lg font-semibold">Unlock transaction export</h2>
+                <h2 className="text-lg font-semibold">Unlock admin panel</h2>
                 <p className="text-sm text-slate-500 dark:text-slate-300">
-                  Submit admin password to retrieve `transactions.json` in-memory.
+                  Submit the admin password to access transaction history, stock management,
+                  and CSV export.
                 </p>
                 <input
+                  type="text"
+                  name="admin_unlock_user"
+                  value={adminUnlockUsername}
+                  readOnly
+                  autoComplete="username"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  className="hidden"
+                />
+                <input
                   type="password"
+                  name="admin_unlock_password"
                   value={adminPassword}
                   onChange={(event) => setAdminPassword(event.target.value)}
                   placeholder="Admin password"
@@ -695,7 +855,7 @@ export default function App() {
                   </button>
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
+                <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-7">
                   <label className="flex flex-col gap-2 text-sm">
                     <span className="text-xs uppercase tracking-wide text-slate-500">
                       Status
@@ -731,6 +891,18 @@ export default function App() {
                         </option>
                       ))}
                     </select>
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-xs uppercase tracking-wide text-slate-500">
+                      Item text
+                    </span>
+                    <input
+                      type="search"
+                      value={adminItemQuery}
+                      onChange={(event) => setAdminItemQuery(event.target.value)}
+                      placeholder="Name or id"
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                    />
                   </label>
                   <label className="flex flex-col gap-2 text-sm">
                     <span className="text-xs uppercase tracking-wide text-slate-500">
@@ -773,6 +945,7 @@ export default function App() {
                       onClick={() => {
                         setAdminStatusFilter("all");
                         setAdminProductFilter("all");
+                        setAdminItemQuery("");
                         setAdminFromDate("");
                         setAdminToDate("");
                       }}
@@ -791,24 +964,27 @@ export default function App() {
                         <th className="px-3 py-2 text-left font-semibold">Date</th>
                         <th className="px-3 py-2 text-left font-semibold">Status</th>
                         <th className="px-3 py-2 text-right font-semibold">Total</th>
-                        <th className="px-3 py-2 text-right font-semibold">Items</th>
+                        <th className="px-3 py-2 text-left font-semibold">Items</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                       {adminFilteredTransactions.map((entry) => (
                         <tr key={entry.id}>
-                          <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">
+                          <td
+                            className="max-w-28 truncate px-3 py-2 font-mono text-xs"
+                            title={entry.id}
+                          >
                             {entry.id}
                           </td>
                           <td className="whitespace-nowrap px-3 py-2">
-                            {new Date(entry.createdAt).toLocaleString()}
+                            {formatAdminDate(entry.createdAt)}
                           </td>
                           <td className="whitespace-nowrap px-3 py-2">{entry.status}</td>
                           <td className="whitespace-nowrap px-3 py-2 text-right">
                             {currencyFormatter.format(entry.total)}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-2 text-right">
-                            {entry.items.length}
+                          <td className="px-3 py-2 text-left">
+                            {entry.items.map((item) => `${item.name} x${item.quantity}`).join(" | ")}
                           </td>
                         </tr>
                       ))}
@@ -842,22 +1018,51 @@ export default function App() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                          {stockSnapshot.items.map((item) => (
+                          {stockSnapshot.items.map((item) => {
+                            const draftValue = stockDraftByProductId[item.productId] ?? "";
+                            const trimmedDraft = draftValue.trim();
+                            const isEmptyDraft = trimmedDraft.length === 0;
+                            const isValidInteger = isEmptyDraft || /^\d+$/.test(trimmedDraft);
+                            const parsedDraft = /^\d+$/.test(trimmedDraft)
+                              ? Number(trimmedDraft)
+                              : NaN;
+                            const hasChanged = !isEmptyDraft && parsedDraft !== item.quantity;
+
+                            return (
                             <tr key={item.productId}>
                               <td className="px-3 py-2">{item.productName}</td>
                               <td className="px-3 py-2 text-right font-semibold">{item.quantity}</td>
                               <td className="px-3 py-2 text-right">
                                 <input
-                                  type="number"
-                                  min={0}
-                                  value={stockDraftByProductId[item.productId] ?? "0"}
-                                  onChange={(event) =>
+                                  type="text"
+                                  inputMode="numeric"
+                                  pattern="[0-9]*"
+                                  data-stock-input="true"
+                                  placeholder={String(item.quantity)}
+                                  value={draftValue}
+                                  onKeyDown={(event) => {
+                                    if (event.key === "ArrowDown") {
+                                      moveStockInputFocus(event, 1);
+                                    }
+                                    if (event.key === "ArrowUp") {
+                                      moveStockInputFocus(event, -1);
+                                    }
+                                  }}
+                                  onChange={(event) => {
+                                    const nextValue = event.target.value;
+                                    if (!/^\d*$/.test(nextValue)) {
+                                      return;
+                                    }
                                     setStockDraftByProductId((current) => ({
                                       ...current,
-                                      [item.productId]: event.target.value
-                                    }))
-                                  }
-                                  className="w-24 rounded-lg border border-slate-300 px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-900"
+                                      [item.productId]: nextValue
+                                    }));
+                                  }}
+                                  className={`w-24 rounded-lg border px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-900 ${
+                                    hasChanged
+                                      ? "border-accent-light text-slate-900 dark:border-accent-dark dark:text-slate-100"
+                                      : "border-slate-300 text-slate-900 dark:text-slate-100"
+                                  }`}
                                 />
                               </td>
                               <td className="px-3 py-2">
@@ -878,13 +1083,15 @@ export default function App() {
                                 <button
                                   type="button"
                                   onClick={() => void updateStock(item.productId)}
-                                  className="rounded-lg bg-accent-light px-3 py-1 text-xs font-semibold text-white dark:bg-accent-dark dark:text-slate-900"
+                                  disabled={!hasChanged || !isValidInteger || isBusy}
+                                  className="rounded-lg bg-accent-light px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-accent-dark dark:text-slate-900"
                                 >
                                   Save
                                 </button>
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -940,74 +1147,14 @@ export default function App() {
                 />
               </div>
               <div className="mt-4 flex flex-col gap-4">
-                {selectedCartItems.length > 0 && (
-                  <div className="rounded-xl border border-dashed border-slate-400/60 px-4 py-3 dark:border-slate-500">
-                    <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-300">
-                      Selected
-                    </p>
-                    <div className="mt-3 flex flex-col gap-4">
-                      {selectedCartItems.map((item) => (
-                        <div
-                          key={`${item.productId}-${item.isMemberPrice}`}
-                          className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 pb-3 last:border-b-0 dark:border-white/10"
-                        >
-                          <div>
-                            <p className="font-medium">
-                              {item.name}{" "}
-                              <span className="text-xs uppercase text-slate-500">
-                                {formatPriceMode(item.isMemberPrice)}
-                              </span>
-                            </p>
-                            <p className="text-sm text-slate-500 dark:text-slate-300">
-                              {currencyFormatter.format(item.unitPrice)} - stock{" "}
-                              {item.inventoryCount}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleQuantityChange(
-                                  item.productId,
-                                  -1,
-                                  item.isMemberPrice
-                                )
-                              }
-                              className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
-                            >
-                              -
-                            </button>
-                            <span className="w-6 text-center text-sm font-semibold">
-                              {item.quantity}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleQuantityChange(
-                                  item.productId,
-                                  1,
-                                  item.isMemberPrice
-                                )
-                              }
-                              className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {unselectedFilteredProducts.length === 0 &&
-                  selectedCartItems.length === 0 && (
+                {filteredProducts.length === 0 && (
                   <p className="text-sm text-slate-500">
                     {products.length === 0
                       ? "No products configured."
                       : "No products match search."}
                   </p>
                 )}
-                {unselectedFilteredProducts.map((product) => {
+                {filteredProducts.map((product) => {
                   const unitPrice = getUnitPrice(
                     product,
                     priceCategories,
@@ -1018,10 +1165,10 @@ export default function App() {
                   return (
                     <div
                       key={product.id}
-                      className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 pb-3 last:border-b-0 dark:border-white/10"
+                      className="flex items-center justify-between gap-3 border-b border-black/5 pb-3 last:border-b-0 dark:border-white/10"
                     >
-                      <div>
-                        <p className="font-medium">
+                      <div className="min-w-0 flex-1 pr-2">
+                        <p className="font-medium break-words">
                           {product.name}{" "}
                           <span className="text-xs uppercase text-slate-500">
                             {formatPriceMode(defaultIsMemberPrice)}
@@ -1032,23 +1179,23 @@ export default function App() {
                           {product.inventoryCount}
                         </p>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="shrink-0 flex items-center gap-1.5 self-center">
                         <button
                           type="button"
                           onClick={() =>
                             handleQuantityChange(product.id, -1, defaultIsMemberPrice)
                           }
-                          className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
+                          className="h-10 w-10 rounded-xl border border-slate-300 text-xl leading-none transition hover:border-slate-500 dark:border-slate-600"
                         >
                           -
                         </button>
-                        <span className="w-6 text-center text-sm font-semibold">{quantity}</span>
+                        <span className="w-5 text-center text-sm font-semibold">{quantity}</span>
                         <button
                           type="button"
                           onClick={() =>
                             handleQuantityChange(product.id, 1, defaultIsMemberPrice)
                           }
-                          className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
+                          className="h-10 w-10 rounded-xl border border-slate-300 text-xl leading-none transition hover:border-slate-500 dark:border-slate-600"
                         >
                           +
                         </button>
@@ -1138,6 +1285,100 @@ export default function App() {
               </div>
             </aside>
           </section>
+        )}
+
+        {uiMode === "pos" && view === "cart" && showCheckoutConfirm && (
+          <div
+            className="fixed inset-0 z-40 flex items-start justify-center bg-black/50 p-4 pt-6"
+            onClick={() => setShowCheckoutConfirm(false)}
+          >
+            <div
+              className="w-full max-w-2xl rounded-2xl border border-black/10 bg-white p-6 shadow-xl dark:border-white/10 dark:bg-slate-900"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold">Confirm checkout</h3>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
+                    Review and edit your cart before generating the payment QR.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void startCheckout()}
+                  disabled={!hasCheckoutItems || isBusy}
+                  className="rounded-xl bg-accent-light px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
+                >
+                  Confirm ({totalLabel})
+                </button>
+              </div>
+
+              <div className="mt-4 max-h-[50vh] overflow-y-auto rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                {cartItemsForCheckout.length === 0 ? (
+                  <p className="text-sm text-slate-500">Your cart is empty.</p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {cartItemsForCheckout.map((item) => (
+                      <div
+                        key={`${item.productId}-${item.isMemberPrice}`}
+                        className="flex items-center justify-between gap-3 border-b border-black/5 pb-3 last:border-b-0 dark:border-white/10"
+                      >
+                        <div className="min-w-0 flex-1 pr-2">
+                          <p className="font-medium break-words">
+                            {item.name}{" "}
+                            <span className="text-xs uppercase text-slate-500">
+                              {formatPriceMode(item.isMemberPrice)}
+                            </span>
+                          </p>
+                          <p className="text-sm text-slate-500 dark:text-slate-300">
+                            {currencyFormatter.format(item.unitPrice)}
+                          </p>
+                        </div>
+                        <div className="shrink-0 flex items-center gap-1.5 self-center">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleQuantityChange(item.productId, -1, item.isMemberPrice)
+                            }
+                            className="h-10 w-10 rounded-xl border border-slate-300 text-xl leading-none transition hover:border-slate-500 dark:border-slate-600"
+                          >
+                            -
+                          </button>
+                          <span className="w-5 text-center text-sm font-semibold">
+                            {item.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleQuantityChange(item.productId, 1, item.isMemberPrice)
+                            }
+                            className="h-10 w-10 rounded-xl border border-slate-300 text-xl leading-none transition hover:border-slate-500 dark:border-slate-600"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4 flex items-center justify-between">
+                <p className="text-sm text-slate-600 dark:text-slate-300">Total</p>
+                <p className="text-xl font-semibold">{totalLabel}</p>
+              </div>
+
+              <div className="mt-6 flex flex-wrap justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCheckoutConfirm(false)}
+                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500 dark:border-slate-600 dark:text-slate-200"
+                >
+                  Back
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
