@@ -60,6 +60,27 @@ function scrollToTop(): void {
 
 let cashierAudioContext: AudioContext | null = null;
 
+type NavigatorWithAudioSession = Navigator & {
+  audioSession?: {
+    type?: string;
+  };
+};
+
+function enableMediaPlaybackAudioMode(): void {
+  if (typeof navigator === "undefined") {
+    return;
+  }
+
+  try {
+    const nav = navigator as NavigatorWithAudioSession;
+    if (nav.audioSession && typeof nav.audioSession.type === "string") {
+      nav.audioSession.type = "playback";
+    }
+  } catch {
+    // Best-effort only; unsupported browsers should continue normally.
+  }
+}
+
 function getCashierAudioContext(): AudioContext | null {
   if (typeof window === "undefined") {
     return null;
@@ -81,6 +102,7 @@ function getCashierAudioContext(): AudioContext | null {
 }
 
 function playCashierOpenSound(): void {
+  enableMediaPlaybackAudioMode();
   const context = getCashierAudioContext();
   if (!context) {
     return;
@@ -127,6 +149,7 @@ function playCashierOpenSound(): void {
 }
 
 function playCashierCloseSound(): void {
+  enableMediaPlaybackAudioMode();
   const context = getCashierAudioContext();
   if (!context) {
     return;
