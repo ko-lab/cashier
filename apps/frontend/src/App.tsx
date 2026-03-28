@@ -1490,40 +1490,13 @@ export default function App() {
                 ) : (
                   <div className="mx-auto h-56 w-56 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
                 )}
-                <div className="mt-4">
-                  <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
-                    Amount due
-                  </p>
-                  <p className="text-2xl font-semibold">{totalLabel}</p>
-                </div>
-                {structuredCommunication && (
-                  <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left dark:border-slate-700 dark:bg-slate-900/40">
-                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                      Gestructureerde mededeling
-                    </p>
-                    <p className="mt-1 font-mono text-sm font-semibold text-slate-800 dark:text-slate-100">
-                      {structuredCommunication}
-                    </p>
-                  </div>
-                )}
-                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left dark:border-slate-700 dark:bg-slate-900/40">
-                  <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Bank account (manual transfer)
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-100">
-                    {paymentIbanName}
-                  </p>
-                  <p className="font-mono text-sm text-slate-700 dark:text-slate-200">
-                    {paymentIbanNumber}
-                  </p>
-                </div>
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
                 <button
                   type="button"
                   onClick={() => finalize("completed")}
                   disabled={isBusy}
-                  className="rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50"
+                  className="rounded-xl bg-emerald-500 px-6 py-3 text-base font-bold text-white transition hover:brightness-95 disabled:opacity-50"
                 >
                   I paid
                 </button>
@@ -1535,6 +1508,36 @@ export default function App() {
                 >
                   Cancel
                 </button>
+              </div>
+              <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-left dark:border-slate-700 dark:bg-slate-900/40">
+                <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  Manual transfer details
+                </p>
+                <div className="mt-3">
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Amount due</p>
+                  <p className="text-xl font-semibold">{totalLabel}</p>
+                </div>
+                {structuredCommunication && (
+                  <div className="mt-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Gestructureerde mededeling
+                    </p>
+                    <p className="mt-1 font-mono text-sm font-semibold text-slate-800 dark:text-slate-100">
+                      {structuredCommunication}
+                    </p>
+                  </div>
+                )}
+                <div className="mt-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Bank account
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    {paymentIbanName}
+                  </p>
+                  <p className="font-mono text-sm text-slate-700 dark:text-slate-200">
+                    {paymentIbanNumber}
+                  </p>
+                </div>
               </div>
             </div>
             <aside className="rounded-2xl border border-black/10 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
