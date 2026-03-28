@@ -97,6 +97,19 @@ function formatAdminDate(value: string): string {
   });
 }
 
+function buildCartBreakdownJson(items: Transaction["items"]): string {
+  return JSON.stringify(
+    items.map((item) => ({
+      productId: item.productId,
+      name: item.name,
+      quantity: item.quantity,
+      isMemberPrice: item.isMemberPrice,
+      unitPrice: item.unitPrice,
+      lineTotal: item.lineTotal
+    }))
+  );
+}
+
 function buildTransactionsCsv(transactions: Transaction[]): string {
   const header = [
     "id",
@@ -107,9 +120,7 @@ function buildTransactionsCsv(transactions: Transaction[]): string {
     "items"
   ];
   const lines = transactions.map((transaction) => {
-    const itemsSummary = transaction.items
-      .map((item) => `${item.name} x${item.quantity}`)
-      .join(" | ");
+    const itemsSummary = buildCartBreakdownJson(transaction.items);
     return [
       transaction.id,
       transaction.createdAt,
@@ -121,6 +132,39 @@ function buildTransactionsCsv(transactions: Transaction[]): string {
       .map(csvEscape)
       .join(",");
   });
+  return [header.join(","), ...lines].join("\n");
+}
+
+function buildStockEventsCsv(
+  events: AdminGetStockOutput["events"],
+  productNameById: Map<string, string>
+): string {
+  const header = ["id", "createdAt", "productId", "productName", "type", "quantity", "note"];
+  const lines = events.map((event) =>
+    [
+      event.id,
+      event.createdAt,
+      event.productId,
+      productNameById.get(event.productId) ?? "",
+      event.type,
+      event.quantity,
+      event.note ?? ""
+    ]
+      .map(csvEscape)
+      .join(",")
+  );
+
+  return [header.join(","), ...lines].join("\n");
+}
+
+function buildStockCountsCsv(items: AdminGetStockOutput["items"]): string {
+  const header = ["productId", "productName", "currentQuantity", "updatedAt"];
+  const lines = items.map((item) =>
+    [item.productId, item.productName, item.quantity, item.updatedAt ?? ""]
+      .map(csvEscape)
+      .join(",")
+  );
+
   return [header.join(","), ...lines].join("\n");
 }
 
@@ -182,6 +226,8 @@ export default function App() {
   const [stockSnapshot, setStockSnapshot] = useState<AdminGetStockOutput | null>(null);
   const [stockDraftByProductId, setStockDraftByProductId] = useState<Record<string, string>>({});
   const [stockNoteByProductId, setStockNoteByProductId] = useState<Record<string, string>>({});
+  const [stockProductQuery, setStockProductQuery] = useState("");
+  const [stockCurrentValueFilter, setStockCurrentValueFilter] = useState("");
   const [isDark, setIsDark] = useState(readStoredTheme);
   const [updateReady, setUpdateReady] = useState(false);
   const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
@@ -481,6 +527,43 @@ export default function App() {
     );
   }, [adminFilteredTransactions]);
 
+  const filteredStockItems = useMemo(() => {
+    if (!stockSnapshot) {
+      return [];
+    }
+
+    const productQuery = stockProductQuery.trim().toLowerCase();
+    const currentFilterRaw = stockCurrentValueFilter.trim();
+    const hasCurrentFilter = currentFilterRaw.length > 0;
+    const currentFilter = Number(currentFilterRaw);
+
+    return stockSnapshot.items.filter((item) => {
+      if (productQuery) {
+        const haystack = `${item.productName} ${item.productId}`.toLowerCase();
+        if (!haystack.includes(productQuery)) {
+          return false;
+        }
+      }
+
+      if (hasCurrentFilter) {
+        if (!Number.isFinite(currentFilter) || item.quantity !== currentFilter) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [stockCurrentValueFilter, stockProductQuery, stockSnapshot]);
+
+  const filteredStockEvents = useMemo(() => {
+    if (!stockSnapshot) {
+      return [];
+    }
+
+    const allowedProductIds = new Set(filteredStockItems.map((item) => item.productId));
+    return stockSnapshot.events.filter((event) => allowedProductIds.has(event.productId));
+  }, [filteredStockItems, stockSnapshot]);
+
   const isBusy = loading || adminLoading;
   const hasCheckoutItems = cart.some((item) => item.quantity > 0);
   const isSafeToRefresh =
@@ -581,6 +664,8 @@ export default function App() {
       setAdminPassword("");
       setAdminStatusFilter("all");
       setAdminProductFilter("all");
+      setStockProductQuery("");
+      setStockCurrentValueFilter("");
       setAdminFromDate("");
       setAdminToDate("");
     } catch {
@@ -597,24 +682,40 @@ export default function App() {
     }
 
     const draftValue = (stockDraftByProductId[productId] ?? "").trim();
-    if (draftValue.length === 0) {
+    const note = stockNoteByProductId[productId]?.trim() ?? "";
+    const hasNote = note.length > 0;
+    const hasQuantityDraft = draftValue.length > 0;
+
+    if (!hasQuantityDraft && !hasNote) {
       return;
     }
 
-    if (!/^\d+$/.test(draftValue)) {
-      setAdminError("Stock must be a non-negative integer.");
+    if (hasNote && /[;,]/.test(note)) {
+      setAdminError("Comment cannot contain commas or semicolons.");
       return;
     }
 
-    const quantity = Number(draftValue);
-    if (!Number.isSafeInteger(quantity) || quantity < 0) {
-      setAdminError("Stock must be a non-negative integer.");
-      return;
+    let quantity: number | undefined;
+    if (hasQuantityDraft) {
+      if (!/^-?\d+$/.test(draftValue)) {
+        setAdminError("Stock must be an integer.");
+        return;
+      }
+
+      quantity = Number(draftValue);
+      if (!Number.isSafeInteger(quantity)) {
+        setAdminError("Stock must be an integer.");
+        return;
+      }
     }
 
     const currentQuantity =
       stockSnapshot?.items.find((item) => item.productId === productId)?.quantity;
-    if (typeof currentQuantity === "number" && currentQuantity === quantity) {
+    if (
+      typeof currentQuantity === "number" &&
+      quantity === currentQuantity &&
+      !hasNote
+    ) {
       return;
     }
 
@@ -625,7 +726,7 @@ export default function App() {
         password: adminSessionPassword,
         productId,
         quantity,
-        note: stockNoteByProductId[productId]?.trim() || undefined
+        note: hasNote ? note : undefined
       });
       setStockSnapshot(response);
       setStockDraftByProductId(
@@ -644,6 +745,8 @@ export default function App() {
     setStockSnapshot(null);
     setStockDraftByProductId({});
     setStockNoteByProductId({});
+    setStockProductQuery("");
+    setStockCurrentValueFilter("");
     setAdminSessionPassword("");
     setAdminPassword("");
     setAdminError(null);
@@ -662,6 +765,41 @@ export default function App() {
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     link.href = url;
     link.download = `transactions-${timestamp}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadFilteredStockEventsCsv = () => {
+    if (!stockSnapshot) {
+      return;
+    }
+
+    const productNameById = new Map(
+      stockSnapshot.items.map((item) => [item.productId, item.productName])
+    );
+    const csv = buildStockEventsCsv(filteredStockEvents, productNameById);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    link.href = url;
+    link.download = `stock-events-${timestamp}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadFilteredStockCountsCsv = () => {
+    const csv = buildStockCountsCsv(filteredStockItems);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    link.href = url;
+    link.download = `stock-counts-${timestamp}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -981,8 +1119,8 @@ export default function App() {
                           <td className="whitespace-nowrap px-3 py-2 text-right">
                             {currencyFormatter.format(entry.total)}
                           </td>
-                          <td className="px-3 py-2 text-left">
-                            {entry.items.map((item) => `${item.name} x${item.quantity}`).join(" | ")}
+                          <td className="px-3 py-2 text-left font-mono text-xs">
+                            {buildCartBreakdownJson(entry.items)}
                           </td>
                         </tr>
                       ))}
@@ -1004,6 +1142,61 @@ export default function App() {
 
                 {adminTab === "stock" && stockSnapshot && (
                   <div className="flex flex-col gap-4">
+                    <div className="grid gap-3 md:grid-cols-4">
+                      <label className="flex flex-col gap-2 text-sm">
+                        <span className="text-xs uppercase tracking-wide text-slate-500">
+                          Product
+                        </span>
+                        <input
+                          type="search"
+                          value={stockProductQuery}
+                          onChange={(event) => setStockProductQuery(event.target.value)}
+                          placeholder="Name or id"
+                          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-2 text-sm">
+                        <span className="text-xs uppercase tracking-wide text-slate-500">
+                          Current value
+                        </span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="-?[0-9]*"
+                          value={stockCurrentValueFilter}
+                          onChange={(event) => {
+                            const next = event.target.value;
+                            if (!/^-?\d*$/.test(next)) {
+                              return;
+                            }
+                            setStockCurrentValueFilter(next);
+                          }}
+                          placeholder="Exact quantity"
+                          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                        />
+                      </label>
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          onClick={downloadFilteredStockEventsCsv}
+                          disabled={filteredStockEvents.length === 0}
+                          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600"
+                        >
+                          Export stock events CSV
+                        </button>
+                      </div>
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          onClick={downloadFilteredStockCountsCsv}
+                          disabled={filteredStockItems.length === 0}
+                          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600"
+                        >
+                          Export current stock CSV
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
                       <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
                         <thead className="bg-slate-50 dark:bg-slate-800/40">
@@ -1016,93 +1209,112 @@ export default function App() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                          {stockSnapshot.items.map((item) => {
+                          {filteredStockItems.map((item) => {
                             const draftValue = stockDraftByProductId[item.productId] ?? "";
                             const trimmedDraft = draftValue.trim();
                             const isEmptyDraft = trimmedDraft.length === 0;
-                            const isValidInteger = isEmptyDraft || /^\d+$/.test(trimmedDraft);
-                            const parsedDraft = /^\d+$/.test(trimmedDraft)
+                            const isValidInteger = isEmptyDraft || /^-?\d+$/.test(trimmedDraft);
+                            const parsedDraft = /^-?\d+$/.test(trimmedDraft)
                               ? Number(trimmedDraft)
                               : NaN;
                             const hasChanged = !isEmptyDraft && parsedDraft !== item.quantity;
+                            const noteValue = stockNoteByProductId[item.productId] ?? "";
+                            const trimmedNote = noteValue.trim();
+                            const hasNoteOnly = hasChanged === false && trimmedNote.length > 0;
+                            const canSubmit = hasChanged || hasNoteOnly;
+                            const actionLabel = hasNoteOnly ? "Add comment" : "Update stock";
 
                             return (
-                            <tr key={item.productId}>
-                              <td className="px-3 py-2">{item.productName}</td>
-                              <td className="px-3 py-2 text-right font-semibold">{item.quantity}</td>
-                              <td className="px-3 py-2 text-right">
-                                <input
-                                  type="text"
-                                  inputMode="numeric"
-                                  pattern="[0-9]*"
-                                  data-stock-input="true"
-                                  placeholder={String(item.quantity)}
-                                  value={draftValue}
-                                  onKeyDown={(event) => {
-                                    if (event.key === "ArrowDown") {
-                                      moveStockInputFocus(event, 1);
-                                    }
-                                    if (event.key === "ArrowUp") {
-                                      moveStockInputFocus(event, -1);
-                                    }
-                                  }}
-                                  onChange={(event) => {
-                                    const nextValue = event.target.value;
-                                    if (!/^\d*$/.test(nextValue)) {
-                                      return;
-                                    }
-                                    setStockDraftByProductId((current) => ({
-                                      ...current,
-                                      [item.productId]: nextValue
-                                    }));
-                                  }}
-                                  className={`w-24 rounded-lg border px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-900 ${
-                                    hasChanged
-                                      ? "border-accent-light text-slate-900 dark:border-accent-dark dark:text-slate-100"
-                                      : "border-slate-300 text-slate-900 dark:text-slate-100"
-                                  }`}
-                                />
-                              </td>
-                              <td className="px-3 py-2">
-                                <input
-                                  type="text"
-                                  value={stockNoteByProductId[item.productId] ?? ""}
-                                  placeholder="Manual count"
-                                  onChange={(event) =>
-                                    setStockNoteByProductId((current) => ({
-                                      ...current,
-                                      [item.productId]: event.target.value
-                                    }))
-                                  }
-                                  className="w-full rounded-lg border border-slate-300 px-2 py-1 dark:border-slate-600 dark:bg-slate-900"
-                                />
-                              </td>
-                              <td className="px-3 py-2 text-right">
-                                <button
-                                  type="button"
-                                  onClick={() => void updateStock(item.productId)}
-                                  disabled={!hasChanged || !isValidInteger || isBusy}
-                                  className="rounded-lg bg-accent-light px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-accent-dark dark:text-slate-900"
-                                >
-                                  Save
-                                </button>
-                              </td>
-                            </tr>
+                              <tr key={item.productId}>
+                                <td className="px-3 py-2">{item.productName}</td>
+                                <td className="px-3 py-2 text-right font-semibold">{item.quantity}</td>
+                                <td className="px-3 py-2 text-right">
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="-?[0-9]*"
+                                    data-stock-input="true"
+                                    placeholder={String(item.quantity)}
+                                    value={draftValue}
+                                    onKeyDown={(event) => {
+                                      if (event.key === "ArrowDown") {
+                                        moveStockInputFocus(event, 1);
+                                      }
+                                      if (event.key === "ArrowUp") {
+                                        moveStockInputFocus(event, -1);
+                                      }
+                                    }}
+                                    onChange={(event) => {
+                                      const nextValue = event.target.value;
+                                      if (!/^-?\d*$/.test(nextValue)) {
+                                        return;
+                                      }
+                                      setStockDraftByProductId((current) => ({
+                                        ...current,
+                                        [item.productId]: nextValue
+                                      }));
+                                    }}
+                                    className={`w-24 rounded-lg border px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-900 ${
+                                      hasChanged
+                                        ? "border-accent-light text-slate-900 dark:border-accent-dark dark:text-slate-100"
+                                        : "border-slate-300 text-slate-900 dark:text-slate-100"
+                                    }`}
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="text"
+                                    value={stockNoteByProductId[item.productId] ?? ""}
+                                    placeholder="Comment"
+                                    onChange={(event) => {
+                                      const nextValue = event.target.value;
+                                      if (/[;,]/.test(nextValue)) {
+                                        return;
+                                      }
+                                      setStockNoteByProductId((current) => ({
+                                        ...current,
+                                        [item.productId]: nextValue
+                                      }));
+                                    }}
+                                    className="w-full rounded-lg border border-slate-300 px-2 py-1 dark:border-slate-600 dark:bg-slate-900"
+                                  />
+                                </td>
+                                <td className="px-3 py-2 text-right">
+                                  <button
+                                    type="button"
+                                    onClick={() => void updateStock(item.productId)}
+                                    disabled={!canSubmit || !isValidInteger || isBusy}
+                                    className="rounded-lg bg-accent-light px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-accent-dark dark:text-slate-900"
+                                  >
+                                    {actionLabel}
+                                  </button>
+                                </td>
+                              </tr>
                             );
                           })}
+                          {filteredStockItems.length === 0 && (
+                            <tr>
+                              <td
+                                colSpan={5}
+                                className="px-3 py-6 text-center text-slate-500 dark:text-slate-300"
+                              >
+                                No stock items match current filters.
+                              </td>
+                            </tr>
+                          )}
                         </tbody>
                       </table>
                     </div>
                     <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                       <h3 className="text-sm font-semibold">Recent stock events</h3>
                       <ul className="mt-2 space-y-1 text-xs text-slate-600 dark:text-slate-300">
-                        {stockSnapshot.events.slice(0, 12).map((event) => (
+                        {filteredStockEvents.slice(0, 12).map((event) => (
                           <li key={event.id}>
                             {new Date(event.createdAt).toLocaleString()} — {event.productId} — {event.type} {event.quantity}
                             {event.note ? ` (${event.note})` : ""}
                           </li>
                         ))}
-                        {stockSnapshot.events.length === 0 && <li>No stock events yet.</li>}
+                        {filteredStockEvents.length === 0 && <li>No stock events for current filter.</li>}
                       </ul>
                     </div>
                   </div>
