@@ -1211,7 +1211,7 @@ export default function App() {
                             const trimmedNote = noteValue.trim();
                             const hasNoteOnly = hasChanged === false && trimmedNote.length > 0;
                             const canSubmit = hasChanged || hasNoteOnly;
-                            const actionLabel = hasChanged ? "Update stock" : "Add comment";
+                            const actionLabel = hasNoteOnly ? "Add comment" : "Update stock";
 
                             return (
                               <tr key={item.productId}>
