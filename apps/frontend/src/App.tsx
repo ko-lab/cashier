@@ -142,6 +142,14 @@ function readInitialAdminTab(): AdminTab {
   return value === "stock" ? "stock" : "transactions";
 }
 
+function readAdminUnlockUsername(): string {
+  if (typeof window === "undefined") {
+    return "cashier_admin";
+  }
+
+  return `${window.location.origin}_admin`;
+}
+
 export default function App() {
   const [uiMode, setUiMode] = useState<UiMode>(readInitialUiMode);
   const [products, setProducts] = useState<Product[]>([]);
@@ -177,6 +185,7 @@ export default function App() {
   const [isDark, setIsDark] = useState(readStoredTheme);
   const [updateReady, setUpdateReady] = useState(false);
   const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
+  const [adminUnlockUsername] = useState(readAdminUnlockUsername);
   const unloadCanceledTransactionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -751,6 +760,8 @@ Logout
                 <input
                   type="text"
                   name="admin_unlock_user"
+                  value={adminUnlockUsername}
+                  readOnly
                   autoComplete="username"
                   tabIndex={-1}
                   aria-hidden="true"
