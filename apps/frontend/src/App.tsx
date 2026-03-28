@@ -312,6 +312,8 @@ export default function App() {
     () => (transaction ? toStructuredCommunication(transaction.id) : null),
     [transaction]
   );
+  const paymentIbanName = import.meta.env.VITE_IBAN_NAME ?? "KO-LAB";
+  const paymentIbanNumber = import.meta.env.VITE_IBAN ?? "BE00000000000000";
 
   useEffect(() => {
     if (!transaction || !structuredCommunication) {
@@ -319,8 +321,6 @@ export default function App() {
       return;
     }
 
-    const ibanName = import.meta.env.VITE_IBAN_NAME ?? "KO-LAB";
-    const ibanNumber = import.meta.env.VITE_IBAN ?? "BE00000000000000";
     const payMessage = structuredCommunication;
     const amount = transaction.total.toFixed(2);
     const payload = [
@@ -329,8 +329,8 @@ export default function App() {
       "1",
       "SCT",
       "",
-      `${ibanName}`,
-      `${ibanNumber}`,
+      `${paymentIbanName}`,
+      `${paymentIbanNumber}`,
       `EUR${amount}`,
       "",
       "",
@@ -352,7 +352,7 @@ export default function App() {
     setQrImageSrc(
       `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrSvg)}`
     );
-  }, [structuredCommunication, transaction]);
+  }, [paymentIbanName, paymentIbanNumber, structuredCommunication, transaction]);
 
   useEffect(() => {
     if (uiMode !== "pos" || view !== "checkout" || !transaction) {
@@ -1493,6 +1493,17 @@ export default function App() {
                     </p>
                   </div>
                 )}
+                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left dark:border-slate-700 dark:bg-slate-900/40">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Bank account (manual transfer)
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    {paymentIbanName}
+                  </p>
+                  <p className="font-mono text-sm text-slate-700 dark:text-slate-200">
+                    {paymentIbanNumber}
+                  </p>
+                </div>
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
                 <button
