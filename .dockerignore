@@ -1,6 +1,6 @@
 node_modules
 .pnpm-store
-.git
+# .git included to allow frontend build fallback version resolution from git metadata
 .gitignored
 apps/**/node_modules
 apps/**/dist
