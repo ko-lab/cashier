@@ -950,7 +950,7 @@ export default function App() {
                 <>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Total tx</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Filtered tx</p>
                     <p className="mt-2 text-xl font-semibold">{adminTotals.count}</p>
                   </div>
                   <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
@@ -965,7 +965,7 @@ export default function App() {
                   </div>
                   <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                     <p className="text-xs uppercase tracking-wide text-slate-500">
-                      Total amount
+                      Filtered amount
                     </p>
                     <p className="mt-2 text-xl font-semibold">
                       {currencyFormatter.format(adminTotals.amount)}
