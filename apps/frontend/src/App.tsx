@@ -58,6 +58,52 @@ function scrollToTop(): void {
   }
 }
 
+function playCashierOpenSound(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const AudioContextCtor = (
+    window.AudioContext ?? (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+  ) as typeof AudioContext | undefined;
+
+  if (!AudioContextCtor) {
+    return;
+  }
+
+  try {
+    const context = new AudioContextCtor();
+    const now = context.currentTime;
+
+    const playTone = (frequency: number, startAt: number, duration: number, gain: number) => {
+      const oscillator = context.createOscillator();
+      const volume = context.createGain();
+
+      oscillator.type = "triangle";
+      oscillator.frequency.setValueAtTime(frequency, startAt);
+      oscillator.connect(volume);
+      volume.connect(context.destination);
+
+      volume.gain.setValueAtTime(0.0001, startAt);
+      volume.gain.exponentialRampToValueAtTime(gain, startAt + 0.01);
+      volume.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+
+      oscillator.start(startAt);
+      oscillator.stop(startAt + duration + 0.01);
+    };
+
+    playTone(280, now, 0.1, 0.08);
+    playTone(420, now + 0.08, 0.12, 0.09);
+    playTone(640, now + 0.18, 0.12, 0.1);
+
+    window.setTimeout(() => {
+      void context.close();
+    }, 500);
+  } catch {
+    // Ignore audio errors and continue checkout flow.
+  }
+}
+
 function playCashierCloseSound(): void {
   if (typeof window === "undefined") {
     return;
@@ -459,6 +505,7 @@ export default function App() {
       setShowCheckoutConfirm(false);
       setTransaction(response);
       setView("checkout");
+      playCashierOpenSound();
       scrollToTop();
     } catch {
       setStatus({ tone: "error", text: "Could not start transaction." });
