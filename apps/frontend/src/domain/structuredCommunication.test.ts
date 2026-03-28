@@ -8,6 +8,10 @@ describe("toStructuredCommunication", () => {
     expect(value).toMatch(/^\+\+\+\d{3}\/\d{4}\/\d{5}\+\+\+$/);
   });
 
+  it("uses a 12-digit transaction id directly as structured communication", () => {
+    expect(toStructuredCommunication("123456789012")).toBe("+++123/4567/89012+++");
+  });
+
   it("is deterministic for the same transaction id", () => {
     const id = "tx-same";
     expect(toStructuredCommunication(id)).toBe(toStructuredCommunication(id));

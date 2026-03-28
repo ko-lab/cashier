@@ -1,5 +1,5 @@
 import { ORPCError } from "@orpc/server";
-import { randomUUID } from "node:crypto";
+import { randomInt } from "node:crypto";
 import type {
   CartItemInput,
   PriceCategory,
@@ -57,6 +57,23 @@ function sumTotal(items: TransactionItem[]): number {
   );
 }
 
+function createStructuredTransactionId(): string {
+  const base = randomInt(0, 10_000_000_000);
+  const checksumRaw = base % 97;
+  const checksum = checksumRaw === 0 ? 97 : checksumRaw;
+  return `${base.toString().padStart(10, "0")}${checksum
+    .toString()
+    .padStart(2, "0")}`;
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return /unique constraint/i.test(error.message);
+}
+
 export type TransactionService = {
   startTransaction: (items: CartItemInput[]) => Promise<Transaction>;
   finalizeTransaction: (
@@ -79,18 +96,31 @@ export function createTransactionService(
         items
       );
       const total = sumTotal(lineItems);
+      const createdAt = new Date().toISOString();
 
-      const transaction: Transaction = {
-        id: randomUUID(),
-        createdAt: new Date().toISOString(),
-        status: "pending",
-        total,
-        items: lineItems
-      };
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const transaction: Transaction = {
+          id: createStructuredTransactionId(),
+          createdAt,
+          status: "pending",
+          total,
+          items: lineItems
+        };
 
-      await transactionStore.create(transaction);
+        try {
+          await transactionStore.create(transaction);
+          return transaction;
+        } catch (error) {
+          if (attempt < 4 && isUniqueConstraintError(error)) {
+            continue;
+          }
+          throw error;
+        }
+      }
 
-      return transaction;
+      throw new ORPCError("INTERNAL_SERVER_ERROR", {
+        data: { message: "Could not create transaction id" }
+      });
     },
     async finalizeTransaction(id, status) {
       const existing = await transactionStore.getById(id);

@@ -62,6 +62,7 @@ describe("transaction service", () => {
 
     expect(transaction.status).toBe("pending");
     expect(transaction.total).toBe(6);
+    expect(transaction.id).toMatch(/^\d{12}$/);
 
     const saved = await transactionStore.getById(transaction.id);
     expect(saved?.id).toBe(transaction.id);
