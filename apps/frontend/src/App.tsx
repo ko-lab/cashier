@@ -75,30 +75,38 @@ function playCashierOpenSound(): void {
     const context = new AudioContextCtor();
     const now = context.currentTime;
 
-    const playTone = (frequency: number, startAt: number, duration: number, gain: number) => {
+    const playTone = (
+      frequency: number,
+      startAt: number,
+      duration: number,
+      gain: number,
+      type: OscillatorType = "square"
+    ) => {
       const oscillator = context.createOscillator();
       const volume = context.createGain();
 
-      oscillator.type = "triangle";
+      oscillator.type = type;
       oscillator.frequency.setValueAtTime(frequency, startAt);
       oscillator.connect(volume);
       volume.connect(context.destination);
 
       volume.gain.setValueAtTime(0.0001, startAt);
-      volume.gain.exponentialRampToValueAtTime(gain, startAt + 0.01);
+      volume.gain.exponentialRampToValueAtTime(gain, startAt + 0.02);
       volume.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
 
       oscillator.start(startAt);
-      oscillator.stop(startAt + duration + 0.01);
+      oscillator.stop(startAt + duration + 0.02);
     };
 
-    playTone(280, now, 0.1, 0.08);
-    playTone(420, now + 0.08, 0.12, 0.09);
-    playTone(640, now + 0.18, 0.12, 0.1);
+    // Retro "register opening" arpeggio, longer and louder.
+    playTone(220, now, 0.2, 0.16);
+    playTone(330, now + 0.14, 0.22, 0.17);
+    playTone(494, now + 0.3, 0.26, 0.18);
+    playTone(659, now + 0.46, 0.32, 0.2);
 
     window.setTimeout(() => {
       void context.close();
-    }, 500);
+    }, 1200);
   } catch {
     // Ignore audio errors and continue checkout flow.
   }
@@ -121,30 +129,38 @@ function playCashierCloseSound(): void {
     const context = new AudioContextCtor();
     const now = context.currentTime;
 
-    const playTone = (frequency: number, startAt: number, duration: number, gain: number) => {
+    const playTone = (
+      frequency: number,
+      startAt: number,
+      duration: number,
+      gain: number,
+      type: OscillatorType = "square"
+    ) => {
       const oscillator = context.createOscillator();
       const volume = context.createGain();
 
-      oscillator.type = "triangle";
+      oscillator.type = type;
       oscillator.frequency.setValueAtTime(frequency, startAt);
       oscillator.connect(volume);
       volume.connect(context.destination);
 
       volume.gain.setValueAtTime(0.0001, startAt);
-      volume.gain.exponentialRampToValueAtTime(gain, startAt + 0.01);
+      volume.gain.exponentialRampToValueAtTime(gain, startAt + 0.02);
       volume.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
 
       oscillator.start(startAt);
-      oscillator.stop(startAt + duration + 0.01);
+      oscillator.stop(startAt + duration + 0.02);
     };
 
-    playTone(900, now, 0.08, 0.09);
-    playTone(520, now + 0.07, 0.16, 0.1);
-    playTone(260, now + 0.19, 0.22, 0.12);
+    // Retro "register closing" descending tones, longer and louder.
+    playTone(880, now, 0.16, 0.16);
+    playTone(622, now + 0.12, 0.2, 0.17);
+    playTone(440, now + 0.28, 0.24, 0.18);
+    playTone(311, now + 0.48, 0.3, 0.2, "sawtooth");
 
     window.setTimeout(() => {
       void context.close();
-    }, 500);
+    }, 1200);
   } catch {
     // Ignore audio errors and continue checkout flow.
   }
