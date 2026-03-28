@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  verify:
-    name: Test, build and Docker build
+  test:
+    name: Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -35,11 +35,49 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+  build:
+    name: Workspace build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Run workspace build
         run: pnpm build
 
+  docker-backend:
+    name: Docker build (backend)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Build backend Docker image
         run: docker build -f infra/backend.Dockerfile -t cashier-backend:pr .
+
+  docker-frontend:
+    name: Docker build (frontend)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Build frontend Docker image
         run: docker build \
