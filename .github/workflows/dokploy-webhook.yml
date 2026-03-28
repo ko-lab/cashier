@@ -3,7 +3,7 @@ name: Trigger Dokploy Webhook
 on:
   push:
     branches:
-      - try2
+      - master
   workflow_dispatch:
 
 jobs:
