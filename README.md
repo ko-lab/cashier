@@ -61,6 +61,13 @@ For Dokploy, use:
   - `VITE_API_URL` (defaults to `/rpc` for same-domain routing)
   - `VITE_APP_VERSION` (defaults to `dev`; set to commit SHA or build timestamp)
 
+For GitHub Actions deploy verification, also configure:
+
+- repository variable:
+  - `DEPLOY_CHECK_URL` (public URL to the live frontend, e.g. `https://cashier.ko-lab.space`)
+- repository secret:
+  - `DOKPLOY_WEBHOOK_URL`
+
 The Dokploy compose is intentionally minimal for Dokploy: no Traefik labels, no host port bindings, and uses external `dokploy-network` + a named volume (`backend-data`) for SQLite persistence.
 
 ### Client auto-refresh on new deploy
@@ -77,6 +84,11 @@ The frontend checks `/version.json` every 60 seconds.
 
 In Docker builds, `infra/frontend.Dockerfile` writes `dist/version.json` from `VITE_APP_VERSION`.
 Set `VITE_APP_VERSION` in Dokploy/CI to a unique value per deploy (e.g. git SHA).
+
+The frontend version is also exposed in two places for quick verification:
+
+- Footer text in the app: `Frontend commit: <version>`
+- HTML meta tag on `/`: `<meta name="app-commit" content="<version>">`
 
 ### Dokploy import guide
 
@@ -126,6 +138,18 @@ Notes for CLI usage:
 - Keep `infra/.env` out of git (contains secrets).
 - Re-deploy on each new commit/branch update.
 - If you split frontend/backend into separate Dokploy apps later, set `VITE_API_URL` to the backend public `/rpc` URL.
+
+### GitHub Actions deploy webhook + live commit verification
+
+Workflow: `.github/workflows/dokploy-webhook.yml`
+
+- Triggers on push to `master`
+- Calls Dokploy via `DOKPLOY_WEBHOOK_URL`
+- Sends both branch ref and pushed SHA in the webhook payload
+- Waits until the live page at `DEPLOY_CHECK_URL` contains the pushed commit in:
+  - `<meta name="app-commit" content="${GITHUB_SHA}">`
+
+The job retries with polling and fails on timeout, so a green workflow means the live page has updated to the expected frontend commit.
 
 ## Testing
 
