@@ -52,7 +52,8 @@ const router = {
       adminService.setStock(input.password, {
         productId: input.productId,
         quantity: input.quantity,
-        note: input.note
+        note: input.note,
+        action: input.action
       })
     )
   }

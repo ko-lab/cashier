@@ -312,6 +312,8 @@ export default function App() {
     () => (transaction ? toStructuredCommunication(transaction.id) : null),
     [transaction]
   );
+  const paymentIbanName = import.meta.env.VITE_IBAN_NAME ?? "KO-LAB";
+  const paymentIbanNumber = import.meta.env.VITE_IBAN ?? "BE00000000000000";
 
   useEffect(() => {
     if (!transaction || !structuredCommunication) {
@@ -319,8 +321,6 @@ export default function App() {
       return;
     }
 
-    const ibanName = import.meta.env.VITE_IBAN_NAME ?? "KO-LAB";
-    const ibanNumber = import.meta.env.VITE_IBAN ?? "BE00000000000000";
     const payMessage = structuredCommunication;
     const amount = transaction.total.toFixed(2);
     const payload = [
@@ -329,8 +329,8 @@ export default function App() {
       "1",
       "SCT",
       "",
-      `${ibanName}`,
-      `${ibanNumber}`,
+      `${paymentIbanName}`,
+      `${paymentIbanNumber}`,
       `EUR${amount}`,
       "",
       "",
@@ -352,7 +352,7 @@ export default function App() {
     setQrImageSrc(
       `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrSvg)}`
     );
-  }, [structuredCommunication, transaction]);
+  }, [paymentIbanName, paymentIbanNumber, structuredCommunication, transaction]);
 
   useEffect(() => {
     if (uiMode !== "pos" || view !== "checkout" || !transaction) {
@@ -726,7 +726,8 @@ export default function App() {
         password: adminSessionPassword,
         productId,
         quantity,
-        note: hasNote ? note : undefined
+        note: hasNote ? note : undefined,
+        action: hasQuantityDraft ? "set" : "comment"
       });
       setStockSnapshot(response);
       setStockDraftByProductId(
@@ -735,6 +736,47 @@ export default function App() {
       setStockNoteByProductId((current) => ({ ...current, [productId]: "" }));
     } catch {
       setAdminError("Could not update stock.");
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  const markStockCountedOk = async (productId: string) => {
+    if (!adminSessionPassword) {
+      setAdminError("Admin session expired. Please unlock again.");
+      return;
+    }
+
+    const currentQuantity =
+      stockSnapshot?.items.find((item) => item.productId === productId)?.quantity;
+    if (typeof currentQuantity !== "number") {
+      setAdminError("Could not resolve current stock for this product.");
+      return;
+    }
+
+    const note = stockNoteByProductId[productId]?.trim();
+    if (note && /[;,]/.test(note)) {
+      setAdminError("Comment cannot contain commas or semicolons.");
+      return;
+    }
+
+    setAdminError(null);
+    setAdminLoading(true);
+    try {
+      const response = await client.admin.setStock({
+        password: adminSessionPassword,
+        productId,
+        quantity: currentQuantity,
+        action: "counted_ok",
+        note: note || undefined
+      });
+      setStockSnapshot(response);
+      setStockDraftByProductId(
+        Object.fromEntries(response.items.map((item) => [item.productId, ""]))
+      );
+      setStockNoteByProductId((current) => ({ ...current, [productId]: "" }));
+    } catch {
+      setAdminError("Could not mark product as counted and correct.");
     } finally {
       setAdminLoading(false);
     }
@@ -811,7 +853,7 @@ export default function App() {
       <div className="mx-auto flex max-w-4xl flex-col gap-8">
         <header className="sticky top-0 z-30 rounded-2xl border border-black/10 bg-white/80 p-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/80">
           <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
-            <h1 className="text-base font-semibold">Fridge Checkout</h1>
+            <h1 className="text-base font-semibold">Cashier</h1>
             <button
               type="button"
               onClick={() => {
@@ -824,11 +866,16 @@ export default function App() {
                 lockAdminPanel();
                 setUiMode("pos");
               }}
-              className={`rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300 ${
-                uiMode === "pos" ? "hidden sm:inline-flex" : "inline-flex"
-              }`}
+              className="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
             >
-              {uiMode === "pos" ? "Admin panel" : "Back to checkout"}
+              {uiMode === "pos" ? (
+                <>
+                  <span className="sm:hidden">Admin</span>
+                  <span className="hidden sm:inline">Admin panel</span>
+                </>
+              ) : (
+                "Back to checkout"
+              )}
             </button>
             <button
               type="button"
@@ -950,7 +997,7 @@ export default function App() {
                 <>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Total tx</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Filtered tx</p>
                     <p className="mt-2 text-xl font-semibold">{adminTotals.count}</p>
                   </div>
                   <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
@@ -965,7 +1012,7 @@ export default function App() {
                   </div>
                   <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                     <p className="text-xs uppercase tracking-wide text-slate-500">
-                      Total amount
+                      Filtered amount
                     </p>
                     <p className="mt-2 text-xl font-semibold">
                       {currencyFormatter.format(adminTotals.amount)}
@@ -1280,14 +1327,24 @@ export default function App() {
                                   />
                                 </td>
                                 <td className="px-3 py-2 text-right">
-                                  <button
-                                    type="button"
-                                    onClick={() => void updateStock(item.productId)}
-                                    disabled={!canSubmit || !isValidInteger || isBusy}
-                                    className="rounded-lg bg-accent-light px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-accent-dark dark:text-slate-900"
-                                  >
-                                    {actionLabel}
-                                  </button>
+                                  <div className="flex justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => void markStockCountedOk(item.productId)}
+                                      disabled={isBusy}
+                                      className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600"
+                                    >
+                                      Counted OK
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => void updateStock(item.productId)}
+                                      disabled={!canSubmit || !isValidInteger || isBusy}
+                                      className="rounded-lg bg-accent-light px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-accent-dark dark:text-slate-900"
+                                    >
+                                      {actionLabel}
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -1328,7 +1385,7 @@ export default function App() {
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <h2 className="text-lg font-semibold">Products</h2>
                 <div className="flex items-center gap-3 rounded-full border border-slate-200 px-3 py-1 text-xs uppercase tracking-wide text-slate-600 dark:border-slate-700 dark:text-slate-200">
-                  <span>{defaultIsMemberPrice ? "Member price" : "Regular price"}</span>
+                  <span>{defaultIsMemberPrice ? "Member price" : "Non-member price"}</span>
                   <button
                     type="button"
                     onClick={() => setDefaultIsMemberPrice((value) => !value)}
@@ -1449,6 +1506,17 @@ export default function App() {
                     </p>
                   </div>
                 )}
+                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left dark:border-slate-700 dark:bg-slate-900/40">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Bank account (manual transfer)
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    {paymentIbanName}
+                  </p>
+                  <p className="font-mono text-sm text-slate-700 dark:text-slate-200">
+                    {paymentIbanNumber}
+                  </p>
+                </div>
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
                 <button

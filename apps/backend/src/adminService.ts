@@ -9,7 +9,12 @@ export type AdminService = {
   getStock: (password: string) => Promise<AdminGetStockOutput>;
   setStock: (
     password: string,
-    input: { productId: string; quantity?: number; note?: string }
+    input: {
+      productId: string;
+      quantity?: number;
+      note?: string;
+      action?: "set" | "comment" | "counted_ok";
+    }
   ) => Promise<AdminGetStockOutput>;
 };
 
@@ -92,14 +97,28 @@ export function createAdminService({
         });
       }
 
-      if (typeof input.quantity === "number") {
+      const action = input.action ?? (typeof input.quantity === "number" ? "set" : "comment");
+
+      if (action === "counted_ok") {
+        const countedQuantity =
+          typeof input.quantity === "number"
+            ? input.quantity
+            : catalog.products[input.productId].inventoryCount;
+
+        await stockEventStore.appendEvent({
+          productId: input.productId,
+          type: "counted_ok",
+          quantity: countedQuantity,
+          note: trimmedNote || "Counted and correct"
+        });
+      } else if (action === "set" && typeof input.quantity === "number") {
         await stockEventStore.appendEvent({
           productId: input.productId,
           type: "manual_set",
           quantity: input.quantity,
           note: trimmedNote
         });
-      } else if (trimmedNote) {
+      } else if (action === "comment" && trimmedNote) {
         await stockEventStore.appendEvent({
           productId: input.productId,
           type: "comment",
@@ -108,7 +127,7 @@ export function createAdminService({
         });
       } else {
         throw new ORPCError("BAD_REQUEST", {
-          data: { message: "Either quantity or note is required." }
+          data: { message: "Invalid stock action payload." }
         });
       }
 
