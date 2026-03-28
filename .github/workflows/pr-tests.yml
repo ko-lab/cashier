@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Run workspace tests
+  verify:
+    name: Test, build and Docker build
     runs-on: ubuntu-latest
 
     steps:
@@ -34,3 +34,18 @@ jobs:
 
       - name: Run tests
         run: pnpm test
+
+      - name: Run workspace build
+        run: pnpm build
+
+      - name: Build backend Docker image
+        run: docker build -f infra/backend.Dockerfile -t cashier-backend:pr .
+
+      - name: Build frontend Docker image
+        run: docker build \
+          -f infra/frontend.Dockerfile \
+          --build-arg VITE_API_URL=/rpc \
+          --build-arg VITE_IBAN=BE00000000000000 \
+          --build-arg VITE_IBAN_NAME=KO-LAB \
+          --build-arg VITE_APP_VERSION=pr-${{ github.event.pull_request.number || 'manual' }} \
+          -t cashier-frontend:pr .
