@@ -737,7 +737,7 @@ Logout
             {!adminTransactions ? (
               <form
                 className="mx-auto flex w-full max-w-md flex-col gap-4"
-                autoComplete="off"
+                autoComplete="on"
                 onSubmit={(event) => {
                   event.preventDefault();
                   void loadAdminTransactions();
@@ -749,15 +749,21 @@ Logout
                   and CSV export.
                 </p>
                 <input
+                  type="text"
+                  name="admin_unlock_user"
+                  autoComplete="username"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  className="hidden"
+                />
+                <input
                   type="password"
                   name="admin_unlock_password"
                   value={adminPassword}
                   onChange={(event) => setAdminPassword(event.target.value)}
                   placeholder="Admin password"
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
-                  autoComplete="new-password"
-                  data-lpignore="true"
-                  data-1p-ignore="true"
+                  autoComplete="current-password"
                 />
                 <button
                   type="submit"
