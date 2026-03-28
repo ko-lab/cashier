@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import QRCode from "qrcode-svg";
 import { client } from "./api/client";
 import type {
@@ -532,13 +532,31 @@ export default function App() {
         item.productId === productId && item.isMemberPrice === isMemberPrice
     )?.quantity ?? 0;
 
+  const moveStockInputFocus = (
+    event: KeyboardEvent<HTMLInputElement>,
+    direction: 1 | -1
+  ) => {
+    const inputs = Array.from(
+      document.querySelectorAll<HTMLInputElement>("input[data-stock-input='true']")
+    );
+    const currentIndex = inputs.findIndex((input) => input === event.currentTarget);
+    if (currentIndex < 0) {
+      return;
+    }
+
+    const target = inputs[currentIndex + direction];
+    if (target) {
+      event.preventDefault();
+      target.focus();
+      target.select();
+    }
+  };
+
   const loadStockSnapshot = async (password: string) => {
     const response = await client.admin.getStock({ password });
     setStockSnapshot(response);
     setStockDraftByProductId(
-      Object.fromEntries(
-        response.items.map((item) => [item.productId, String(item.quantity)])
-      )
+      Object.fromEntries(response.items.map((item) => [item.productId, ""]))
     );
   };
 
@@ -570,6 +588,10 @@ export default function App() {
     }
 
     const draftValue = (stockDraftByProductId[productId] ?? "").trim();
+    if (draftValue.length === 0) {
+      return;
+    }
+
     if (!/^\d+$/.test(draftValue)) {
       setAdminError("Stock must be a non-negative integer.");
       return;
@@ -598,9 +620,7 @@ export default function App() {
       });
       setStockSnapshot(response);
       setStockDraftByProductId(
-        Object.fromEntries(
-          response.items.map((item) => [item.productId, String(item.quantity)])
-        )
+        Object.fromEntries(response.items.map((item) => [item.productId, ""]))
       );
       setStockNoteByProductId((current) => ({ ...current, [productId]: "" }));
     } catch {
@@ -982,10 +1002,14 @@ Logout
                         </thead>
                         <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                           {stockSnapshot.items.map((item) => {
-                            const draftValue = stockDraftByProductId[item.productId] ?? "0";
-                            const isValidInteger = /^\d+$/.test(draftValue.trim());
-                            const parsedDraft = isValidInteger ? Number(draftValue) : NaN;
-                            const hasChanged = isValidInteger && parsedDraft !== item.quantity;
+                            const draftValue = stockDraftByProductId[item.productId] ?? "";
+                            const trimmedDraft = draftValue.trim();
+                            const isEmptyDraft = trimmedDraft.length === 0;
+                            const isValidInteger = isEmptyDraft || /^\d+$/.test(trimmedDraft);
+                            const parsedDraft = /^\d+$/.test(trimmedDraft)
+                              ? Number(trimmedDraft)
+                              : NaN;
+                            const hasChanged = !isEmptyDraft && parsedDraft !== item.quantity;
 
                             return (
                             <tr key={item.productId}>
@@ -996,7 +1020,17 @@ Logout
                                   type="text"
                                   inputMode="numeric"
                                   pattern="[0-9]*"
+                                  data-stock-input="true"
+                                  placeholder={String(item.quantity)}
                                   value={draftValue}
+                                  onKeyDown={(event) => {
+                                    if (event.key === "ArrowDown") {
+                                      moveStockInputFocus(event, 1);
+                                    }
+                                    if (event.key === "ArrowUp") {
+                                      moveStockInputFocus(event, -1);
+                                    }
+                                  }}
                                   onChange={(event) => {
                                     const nextValue = event.target.value;
                                     if (!/^\d*$/.test(nextValue)) {
@@ -1009,8 +1043,8 @@ Logout
                                   }}
                                   className={`w-24 rounded-lg border px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-900 ${
                                     hasChanged
-                                      ? "border-slate-300 text-slate-900 dark:text-slate-100"
-                                      : "border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500"
+                                      ? "border-accent-light text-slate-900 dark:border-accent-dark dark:text-slate-100"
+                                      : "border-slate-300 text-slate-900 dark:text-slate-100"
                                   }`}
                                 />
                               </td>
