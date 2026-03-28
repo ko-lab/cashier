@@ -17,8 +17,7 @@ import {
 import {
   filterProductsByQuery,
   formatPriceMode,
-  getSelectedItems,
-  getUnselectedProducts
+  getSelectedItems
 } from "./domain/productSection";
 import { getUnitPrice } from "./domain/pricing";
 import { toStructuredCommunication } from "./domain/structuredCommunication";
@@ -144,6 +143,7 @@ export default function App() {
   const [stockNoteByProductId, setStockNoteByProductId] = useState<Record<string, string>>({});
   const [isDark, setIsDark] = useState(readStoredTheme);
   const [updateReady, setUpdateReady] = useState(false);
+  const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
@@ -193,14 +193,9 @@ export default function App() {
     [products, searchQuery]
   );
 
-  const selectedCartItems = useMemo(
-    () => getSelectedItems(products, priceCategories, cart, searchQuery),
-    [products, priceCategories, cart, searchQuery]
-  );
-
-  const unselectedFilteredProducts = useMemo(
-    () => getUnselectedProducts(products, cart, searchQuery, defaultIsMemberPrice),
-    [products, cart, searchQuery, defaultIsMemberPrice]
+  const cartItemsForCheckout = useMemo(
+    () => getSelectedItems(products, priceCategories, cart, ""),
+    [products, priceCategories, cart]
   );
 
   const structuredCommunication = useMemo(
@@ -259,6 +254,13 @@ export default function App() {
     );
   };
 
+  const openCheckoutConfirm = () => {
+    if (summary.items.length === 0 || isBusy) {
+      return;
+    }
+    setShowCheckoutConfirm(true);
+  };
+
   const startCheckout = async () => {
     setStatus(null);
     setLoading(true);
@@ -267,6 +269,7 @@ export default function App() {
       const response = await client.transaction.start({
         items: toTransactionItems(cart)
       });
+      setShowCheckoutConfirm(false);
       setTransaction(response);
       setView("checkout");
       scrollToTop();
@@ -561,11 +564,11 @@ export default function App() {
                 <span className="text-sm font-semibold">{totalLabel}</span>
                 <button
                   type="button"
-                  onClick={startCheckout}
+                  onClick={openCheckoutConfirm}
                   disabled={summary.items.length === 0 || isBusy}
                   className="rounded-full bg-accent-light px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
                 >
-                  Checkout
+                  Checkout ({totalLabel})
                 </button>
               </>
             )}
@@ -940,74 +943,14 @@ export default function App() {
                 />
               </div>
               <div className="mt-4 flex flex-col gap-4">
-                {selectedCartItems.length > 0 && (
-                  <div className="rounded-xl border border-dashed border-slate-400/60 px-4 py-3 dark:border-slate-500">
-                    <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-300">
-                      Selected
-                    </p>
-                    <div className="mt-3 flex flex-col gap-4">
-                      {selectedCartItems.map((item) => (
-                        <div
-                          key={`${item.productId}-${item.isMemberPrice}`}
-                          className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 pb-3 last:border-b-0 dark:border-white/10"
-                        >
-                          <div>
-                            <p className="font-medium">
-                              {item.name}{" "}
-                              <span className="text-xs uppercase text-slate-500">
-                                {formatPriceMode(item.isMemberPrice)}
-                              </span>
-                            </p>
-                            <p className="text-sm text-slate-500 dark:text-slate-300">
-                              {currencyFormatter.format(item.unitPrice)} - stock{" "}
-                              {item.inventoryCount}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleQuantityChange(
-                                  item.productId,
-                                  -1,
-                                  item.isMemberPrice
-                                )
-                              }
-                              className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
-                            >
-                              -
-                            </button>
-                            <span className="w-6 text-center text-sm font-semibold">
-                              {item.quantity}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleQuantityChange(
-                                  item.productId,
-                                  1,
-                                  item.isMemberPrice
-                                )
-                              }
-                              className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {unselectedFilteredProducts.length === 0 &&
-                  selectedCartItems.length === 0 && (
+                {filteredProducts.length === 0 && (
                   <p className="text-sm text-slate-500">
                     {products.length === 0
                       ? "No products configured."
                       : "No products match search."}
                   </p>
                 )}
-                {unselectedFilteredProducts.map((product) => {
+                {filteredProducts.map((product) => {
                   const unitPrice = getUnitPrice(
                     product,
                     priceCategories,
@@ -1138,6 +1081,90 @@ export default function App() {
               </div>
             </aside>
           </section>
+        )}
+
+        {uiMode === "pos" && view === "cart" && showCheckoutConfirm && (
+          <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/50 p-4 sm:items-center">
+            <div className="w-full max-w-2xl rounded-2xl border border-black/10 bg-white p-6 shadow-xl dark:border-white/10 dark:bg-slate-900">
+              <h3 className="text-lg font-semibold">Confirm checkout</h3>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
+                Review and edit your cart before generating the payment QR.
+              </p>
+
+              <div className="mt-4 max-h-[50vh] overflow-y-auto rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                {cartItemsForCheckout.length === 0 ? (
+                  <p className="text-sm text-slate-500">Your cart is empty.</p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {cartItemsForCheckout.map((item) => (
+                      <div
+                        key={`${item.productId}-${item.isMemberPrice}`}
+                        className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 pb-3 last:border-b-0 dark:border-white/10"
+                      >
+                        <div>
+                          <p className="font-medium">
+                            {item.name}{" "}
+                            <span className="text-xs uppercase text-slate-500">
+                              {formatPriceMode(item.isMemberPrice)}
+                            </span>
+                          </p>
+                          <p className="text-sm text-slate-500 dark:text-slate-300">
+                            {currencyFormatter.format(item.unitPrice)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleQuantityChange(item.productId, -1, item.isMemberPrice)
+                            }
+                            className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
+                          >
+                            -
+                          </button>
+                          <span className="w-6 text-center text-sm font-semibold">
+                            {item.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleQuantityChange(item.productId, 1, item.isMemberPrice)
+                            }
+                            className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4 flex items-center justify-between">
+                <p className="text-sm text-slate-600 dark:text-slate-300">Total</p>
+                <p className="text-xl font-semibold">{totalLabel}</p>
+              </div>
+
+              <div className="mt-6 flex flex-wrap justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCheckoutConfirm(false)}
+                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500 dark:border-slate-600 dark:text-slate-200"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void startCheckout()}
+                  disabled={cartItemsForCheckout.length === 0 || isBusy}
+                  className="rounded-xl bg-accent-light px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
+                >
+                  Confirm & generate QR ({totalLabel})
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
