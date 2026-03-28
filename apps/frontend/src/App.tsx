@@ -972,10 +972,10 @@ export default function App() {
                   return (
                     <div
                       key={product.id}
-                      className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 pb-3 last:border-b-0 dark:border-white/10"
+                      className="flex items-center justify-between gap-3 border-b border-black/5 pb-3 last:border-b-0 dark:border-white/10"
                     >
-                      <div>
-                        <p className="font-medium">
+                      <div className="min-w-0 flex-1 pr-2">
+                        <p className="font-medium break-words">
                           {product.name}{" "}
                           <span className="text-xs uppercase text-slate-500">
                             {formatPriceMode(defaultIsMemberPrice)}
@@ -986,23 +986,23 @@ export default function App() {
                           {product.inventoryCount}
                         </p>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="shrink-0 flex items-center gap-1.5 self-center">
                         <button
                           type="button"
                           onClick={() =>
                             handleQuantityChange(product.id, -1, defaultIsMemberPrice)
                           }
-                          className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
+                          className="h-10 w-10 rounded-xl border border-slate-300 text-xl leading-none transition hover:border-slate-500 dark:border-slate-600"
                         >
                           -
                         </button>
-                        <span className="w-6 text-center text-sm font-semibold">{quantity}</span>
+                        <span className="w-5 text-center text-sm font-semibold">{quantity}</span>
                         <button
                           type="button"
                           onClick={() =>
                             handleQuantityChange(product.id, 1, defaultIsMemberPrice)
                           }
-                          className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
+                          className="h-10 w-10 rounded-xl border border-slate-300 text-xl leading-none transition hover:border-slate-500 dark:border-slate-600"
                         >
                           +
                         </button>
@@ -1122,10 +1122,10 @@ export default function App() {
                     {cartItemsForCheckout.map((item) => (
                       <div
                         key={`${item.productId}-${item.isMemberPrice}`}
-                        className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 pb-3 last:border-b-0 dark:border-white/10"
+                        className="flex items-center justify-between gap-3 border-b border-black/5 pb-3 last:border-b-0 dark:border-white/10"
                       >
-                        <div>
-                          <p className="font-medium">
+                        <div className="min-w-0 flex-1 pr-2">
+                          <p className="font-medium break-words">
                             {item.name}{" "}
                             <span className="text-xs uppercase text-slate-500">
                               {formatPriceMode(item.isMemberPrice)}
@@ -1135,17 +1135,17 @@ export default function App() {
                             {currencyFormatter.format(item.unitPrice)}
                           </p>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="shrink-0 flex items-center gap-1.5 self-center">
                           <button
                             type="button"
                             onClick={() =>
                               handleQuantityChange(item.productId, -1, item.isMemberPrice)
                             }
-                            className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
+                            className="h-10 w-10 rounded-xl border border-slate-300 text-xl leading-none transition hover:border-slate-500 dark:border-slate-600"
                           >
                             -
                           </button>
-                          <span className="w-6 text-center text-sm font-semibold">
+                          <span className="w-5 text-center text-sm font-semibold">
                             {item.quantity}
                           </span>
                           <button
@@ -1153,7 +1153,7 @@ export default function App() {
                             onClick={() =>
                               handleQuantityChange(item.productId, 1, item.isMemberPrice)
                             }
-                            className="h-8 w-8 rounded-full border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600"
+                            className="h-10 w-10 rounded-xl border border-slate-300 text-xl leading-none transition hover:border-slate-500 dark:border-slate-600"
                           >
                             +
                           </button>
