@@ -58,9 +58,11 @@ function scrollToTop(): void {
   }
 }
 
-function playCashierOpenSound(): void {
+let cashierAudioContext: AudioContext | null = null;
+
+function getCashierAudioContext(): AudioContext | null {
   if (typeof window === "undefined") {
-    return;
+    return null;
   }
 
   const AudioContextCtor = (
@@ -68,11 +70,27 @@ function playCashierOpenSound(): void {
   ) as typeof AudioContext | undefined;
 
   if (!AudioContextCtor) {
+    return null;
+  }
+
+  if (!cashierAudioContext) {
+    cashierAudioContext = new AudioContextCtor();
+  }
+
+  return cashierAudioContext;
+}
+
+function playCashierOpenSound(): void {
+  const context = getCashierAudioContext();
+  if (!context) {
     return;
   }
 
   try {
-    const context = new AudioContextCtor();
+    if (context.state === "suspended") {
+      void context.resume();
+    }
+
     const now = context.currentTime;
 
     const playTone = (
@@ -103,30 +121,22 @@ function playCashierOpenSound(): void {
     playTone(330, now + 0.14, 0.22, 0.17);
     playTone(494, now + 0.3, 0.26, 0.18);
     playTone(659, now + 0.46, 0.32, 0.2);
-
-    window.setTimeout(() => {
-      void context.close();
-    }, 1200);
   } catch {
     // Ignore audio errors and continue checkout flow.
   }
 }
 
 function playCashierCloseSound(): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  const AudioContextCtor = (
-    window.AudioContext ?? (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-  ) as typeof AudioContext | undefined;
-
-  if (!AudioContextCtor) {
+  const context = getCashierAudioContext();
+  if (!context) {
     return;
   }
 
   try {
-    const context = new AudioContextCtor();
+    if (context.state === "suspended") {
+      void context.resume();
+    }
+
     const now = context.currentTime;
 
     const playTone = (
@@ -157,10 +167,6 @@ function playCashierCloseSound(): void {
     playTone(622, now + 0.12, 0.2, 0.17);
     playTone(440, now + 0.28, 0.24, 0.18);
     playTone(311, now + 0.48, 0.3, 0.2, "sawtooth");
-
-    window.setTimeout(() => {
-      void context.close();
-    }, 1200);
   } catch {
     // Ignore audio errors and continue checkout flow.
   }
@@ -521,7 +527,6 @@ export default function App() {
       setShowCheckoutConfirm(false);
       setTransaction(response);
       setView("checkout");
-      playCashierOpenSound();
       scrollToTop();
     } catch {
       setStatus({ tone: "error", text: "Could not start transaction." });
@@ -1703,7 +1708,10 @@ export default function App() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => void startCheckout()}
+                  onClick={() => {
+                    playCashierOpenSound();
+                    void startCheckout();
+                  }}
                   disabled={!hasCheckoutItems || isBusy}
                   className="rounded-xl bg-accent-light px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
                 >
