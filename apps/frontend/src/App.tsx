@@ -747,6 +747,13 @@ export default function App() {
       return;
     }
 
+    const currentQuantity =
+      stockSnapshot?.items.find((item) => item.productId === productId)?.quantity;
+    if (typeof currentQuantity !== "number") {
+      setAdminError("Could not resolve current stock for this product.");
+      return;
+    }
+
     const note = stockNoteByProductId[productId]?.trim();
     if (note && /[;,]/.test(note)) {
       setAdminError("Comment cannot contain commas or semicolons.");
@@ -759,6 +766,7 @@ export default function App() {
       const response = await client.admin.setStock({
         password: adminSessionPassword,
         productId,
+        quantity: currentQuantity,
         action: "counted_ok",
         note: note || undefined
       });

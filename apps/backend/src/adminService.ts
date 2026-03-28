@@ -100,10 +100,15 @@ export function createAdminService({
       const action = input.action ?? (typeof input.quantity === "number" ? "set" : "comment");
 
       if (action === "counted_ok") {
+        const countedQuantity =
+          typeof input.quantity === "number"
+            ? input.quantity
+            : catalog.products[input.productId].inventoryCount;
+
         await stockEventStore.appendEvent({
           productId: input.productId,
           type: "counted_ok",
-          quantity: 0,
+          quantity: countedQuantity,
           note: trimmedNote || "Counted and correct"
         });
       } else if (action === "set" && typeof input.quantity === "number") {
