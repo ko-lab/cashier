@@ -561,7 +561,6 @@ export default function App() {
             )}
             {uiMode === "pos" && view === "cart" && (
               <div className="ml-auto flex items-center gap-3">
-                <span className="text-sm font-semibold">{totalLabel}</span>
                 <button
                   type="button"
                   onClick={openCheckoutConfirm}
