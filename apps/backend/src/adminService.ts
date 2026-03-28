@@ -78,6 +78,32 @@ export function createAdminService({
     async setStock(password, input) {
       assertPassword(password);
 
+      const trimmedNote = input.note?.trim();
+      const isGeneralComment = input.productId === "__general__";
+
+      if (isGeneralComment) {
+        if (typeof input.quantity === "number") {
+          throw new ORPCError("BAD_REQUEST", {
+            data: { message: "General comments cannot set stock quantity." }
+          });
+        }
+
+        if (!trimmedNote) {
+          throw new ORPCError("BAD_REQUEST", {
+            data: { message: "General comment cannot be empty." }
+          });
+        }
+
+        await stockEventStore.appendEvent({
+          productId: "__general__",
+          type: "comment",
+          quantity: 0,
+          note: trimmedNote
+        });
+
+        return buildStockSnapshot();
+      }
+
       const catalog = await productStore.listCatalog();
       if (!catalog.products[input.productId]) {
         throw new ORPCError("BAD_REQUEST", {
@@ -85,7 +111,6 @@ export function createAdminService({
         });
       }
 
-      const trimmedNote = input.note?.trim();
       if (trimmedNote && /[;,]/.test(trimmedNote)) {
         throw new ORPCError("BAD_REQUEST", {
           data: { message: "Note cannot contain commas or semicolons." }

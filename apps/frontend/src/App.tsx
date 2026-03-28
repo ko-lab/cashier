@@ -145,7 +145,9 @@ function buildStockEventsCsv(
       event.id,
       event.createdAt,
       event.productId,
-      productNameById.get(event.productId) ?? "",
+      event.productId === "__general__"
+        ? "General"
+        : (productNameById.get(event.productId) ?? ""),
       event.type,
       event.quantity,
       event.note ?? ""
@@ -228,6 +230,7 @@ export default function App() {
   const [stockNoteByProductId, setStockNoteByProductId] = useState<Record<string, string>>({});
   const [stockProductQuery, setStockProductQuery] = useState("");
   const [stockCurrentValueFilter, setStockCurrentValueFilter] = useState("");
+  const [generalStockComment, setGeneralStockComment] = useState("");
   const [isDark, setIsDark] = useState(readStoredTheme);
   const [updateReady, setUpdateReady] = useState(false);
   const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
@@ -561,7 +564,9 @@ export default function App() {
     }
 
     const allowedProductIds = new Set(filteredStockItems.map((item) => item.productId));
-    return stockSnapshot.events.filter((event) => allowedProductIds.has(event.productId));
+    return stockSnapshot.events.filter(
+      (event) => event.productId === "__general__" || allowedProductIds.has(event.productId)
+    );
   }, [filteredStockItems, stockSnapshot]);
 
   const isBusy = loading || adminLoading;
@@ -740,6 +745,39 @@ export default function App() {
     }
   };
 
+  const addGeneralStockComment = async () => {
+    if (!adminSessionPassword) {
+      setAdminError("Admin session expired. Please unlock again.");
+      return;
+    }
+
+    const note = generalStockComment.trim();
+    if (!note) {
+      return;
+    }
+
+    if (/[;,]/.test(note)) {
+      setAdminError("Comment cannot contain commas or semicolons.");
+      return;
+    }
+
+    setAdminError(null);
+    setAdminLoading(true);
+    try {
+      const response = await client.admin.setStock({
+        password: adminSessionPassword,
+        productId: "__general__",
+        note
+      });
+      setStockSnapshot(response);
+      setGeneralStockComment("");
+    } catch {
+      setAdminError("Could not add general comment.");
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
   const lockAdminPanel = () => {
     setAdminTransactions(null);
     setStockSnapshot(null);
@@ -747,6 +785,7 @@ export default function App() {
     setStockNoteByProductId({});
     setStockProductQuery("");
     setStockCurrentValueFilter("");
+    setGeneralStockComment("");
     setAdminSessionPassword("");
     setAdminPassword("");
     setAdminError(null);
@@ -1197,6 +1236,33 @@ export default function App() {
                       </div>
                     </div>
 
+                    <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">General comment</p>
+                      <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <input
+                          type="text"
+                          value={generalStockComment}
+                          onChange={(event) => {
+                            const nextValue = event.target.value;
+                            if (/[;,]/.test(nextValue)) {
+                              return;
+                            }
+                            setGeneralStockComment(nextValue);
+                          }}
+                          placeholder="Add a note not tied to a product"
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void addGeneralStockComment()}
+                          disabled={generalStockComment.trim().length === 0 || isBusy}
+                          className="rounded-lg bg-accent-light px-3 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-accent-dark dark:text-slate-900"
+                        >
+                          Add general comment
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
                       <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
                         <thead className="bg-slate-50 dark:bg-slate-800/40">
@@ -1310,7 +1376,7 @@ export default function App() {
                       <ul className="mt-2 space-y-1 text-xs text-slate-600 dark:text-slate-300">
                         {filteredStockEvents.slice(0, 12).map((event) => (
                           <li key={event.id}>
-                            {new Date(event.createdAt).toLocaleString()} — {event.productId} — {event.type} {event.quantity}
+                            {new Date(event.createdAt).toLocaleString()} — {event.productId === "__general__" ? "general" : event.productId} — {event.type} {event.quantity}
                             {event.note ? ` (${event.note})` : ""}
                           </li>
                         ))}
