@@ -618,9 +618,10 @@ Logout
                   void loadAdminTransactions();
                 }}
               >
-                <h2 className="text-lg font-semibold">Unlock transaction export</h2>
+                <h2 className="text-lg font-semibold">Unlock admin panel</h2>
                 <p className="text-sm text-slate-500 dark:text-slate-300">
-                  Submit admin password to retrieve `transactions.json` in-memory.
+                  Submit the admin password to access transaction history, stock management,
+                  and CSV export.
                 </p>
                 <input
                   type="password"
