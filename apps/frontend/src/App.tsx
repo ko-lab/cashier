@@ -101,7 +101,7 @@ function getCashierAudioContext(): AudioContext | null {
   return cashierAudioContext;
 }
 
-function playCashierOpenSound(): void {
+function playCashierOpenSound(isDarkMode = false): void {
   enableMediaPlaybackAudioMode();
   const context = getCashierAudioContext();
   if (!context) {
@@ -138,17 +138,18 @@ function playCashierOpenSound(): void {
       oscillator.stop(startAt + duration + 0.02);
     };
 
-    // Retro "register opening" arpeggio, longer and louder.
-    playTone(220, now, 0.2, 0.16);
-    playTone(330, now + 0.14, 0.22, 0.17);
-    playTone(494, now + 0.3, 0.26, 0.18);
-    playTone(659, now + 0.46, 0.32, 0.2);
+    // Retro "register opening" arpeggio. Dark mode: deeper + softer.
+    const gainBoost = isDarkMode ? 0.85 : 1;
+    playTone(isDarkMode ? 196 : 220, now, 0.2, 0.16 * gainBoost, isDarkMode ? "triangle" : "square");
+    playTone(isDarkMode ? 294 : 330, now + 0.14, 0.22, 0.17 * gainBoost, isDarkMode ? "triangle" : "square");
+    playTone(isDarkMode ? 440 : 494, now + 0.3, 0.26, 0.18 * gainBoost, isDarkMode ? "triangle" : "square");
+    playTone(isDarkMode ? 587 : 659, now + 0.46, 0.32, 0.2 * gainBoost, isDarkMode ? "triangle" : "square");
   } catch {
     // Ignore audio errors and continue checkout flow.
   }
 }
 
-function playCashierCloseSound(): void {
+function playCashierCloseSound(isDarkMode = false): void {
   enableMediaPlaybackAudioMode();
   const context = getCashierAudioContext();
   if (!context) {
@@ -185,17 +186,18 @@ function playCashierCloseSound(): void {
       oscillator.stop(startAt + duration + 0.02);
     };
 
-    // Retro "register closing" descending tones, longer and louder.
-    playTone(880, now, 0.16, 0.16);
-    playTone(622, now + 0.12, 0.2, 0.17);
-    playTone(440, now + 0.28, 0.24, 0.18);
-    playTone(311, now + 0.48, 0.3, 0.2, "sawtooth");
+    // Retro "register closing" descending tones. Dark mode: deeper + softer.
+    const gainBoost = isDarkMode ? 0.85 : 1;
+    playTone(isDarkMode ? 740 : 880, now, 0.16, 0.16 * gainBoost, isDarkMode ? "triangle" : "square");
+    playTone(isDarkMode ? 523 : 622, now + 0.12, 0.2, 0.17 * gainBoost, isDarkMode ? "triangle" : "square");
+    playTone(isDarkMode ? 370 : 440, now + 0.28, 0.24, 0.18 * gainBoost, isDarkMode ? "triangle" : "square");
+    playTone(isDarkMode ? 262 : 311, now + 0.48, 0.3, 0.2 * gainBoost, isDarkMode ? "triangle" : "sawtooth");
   } catch {
     // Ignore audio errors and continue checkout flow.
   }
 }
 
-function playTypewriterAddSound(): void {
+function playTypewriterAddSound(isDarkMode = false): void {
   enableMediaPlaybackAudioMode();
   const context = getCashierAudioContext();
   if (!context) {
@@ -219,7 +221,7 @@ function playTypewriterAddSound(): void {
       volume.connect(context.destination);
 
       volume.gain.setValueAtTime(0.0001, startAt);
-      volume.gain.exponentialRampToValueAtTime(0.08, startAt + 0.003);
+      volume.gain.exponentialRampToValueAtTime(isDarkMode ? 0.065 : 0.08, startAt + 0.003);
       volume.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.03);
 
       oscillator.start(startAt);
@@ -227,23 +229,24 @@ function playTypewriterAddSound(): void {
     };
 
     // 5 key taps
-    playClick(now + 0.0, 1750);
-    playClick(now + 0.045, 1600);
-    playClick(now + 0.09, 1820);
-    playClick(now + 0.135, 1680);
-    playClick(now + 0.18, 1780);
+    const pitchShift = isDarkMode ? 0.88 : 1;
+    playClick(now + 0.0, 1750 * pitchShift);
+    playClick(now + 0.045, 1600 * pitchShift);
+    playClick(now + 0.09, 1820 * pitchShift);
+    playClick(now + 0.135, 1680 * pitchShift);
+    playClick(now + 0.18, 1780 * pitchShift);
 
     // carriage-return / linefeed bell-ish ding
     const ding = context.createOscillator();
     const dingGain = context.createGain();
     const dingStart = now + 0.24;
-    ding.type = "triangle";
-    ding.frequency.setValueAtTime(1320, dingStart);
-    ding.frequency.exponentialRampToValueAtTime(980, dingStart + 0.18);
+    ding.type = isDarkMode ? "sine" : "triangle";
+    ding.frequency.setValueAtTime((isDarkMode ? 1160 : 1320), dingStart);
+    ding.frequency.exponentialRampToValueAtTime((isDarkMode ? 860 : 980), dingStart + 0.18);
     ding.connect(dingGain);
     dingGain.connect(context.destination);
     dingGain.gain.setValueAtTime(0.0001, dingStart);
-    dingGain.gain.exponentialRampToValueAtTime(0.1, dingStart + 0.01);
+    dingGain.gain.exponentialRampToValueAtTime(isDarkMode ? 0.08 : 0.1, dingStart + 0.01);
     dingGain.gain.exponentialRampToValueAtTime(0.0001, dingStart + 0.2);
     ding.start(dingStart);
     ding.stop(dingStart + 0.22);
@@ -585,7 +588,7 @@ export default function App() {
     isMemberPrice: boolean
   ) => {
     if (delta > 0) {
-      playTypewriterAddSound();
+      playTypewriterAddSound(isDark);
     }
 
     setCart((current) =>
@@ -1698,7 +1701,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
-                    playCashierCloseSound();
+                    playCashierCloseSound(isDark);
                     void finalize("completed");
                   }}
                   disabled={isBusy}
@@ -1793,7 +1796,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
-                    playCashierOpenSound();
+                    playCashierOpenSound(isDark);
                     void startCheckout();
                   }}
                   disabled={!hasCheckoutItems || isBusy}
