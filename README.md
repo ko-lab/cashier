@@ -30,7 +30,7 @@ To enable the simple admin panel export endpoint, set a backend password first:
 export ADMIN_PANEL_PASSWORD="change-me"
 ```
 
-Frontend runs on Vite, backend runs on oRPC. Data is stored under `apps/backend/data/` (including `transactions.sqlite`).
+Frontend runs on Vite, backend runs on oRPC. Runtime data is stored under `apps/backend/data/` (including `transactions.sqlite`). Product catalog lives in `apps/backend/catalog/products.json` (kept in git, not in the mounted runtime data dir).
 
 ## Docker / Dokploy (optimized)
 

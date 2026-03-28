@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode-svg";
 import { client } from "./api/client";
 import type {
+  AdminGetStockOutput,
   PriceCategory,
   Product,
   Transaction,
@@ -23,6 +24,7 @@ import { getUnitPrice } from "./domain/pricing";
 
 type View = "cart" | "checkout";
 type UiMode = "pos" | "admin";
+type AdminTab = "transactions" | "stock";
 
 type StatusMessage = {
   tone: "error" | "info";
@@ -134,6 +136,11 @@ export default function App() {
   const [adminProductFilter, setAdminProductFilter] = useState("all");
   const [adminFromDate, setAdminFromDate] = useState("");
   const [adminToDate, setAdminToDate] = useState("");
+  const [adminTab, setAdminTab] = useState<AdminTab>("transactions");
+  const [adminSessionPassword, setAdminSessionPassword] = useState("");
+  const [stockSnapshot, setStockSnapshot] = useState<AdminGetStockOutput | null>(null);
+  const [stockDraftByProductId, setStockDraftByProductId] = useState<Record<string, string>>({});
+  const [stockNoteByProductId, setStockNoteByProductId] = useState<Record<string, string>>({});
   const [isDark, setIsDark] = useState(readStoredTheme);
   const [updateReady, setUpdateReady] = useState(false);
 
@@ -423,14 +430,25 @@ export default function App() {
         item.productId === productId && item.isMemberPrice === isMemberPrice
     )?.quantity ?? 0;
 
+  const loadStockSnapshot = async (password: string) => {
+    const response = await client.admin.getStock({ password });
+    setStockSnapshot(response);
+    setStockDraftByProductId(
+      Object.fromEntries(
+        response.items.map((item) => [item.productId, String(item.quantity)])
+      )
+    );
+  };
+
   const loadAdminTransactions = async () => {
     setAdminError(null);
     setAdminLoading(true);
     try {
-      const response = await client.admin.exportTransactions({
-        password: adminPassword
-      });
+      const password = adminPassword;
+      const response = await client.admin.exportTransactions({ password });
       setAdminTransactions(response.transactions);
+      await loadStockSnapshot(password);
+      setAdminSessionPassword(password);
       setAdminPassword("");
       setAdminStatusFilter("all");
       setAdminProductFilter("all");
@@ -443,14 +461,54 @@ export default function App() {
     }
   };
 
+  const updateStock = async (productId: string) => {
+    if (!adminSessionPassword) {
+      setAdminError("Admin session expired. Please unlock again.");
+      return;
+    }
+
+    const quantity = Number.parseInt(stockDraftByProductId[productId] ?? "", 10);
+    if (!Number.isFinite(quantity) || quantity < 0) {
+      setAdminError("Stock must be a non-negative integer.");
+      return;
+    }
+
+    setAdminError(null);
+    setAdminLoading(true);
+    try {
+      const response = await client.admin.setStock({
+        password: adminSessionPassword,
+        productId,
+        quantity,
+        note: stockNoteByProductId[productId]?.trim() || undefined
+      });
+      setStockSnapshot(response);
+      setStockDraftByProductId(
+        Object.fromEntries(
+          response.items.map((item) => [item.productId, String(item.quantity)])
+        )
+      );
+      setStockNoteByProductId((current) => ({ ...current, [productId]: "" }));
+    } catch {
+      setAdminError("Could not update stock.");
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
   const lockAdminPanel = () => {
     setAdminTransactions(null);
+    setStockSnapshot(null);
+    setStockDraftByProductId({});
+    setStockNoteByProductId({});
+    setAdminSessionPassword("");
     setAdminPassword("");
     setAdminError(null);
     setAdminStatusFilter("all");
     setAdminProductFilter("all");
     setAdminFromDate("");
     setAdminToDate("");
+    setAdminTab("transactions");
   };
 
   const downloadAdminCsv = () => {
@@ -473,32 +531,25 @@ export default function App() {
         <header className="sticky top-0 z-30 rounded-2xl border border-black/10 bg-white/80 p-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/80">
           <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
             <h1 className="text-base font-semibold">Fridge Checkout</h1>
-            {/*<button*/}
-            {/*  type="button"*/}
-            {/*  onClick={() => setIsDark((value) => !value)}*/}
-            {/*  className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"*/}
-            {/*>*/}
-            {/*  {isDark ? "Light mode" : "Dark mode"}*/}
-            {/*</button>*/}
-            {/*<button*/}
-            {/*  type="button"*/}
-            {/*  onClick={() => {*/}
-            {/*    setUiMode((current) => (current === "pos" ? "admin" : "pos"));*/}
-            {/*    setAdminError(null);*/}
-            {/*  }}*/}
-            {/*  className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"*/}
-            {/*>*/}
-            {/*  {uiMode === "pos" ? "Admin panel" : "Back to checkout"}*/}
-            {/*</button>*/}
-            {/*{uiMode === "admin" && adminTransactions && (*/}
-            {/*  <button*/}
-            {/*    type="button"*/}
-            {/*    onClick={lockAdminPanel}*/}
-            {/*    className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:text-slate-300"*/}
-            {/*  >*/}
-            {/*    Refresh*/}
-            {/*  </button>*/}
-            {/*)}*/}
+            <button
+              type="button"
+              onClick={() => {
+                setUiMode((current) => (current === "pos" ? "admin" : "pos"));
+                setAdminError(null);
+              }}
+              className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
+            >
+              {uiMode === "pos" ? "Admin panel" : "Back to checkout"}
+            </button>
+            {uiMode === "admin" && adminTransactions && (
+              <button
+                type="button"
+                onClick={lockAdminPanel}
+                className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:text-slate-300"
+              >
+                Lock admin
+              </button>
+            )}
             {uiMode === "pos" && view === "cart" && (
               <>
                 <span className="text-sm font-semibold">{totalLabel}</span>
@@ -569,6 +620,32 @@ export default function App() {
               </form>
             ) : (
               <div className="flex flex-col gap-6">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAdminTab("transactions")}
+                    className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                      adminTab === "transactions"
+                        ? "bg-accent-light text-white dark:bg-accent-dark dark:text-slate-900"
+                        : "border border-slate-300 hover:border-slate-500 dark:border-slate-600"
+                    }`}
+                  >
+                    Transactions
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAdminTab("stock")}
+                    className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                      adminTab === "stock"
+                        ? "bg-accent-light text-white dark:bg-accent-dark dark:text-slate-900"
+                        : "border border-slate-300 hover:border-slate-500 dark:border-slate-600"
+                    }`}
+                  >
+                    Stock
+                  </button>
+                </div>
+                {adminTab === "transactions" && (
+                <>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                     <p className="text-xs uppercase tracking-wide text-slate-500">Total tx</p>
@@ -742,6 +819,83 @@ export default function App() {
                     </tbody>
                   </table>
                 </div>
+                </>
+                )}
+
+                {adminTab === "stock" && stockSnapshot && (
+                  <div className="flex flex-col gap-4">
+                    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+                      <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
+                        <thead className="bg-slate-50 dark:bg-slate-800/40">
+                          <tr>
+                            <th className="px-3 py-2 text-left font-semibold">Product</th>
+                            <th className="px-3 py-2 text-right font-semibold">Current</th>
+                            <th className="px-3 py-2 text-right font-semibold">New stock</th>
+                            <th className="px-3 py-2 text-left font-semibold">Note</th>
+                            <th className="px-3 py-2 text-right font-semibold">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                          {stockSnapshot.items.map((item) => (
+                            <tr key={item.productId}>
+                              <td className="px-3 py-2">{item.productName}</td>
+                              <td className="px-3 py-2 text-right font-semibold">{item.quantity}</td>
+                              <td className="px-3 py-2 text-right">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={stockDraftByProductId[item.productId] ?? "0"}
+                                  onChange={(event) =>
+                                    setStockDraftByProductId((current) => ({
+                                      ...current,
+                                      [item.productId]: event.target.value
+                                    }))
+                                  }
+                                  className="w-24 rounded-lg border border-slate-300 px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-900"
+                                />
+                              </td>
+                              <td className="px-3 py-2">
+                                <input
+                                  type="text"
+                                  value={stockNoteByProductId[item.productId] ?? ""}
+                                  placeholder="Manual count"
+                                  onChange={(event) =>
+                                    setStockNoteByProductId((current) => ({
+                                      ...current,
+                                      [item.productId]: event.target.value
+                                    }))
+                                  }
+                                  className="w-full rounded-lg border border-slate-300 px-2 py-1 dark:border-slate-600 dark:bg-slate-900"
+                                />
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => void updateStock(item.productId)}
+                                  className="rounded-lg bg-accent-light px-3 py-1 text-xs font-semibold text-white dark:bg-accent-dark dark:text-slate-900"
+                                >
+                                  Save
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                      <h3 className="text-sm font-semibold">Recent stock events</h3>
+                      <ul className="mt-2 space-y-1 text-xs text-slate-600 dark:text-slate-300">
+                        {stockSnapshot.events.slice(0, 12).map((event) => (
+                          <li key={event.id}>
+                            {new Date(event.createdAt).toLocaleString()} — {event.productId} — {event.type} {event.quantity}
+                            {event.note ? ` (${event.note})` : ""}
+                          </li>
+                        ))}
+                        {stockSnapshot.events.length === 0 && <li>No stock events yet.</li>}
+                      </ul>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </section>

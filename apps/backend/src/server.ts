@@ -7,15 +7,25 @@ import { createProductStore } from "./productStore.ts";
 import { createTransactionStore } from "./transactionStore.ts";
 import { createTransactionService } from "./transactionService.ts";
 import { createAdminService } from "./adminService.ts";
+import { createStockEventStore } from "./stockEventStore.ts";
 
 const api = implement(contract);
 const defaultDataDir = fileURLToPath(new URL("../data/", import.meta.url));
+const defaultCatalogDir = fileURLToPath(new URL("../catalog/", import.meta.url));
 const dataDir = process.env.DATA_DIR ?? defaultDataDir;
-const productStore = createProductStore(dataDir);
+const catalogDir = process.env.CATALOG_DIR ?? defaultCatalogDir;
+const stockEventStore = createStockEventStore(dataDir);
+const productStore = createProductStore(catalogDir, stockEventStore);
 const transactionStore = createTransactionStore(dataDir);
-const transactionService = createTransactionService(productStore, transactionStore);
+const transactionService = createTransactionService(
+  productStore,
+  transactionStore,
+  stockEventStore
+);
 const adminService = createAdminService({
   transactionStore,
+  productStore,
+  stockEventStore,
   adminPanelPassword: process.env.ADMIN_PANEL_PASSWORD
 });
 
@@ -34,6 +44,16 @@ const router = {
   admin: {
     exportTransactions: api.admin.exportTransactions.handler(async ({ input }) =>
       adminService.exportTransactions(input.password)
+    ),
+    getStock: api.admin.getStock.handler(async ({ input }) =>
+      adminService.getStock(input.password)
+    ),
+    setStock: api.admin.setStock.handler(async ({ input }) =>
+      adminService.setStock(input.password, {
+        productId: input.productId,
+        quantity: input.quantity,
+        note: input.note
+      })
     )
   }
 };
@@ -45,6 +65,7 @@ const healthPath = "/healthz";
 const port = Number(process.env.PORT ?? 4000);
 
 const server = createServer(async (req, res) => {
+  try {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
@@ -110,6 +131,27 @@ const server = createServer(async (req, res) => {
     res.statusCode = 404;
     res.end("Not found");
   }
+  } catch (error) {
+    console.error(
+      `[server-error] ${new Date().toISOString()} ${req.method ?? "UNKNOWN"} ${req.url ?? ""}`,
+      error
+    );
+    if (!res.headersSent) {
+      res.statusCode = 500;
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ error: "Internal Server Error" }));
+    } else {
+      res.end();
+    }
+  }
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error(`[unhandledRejection] ${new Date().toISOString()}`, reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error(`[uncaughtException] ${new Date().toISOString()}`, error);
 });
 
 server.listen(port, () => {

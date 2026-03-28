@@ -3,6 +3,8 @@ import * as z from "zod";
 import {
   AdminExportTransactionsInputSchema,
   AdminExportTransactionsOutputSchema,
+  AdminGetStockOutputSchema,
+  AdminSetStockInputSchema,
   FinalizeTransactionInputSchema,
   ProductCatalogSchema,
   StartTransactionInputSchema,
@@ -25,6 +27,14 @@ export const adminExportTransactionsContract = oc
   .input(AdminExportTransactionsInputSchema)
   .output(AdminExportTransactionsOutputSchema);
 
+export const adminGetStockContract = oc
+  .input(AdminExportTransactionsInputSchema)
+  .output(AdminGetStockOutputSchema);
+
+export const adminSetStockContract = oc
+  .input(AdminSetStockInputSchema)
+  .output(AdminGetStockOutputSchema);
+
 export const contract = {
   product: {
     list: listProductsContract
@@ -34,6 +44,8 @@ export const contract = {
     finalize: finalizeTransactionContract
   },
   admin: {
-    exportTransactions: adminExportTransactionsContract
+    exportTransactions: adminExportTransactionsContract,
+    getStock: adminGetStockContract,
+    setStock: adminSetStockContract
   }
 };
