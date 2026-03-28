@@ -110,8 +110,26 @@ function buildTransactionsCsv(transactions: Transaction[]): string {
   return [header.join(","), ...lines].join("\n");
 }
 
+function readInitialUiMode(): UiMode {
+  if (typeof window === "undefined") {
+    return "pos";
+  }
+
+  const value = new URLSearchParams(window.location.search).get("mode");
+  return value === "admin" ? "admin" : "pos";
+}
+
+function readInitialAdminTab(): AdminTab {
+  if (typeof window === "undefined") {
+    return "transactions";
+  }
+
+  const value = new URLSearchParams(window.location.search).get("tab");
+  return value === "stock" ? "stock" : "transactions";
+}
+
 export default function App() {
-  const [uiMode, setUiMode] = useState<UiMode>("pos");
+  const [uiMode, setUiMode] = useState<UiMode>(readInitialUiMode);
   const [products, setProducts] = useState<Product[]>([]);
   const [priceCategories, setPriceCategories] = useState<PriceCategory[]>([]);
   const [cart, setCart] = useState<
@@ -136,7 +154,7 @@ export default function App() {
   const [adminProductFilter, setAdminProductFilter] = useState("all");
   const [adminFromDate, setAdminFromDate] = useState("");
   const [adminToDate, setAdminToDate] = useState("");
-  const [adminTab, setAdminTab] = useState<AdminTab>("transactions");
+  const [adminTab, setAdminTab] = useState<AdminTab>(readInitialAdminTab);
   const [adminSessionPassword, setAdminSessionPassword] = useState("");
   const [stockSnapshot, setStockSnapshot] = useState<AdminGetStockOutput | null>(null);
   const [stockDraftByProductId, setStockDraftByProductId] = useState<Record<string, string>>({});
@@ -149,6 +167,27 @@ export default function App() {
     document.documentElement.classList.toggle("dark", isDark);
     persistTheme(isDark);
   }, [isDark]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    params.delete("mode");
+    params.delete("tab");
+
+    if (uiMode === "admin") {
+      params.set("mode", "admin");
+      if (adminTab === "stock") {
+        params.set("tab", "stock");
+      }
+    }
+
+    const query = params.toString();
+    const nextUrl = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
+    window.history.replaceState(null, "", nextUrl);
+  }, [adminTab, uiMode]);
 
   useEffect(() => {
     let isMounted = true;
