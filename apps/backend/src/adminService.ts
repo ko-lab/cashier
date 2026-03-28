@@ -9,7 +9,7 @@ export type AdminService = {
   getStock: (password: string) => Promise<AdminGetStockOutput>;
   setStock: (
     password: string,
-    input: { productId: string; quantity: number; note?: string }
+    input: { productId: string; quantity?: number; note?: string }
   ) => Promise<AdminGetStockOutput>;
 };
 
@@ -85,12 +85,32 @@ export function createAdminService({
         });
       }
 
-      await stockEventStore.appendEvent({
-        productId: input.productId,
-        type: "manual_set",
-        quantity: input.quantity,
-        note: input.note
-      });
+      const trimmedNote = input.note?.trim();
+      if (trimmedNote && /[;,]/.test(trimmedNote)) {
+        throw new ORPCError("BAD_REQUEST", {
+          data: { message: "Note cannot contain commas or semicolons." }
+        });
+      }
+
+      if (typeof input.quantity === "number") {
+        await stockEventStore.appendEvent({
+          productId: input.productId,
+          type: "manual_set",
+          quantity: input.quantity,
+          note: trimmedNote
+        });
+      } else if (trimmedNote) {
+        await stockEventStore.appendEvent({
+          productId: input.productId,
+          type: "comment",
+          quantity: 0,
+          note: trimmedNote
+        });
+      } else {
+        throw new ORPCError("BAD_REQUEST", {
+          data: { message: "Either quantity or note is required." }
+        });
+      }
 
       return buildStockSnapshot();
     }

@@ -20,6 +20,9 @@ function applyEvent(current: number, event: StockEvent): number {
   if (event.type === "manual_set") {
     return Math.max(0, event.quantity);
   }
+  if (event.type === "comment") {
+    return current;
+  }
   return Math.max(0, current + event.quantity);
 }
 
