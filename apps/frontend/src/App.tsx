@@ -560,7 +560,7 @@ export default function App() {
               </button>
             )}
             {uiMode === "pos" && view === "cart" && (
-              <>
+              <div className="ml-auto flex items-center gap-3">
                 <span className="text-sm font-semibold">{totalLabel}</span>
                 <button
                   type="button"
@@ -570,7 +570,7 @@ export default function App() {
                 >
                   Checkout ({totalLabel})
                 </button>
-              </>
+              </div>
             )}
           </div>
         </header>
