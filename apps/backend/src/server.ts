@@ -11,9 +11,11 @@ import { createStockEventStore } from "./stockEventStore.ts";
 
 const api = implement(contract);
 const defaultDataDir = fileURLToPath(new URL("../data/", import.meta.url));
+const defaultCatalogDir = fileURLToPath(new URL("../catalog/", import.meta.url));
 const dataDir = process.env.DATA_DIR ?? defaultDataDir;
+const catalogDir = process.env.CATALOG_DIR ?? defaultCatalogDir;
 const stockEventStore = createStockEventStore(dataDir);
-const productStore = createProductStore(dataDir, stockEventStore);
+const productStore = createProductStore(catalogDir, stockEventStore);
 const transactionStore = createTransactionStore(dataDir);
 const transactionService = createTransactionService(
   productStore,

@@ -19,6 +19,7 @@ COPY apps/backend ./apps/backend
 
 ENV PORT=4000
 ENV DATA_DIR=/app/apps/backend/data
+ENV CATALOG_DIR=/app/apps/backend/catalog
 
 EXPOSE 4000
 

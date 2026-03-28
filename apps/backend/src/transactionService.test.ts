@@ -7,10 +7,11 @@ import { createProductStore } from "./productStore.ts";
 import { createTransactionStore } from "./transactionStore.ts";
 import { createTransactionService } from "./transactionService.ts";
 import { writeJson } from "./storage.ts";
+import { createStockEventStore } from "./stockEventStore.ts";
 import type { PriceCategory, Product } from "../../../shared/models.ts";
 
 const priceCategories: Record<string, PriceCategory> = {
-  "beer": {
+  beer: {
     id: "beer",
     name: "Beer",
     priceMember: 3,
@@ -19,20 +20,23 @@ const priceCategories: Record<string, PriceCategory> = {
 };
 
 const products: Record<string, Product> = {
-  "cola": {
+  cola: {
     id: "cola",
     name: "Cola",
     priceCategoryId: "beer",
     inventoryCount: 10,
     active: true
   }
-}
+};
 
 describe("transaction service", () => {
   let dataDir: string;
+  let catalogDir: string;
+
   beforeEach(async () => {
     dataDir = await mkdtemp(path.join(tmpdir(), "pos-data-"));
-    await writeJson(path.join(dataDir, "products.json"), {
+    catalogDir = path.join(dataDir, "catalog");
+    await writeJson(path.join(catalogDir, "products.json"), {
       products,
       priceCategories
     });
@@ -43,9 +47,14 @@ describe("transaction service", () => {
   });
 
   it("creates a pending transaction and persists it", async () => {
-    const productStore = createProductStore(dataDir);
+    const stockEventStore = createStockEventStore(dataDir);
+    const productStore = createProductStore(catalogDir, stockEventStore);
     const transactionStore = createTransactionStore(dataDir);
-    const service = createTransactionService(productStore, transactionStore);
+    const service = createTransactionService(
+      productStore,
+      transactionStore,
+      stockEventStore
+    );
 
     const transaction = await service.startTransaction([
       { productId: "cola", quantity: 2, isMemberPrice: true }
@@ -59,9 +68,14 @@ describe("transaction service", () => {
   });
 
   it("finalizes a transaction", async () => {
-    const productStore = createProductStore(dataDir);
+    const stockEventStore = createStockEventStore(dataDir);
+    const productStore = createProductStore(catalogDir, stockEventStore);
     const transactionStore = createTransactionStore(dataDir);
-    const service = createTransactionService(productStore, transactionStore);
+    const service = createTransactionService(
+      productStore,
+      transactionStore,
+      stockEventStore
+    );
 
     const transaction = await service.startTransaction([
       { productId: "cola", quantity: 1, isMemberPrice: false }
@@ -75,9 +89,14 @@ describe("transaction service", () => {
   });
 
   it("rejects unknown products", async () => {
-    const productStore = createProductStore(dataDir);
+    const stockEventStore = createStockEventStore(dataDir);
+    const productStore = createProductStore(catalogDir, stockEventStore);
     const transactionStore = createTransactionStore(dataDir);
-    const service = createTransactionService(productStore, transactionStore);
+    const service = createTransactionService(
+      productStore,
+      transactionStore,
+      stockEventStore
+    );
 
     await expect(
       service.startTransaction([

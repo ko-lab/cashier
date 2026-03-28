@@ -7,6 +7,7 @@ services:
     environment:
       PORT: "4000"
       DATA_DIR: /app/apps/backend/data
+      CATALOG_DIR: /app/apps/backend/catalog
       ADMIN_PANEL_PASSWORD: ${ADMIN_PANEL_PASSWORD}
     volumes:
       - ../apps/backend/data:/app/apps/backend/data

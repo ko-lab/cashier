@@ -8,10 +8,10 @@ export type ProductStore = {
 };
 
 export function createProductStore(
-  dataDir: string,
+  catalogDir: string,
   stockEventStore: StockEventStore
 ): ProductStore {
-  const productsPath = path.join(dataDir, "products.json");
+  const productsPath = path.join(catalogDir, "products.json");
 
   return {
     async listCatalog() {
