@@ -21,12 +21,19 @@ jobs:
             exit 1
           fi
 
-          curl --fail --show-error --silent \
+          response="$(curl --fail --show-error --silent \
             -X POST \
             -H "Content-Type: application/json" \
             -H "X-GitHub-Event: push" \
             --data "{\"ref\":\"refs/heads/${REF_NAME}\",\"after\":\"${COMMIT_SHA}\"}" \
-            "$DOKPLOY_WEBHOOK_URL"
+            "$DOKPLOY_WEBHOOK_URL")"
+
+          echo "Dokploy response: $response"
+
+          if ! echo "$response" | grep -q "Compose deployed successfully"; then
+            echo "Dokploy webhook did not return expected success message."
+            exit 1
+          fi
 
           echo "Dokploy webhook triggered for refs/heads/${REF_NAME} @ ${COMMIT_SHA}."
 
