@@ -853,7 +853,7 @@ export default function App() {
       <div className="mx-auto flex max-w-4xl flex-col gap-8">
         <header className="sticky top-0 z-30 rounded-2xl border border-black/10 bg-white/80 p-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/80">
           <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
-            <h1 className="text-base font-semibold">Fridge Checkout</h1>
+            <h1 className="text-base font-semibold">Cashier</h1>
             <button
               type="button"
               onClick={() => {
@@ -866,11 +866,16 @@ export default function App() {
                 lockAdminPanel();
                 setUiMode("pos");
               }}
-              className={`rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300 ${
-                uiMode === "pos" ? "hidden sm:inline-flex" : "inline-flex"
-              }`}
+              className="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
             >
-              {uiMode === "pos" ? "Admin panel" : "Back to checkout"}
+              {uiMode === "pos" ? (
+                <>
+                  <span className="sm:hidden">Admin</span>
+                  <span className="hidden sm:inline">Admin panel</span>
+                </>
+              ) : (
+                "Back to checkout"
+              )}
             </button>
             <button
               type="button"
