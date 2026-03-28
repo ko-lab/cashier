@@ -21,6 +21,7 @@ import {
   getUnselectedProducts
 } from "./domain/productSection";
 import { getUnitPrice } from "./domain/pricing";
+import { toStructuredCommunication } from "./domain/structuredCommunication";
 
 type View = "cart" | "checkout";
 type UiMode = "pos" | "admin";
@@ -202,15 +203,20 @@ export default function App() {
     [products, cart, searchQuery, defaultIsMemberPrice]
   );
 
+  const structuredCommunication = useMemo(
+    () => (transaction ? toStructuredCommunication(transaction.id) : null),
+    [transaction]
+  );
+
   useEffect(() => {
-    if (!transaction) {
+    if (!transaction || !structuredCommunication) {
       setQrImageSrc(null);
       return;
     }
 
     const ibanName = import.meta.env.VITE_IBAN_NAME ?? "KO-LAB";
     const ibanNumber = import.meta.env.VITE_IBAN ?? "BE00000000000000";
-    const payMessage = transaction.id;
+    const payMessage = structuredCommunication;
     const amount = transaction.total.toFixed(2);
     const payload = [
       "BCD",
@@ -241,7 +247,7 @@ export default function App() {
     setQrImageSrc(
       `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrSvg)}`
     );
-  }, [transaction]);
+  }, [structuredCommunication, transaction]);
 
   const handleQuantityChange = (
     productId: string,
@@ -1076,6 +1082,16 @@ export default function App() {
                   </p>
                   <p className="text-2xl font-semibold">{totalLabel}</p>
                 </div>
+                {structuredCommunication && (
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left dark:border-slate-700 dark:bg-slate-900/40">
+                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Gestructureerde mededeling
+                    </p>
+                    <p className="mt-1 font-mono text-sm font-semibold text-slate-800 dark:text-slate-100">
+                      {structuredCommunication}
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
                 <button
