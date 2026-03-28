@@ -13,3 +13,4 @@ coverage/
 apps/backend/data/transactions.*
 
 .env
+.worktrees
