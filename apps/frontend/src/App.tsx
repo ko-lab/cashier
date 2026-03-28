@@ -255,7 +255,7 @@ export default function App() {
   };
 
   const openCheckoutConfirm = () => {
-    if (summary.items.length === 0 || isBusy) {
+    if (!hasCheckoutItems || isBusy) {
       return;
     }
     setShowCheckoutConfirm(true);
@@ -381,8 +381,9 @@ export default function App() {
   }, [adminFilteredTransactions]);
 
   const isBusy = loading || adminLoading;
+  const hasCheckoutItems = cart.some((item) => item.quantity > 0);
   const isSafeToRefresh =
-    uiMode === "pos" && view === "cart" && cart.length === 0 && !isBusy && !transaction;
+    uiMode === "pos" && view === "cart" && !hasCheckoutItems && !isBusy && !transaction;
 
   useEffect(() => {
     let isMounted = true;
@@ -575,7 +576,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={openCheckoutConfirm}
-                  disabled={summary.items.length === 0 || isBusy}
+                  disabled={!hasCheckoutItems || isBusy}
                   className="rounded-full bg-accent-light px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
                 >
                   Checkout ({totalLabel})
@@ -1094,12 +1095,24 @@ export default function App() {
         )}
 
         {uiMode === "pos" && view === "cart" && showCheckoutConfirm && (
-          <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/50 p-4 sm:items-center">
+          <div className="fixed inset-0 z-40 flex items-start justify-center bg-black/50 p-4 pt-6">
             <div className="w-full max-w-2xl rounded-2xl border border-black/10 bg-white p-6 shadow-xl dark:border-white/10 dark:bg-slate-900">
-              <h3 className="text-lg font-semibold">Confirm checkout</h3>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
-                Review and edit your cart before generating the payment QR.
-              </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold">Confirm checkout</h3>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
+                    Review and edit your cart before generating the payment QR.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void startCheckout()}
+                  disabled={!hasCheckoutItems || isBusy}
+                  className="rounded-xl bg-accent-light px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
+                >
+                  Confirm ({totalLabel})
+                </button>
+              </div>
 
               <div className="mt-4 max-h-[50vh] overflow-y-auto rounded-xl border border-slate-200 p-3 dark:border-slate-700">
                 {cartItemsForCheckout.length === 0 ? (
@@ -1163,14 +1176,6 @@ export default function App() {
                   className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500 dark:border-slate-600 dark:text-slate-200"
                 >
                   Back
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void startCheckout()}
-                  disabled={cartItemsForCheckout.length === 0 || isBusy}
-                  className="rounded-xl bg-accent-light px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
-                >
-                  Confirm & generate QR ({totalLabel})
                 </button>
               </div>
             </div>
