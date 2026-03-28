@@ -43,12 +43,19 @@ jobs:
     steps:
       - name: Wait for live page to serve deployed commit
         env:
-          DEPLOY_CHECK_URL: ${{ vars.DEPLOY_CHECK_URL }}
+          DEPLOY_CHECK_URL: ${{ vars.DEPLOY_CHECK_URL_DEV || vars.DEPLOY_CHECK_URL }}
+          DEPLOY_CHECK_URL_DEV: ${{ vars.DEPLOY_CHECK_URL_DEV }}
           EXPECTED_COMMIT: ${{ github.sha }}
         run: |
           if [ -z "$DEPLOY_CHECK_URL" ]; then
-            echo "Missing required repository variable: DEPLOY_CHECK_URL"
+            echo "Missing required repository variable: DEPLOY_CHECK_URL_DEV (or fallback DEPLOY_CHECK_URL)"
             exit 1
+          fi
+
+          if [ -n "$DEPLOY_CHECK_URL_DEV" ]; then
+            echo "Using dedicated dev check URL (DEPLOY_CHECK_URL_DEV)."
+          else
+            echo "DEPLOY_CHECK_URL_DEV not set; using DEPLOY_CHECK_URL fallback."
           fi
 
           echo "Waiting for $DEPLOY_CHECK_URL to expose commit $EXPECTED_COMMIT"
