@@ -83,6 +83,20 @@ function csvEscape(value: string | number | boolean): string {
   return text;
 }
 
+function formatAdminDate(value: string): string {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString([], {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
 function buildTransactionsCsv(transactions: Transaction[]): string {
   const header = [
     "id",
@@ -152,6 +166,7 @@ export default function App() {
     "all" | TransactionStatus
   >("all");
   const [adminProductFilter, setAdminProductFilter] = useState("all");
+  const [adminItemQuery, setAdminItemQuery] = useState("");
   const [adminFromDate, setAdminFromDate] = useState("");
   const [adminToDate, setAdminToDate] = useState("");
   const [adminTab, setAdminTab] = useState<AdminTab>(readInitialAdminTab);
@@ -391,6 +406,15 @@ export default function App() {
       ) {
         return false;
       }
+      if (adminItemQuery.trim()) {
+        const query = adminItemQuery.trim().toLowerCase();
+        const hasMatch = transaction.items.some((item) =>
+          `${item.name} ${item.productId}`.toLowerCase().includes(query)
+        );
+        if (!hasMatch) {
+          return false;
+        }
+      }
 
       const date = new Date(transaction.createdAt);
       if (!Number.isFinite(date.getTime())) {
@@ -417,6 +441,7 @@ export default function App() {
     adminTransactions,
     adminStatusFilter,
     adminProductFilter,
+    adminItemQuery,
     adminFromDate,
     adminToDate
   ]);
@@ -777,7 +802,7 @@ Logout
                   </button>
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
+                <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-7">
                   <label className="flex flex-col gap-2 text-sm">
                     <span className="text-xs uppercase tracking-wide text-slate-500">
                       Status
@@ -813,6 +838,18 @@ Logout
                         </option>
                       ))}
                     </select>
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-xs uppercase tracking-wide text-slate-500">
+                      Item text
+                    </span>
+                    <input
+                      type="search"
+                      value={adminItemQuery}
+                      onChange={(event) => setAdminItemQuery(event.target.value)}
+                      placeholder="Name or id"
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                    />
                   </label>
                   <label className="flex flex-col gap-2 text-sm">
                     <span className="text-xs uppercase tracking-wide text-slate-500">
@@ -855,6 +892,7 @@ Logout
                       onClick={() => {
                         setAdminStatusFilter("all");
                         setAdminProductFilter("all");
+                        setAdminItemQuery("");
                         setAdminFromDate("");
                         setAdminToDate("");
                       }}
@@ -873,24 +911,27 @@ Logout
                         <th className="px-3 py-2 text-left font-semibold">Date</th>
                         <th className="px-3 py-2 text-left font-semibold">Status</th>
                         <th className="px-3 py-2 text-right font-semibold">Total</th>
-                        <th className="px-3 py-2 text-right font-semibold">Items</th>
+                        <th className="px-3 py-2 text-left font-semibold">Items</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                       {adminFilteredTransactions.map((entry) => (
                         <tr key={entry.id}>
-                          <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">
+                          <td
+                            className="max-w-28 truncate px-3 py-2 font-mono text-xs"
+                            title={entry.id}
+                          >
                             {entry.id}
                           </td>
                           <td className="whitespace-nowrap px-3 py-2">
-                            {new Date(entry.createdAt).toLocaleString()}
+                            {formatAdminDate(entry.createdAt)}
                           </td>
                           <td className="whitespace-nowrap px-3 py-2">{entry.status}</td>
                           <td className="whitespace-nowrap px-3 py-2 text-right">
                             {currencyFormatter.format(entry.total)}
                           </td>
-                          <td className="whitespace-nowrap px-3 py-2 text-right">
-                            {entry.items.length}
+                          <td className="px-3 py-2 text-left">
+                            {entry.items.map((item) => `${item.name} x${item.quantity}`).join(" | ")}
                           </td>
                         </tr>
                       ))}
