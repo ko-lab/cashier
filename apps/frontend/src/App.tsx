@@ -1095,8 +1095,14 @@ export default function App() {
         )}
 
         {uiMode === "pos" && view === "cart" && showCheckoutConfirm && (
-          <div className="fixed inset-0 z-40 flex items-start justify-center bg-black/50 p-4 pt-6">
-            <div className="w-full max-w-2xl rounded-2xl border border-black/10 bg-white p-6 shadow-xl dark:border-white/10 dark:bg-slate-900">
+          <div
+            className="fixed inset-0 z-40 flex items-start justify-center bg-black/50 p-4 pt-6"
+            onClick={() => setShowCheckoutConfirm(false)}
+          >
+            <div
+              className="w-full max-w-2xl rounded-2xl border border-black/10 bg-white p-6 shadow-xl dark:border-white/10 dark:bg-slate-900"
+              onClick={(event) => event.stopPropagation()}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-semibold">Confirm checkout</h3>
