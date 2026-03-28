@@ -12,6 +12,7 @@
     "docker:up": "docker compose -f \"$PWD/infra/docker-compose.yml\" --env-file \"$PWD/infra/.env\" up --build",
     "test": "pnpm -r test",
     "test:be": "pnpm --filter @spacier/backend test",
-    "test:fe": "pnpm --filter @spacier/frontend test"
+    "test:fe": "pnpm --filter @spacier/frontend test",
+    "hooks:install": "git config core.hooksPath .githooks"
   }
 }
