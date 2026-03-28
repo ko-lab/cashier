@@ -1380,7 +1380,7 @@ export default function App() {
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <h2 className="text-lg font-semibold">Products</h2>
                 <div className="flex items-center gap-3 rounded-full border border-slate-200 px-3 py-1 text-xs uppercase tracking-wide text-slate-600 dark:border-slate-700 dark:text-slate-200">
-                  <span>{defaultIsMemberPrice ? "Member price" : "Regular price"}</span>
+                  <span>{defaultIsMemberPrice ? "Member price" : "Non-member price"}</span>
                   <button
                     type="button"
                     onClick={() => setDefaultIsMemberPrice((value) => !value)}

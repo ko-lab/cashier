@@ -12,7 +12,7 @@ export type SelectedItemView = {
 };
 
 export function formatPriceMode(isMemberPrice: boolean): string {
-  return isMemberPrice ? "(member price)" : "(regular price)";
+  return isMemberPrice ? "(member price)" : "(non-member price)";
 }
 
 export function filterProductsByQuery(
