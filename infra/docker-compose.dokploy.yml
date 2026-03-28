@@ -24,7 +24,7 @@ services:
         VITE_API_URL: ${VITE_API_URL:-/rpc}
         VITE_IBAN: ${VITE_IBAN}
         VITE_IBAN_NAME: ${VITE_IBAN_NAME}
-        VITE_APP_VERSION: ${VITE_APP_VERSION:-dev}
+        VITE_APP_VERSION: ${VITE_APP_VERSION:-${COMMIT_SHA:-dev}}
     expose:
       - "4173"
     restart: unless-stopped

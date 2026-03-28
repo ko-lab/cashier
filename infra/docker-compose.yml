@@ -23,7 +23,7 @@ services:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:4000/rpc}
         VITE_IBAN: ${VITE_IBAN}
         VITE_IBAN_NAME: ${VITE_IBAN_NAME}
-        VITE_APP_VERSION: ${VITE_APP_VERSION:-dev}
+        VITE_APP_VERSION: ${VITE_APP_VERSION:-${COMMIT_SHA:-dev}}
     depends_on:
       - backend
     ports:
