@@ -38,7 +38,7 @@ const router = {
       transactionService.startTransaction(input.items)
     ),
     finalize: api.transaction.finalize.handler(async ({ input }) =>
-      transactionService.finalizeTransaction(input.id, input.status)
+      transactionService.finalizeTransaction(input.id, input.status, input.reason)
     )
   },
   admin: {

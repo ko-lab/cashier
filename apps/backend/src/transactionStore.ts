@@ -8,7 +8,8 @@ export type TransactionStore = {
   getById: (id: string) => Promise<Transaction | null>;
   updateStatus: (
     id: string,
-    status: Exclude<TransactionStatus, "pending">
+    status: Exclude<TransactionStatus, "pending">,
+    reason?: string
   ) => Promise<Transaction | null>;
   list: () => Promise<Transaction[]>;
 };
@@ -24,35 +25,48 @@ export function createTransactionStore(dataDir: string): TransactionStore {
       id TEXT PRIMARY KEY,
       created_at TEXT NOT NULL,
       status TEXT NOT NULL,
+      abandonment_reason TEXT,
       total REAL NOT NULL,
       items_json TEXT NOT NULL
     );
   `);
 
+  const tableInfo = db
+    .prepare("PRAGMA table_info(transactions)")
+    .all() as { name: string }[];
+  const hasAbandonmentReasonColumn = tableInfo.some(
+    (column) => column.name === "abandonment_reason"
+  );
+  if (!hasAbandonmentReasonColumn) {
+    db.exec("ALTER TABLE transactions ADD COLUMN abandonment_reason TEXT");
+  }
+
   const insertTransaction = db.prepare(`
-    INSERT INTO transactions (id, created_at, status, total, items_json)
-    VALUES (@id, @createdAt, @status, @total, @itemsJson)
+    INSERT INTO transactions (id, created_at, status, abandonment_reason, total, items_json)
+    VALUES (@id, @createdAt, @status, @abandonmentReason, @total, @itemsJson)
   `);
   const selectById = db.prepare(
-    "SELECT id, created_at, status, total, items_json FROM transactions WHERE id = ?"
+    "SELECT id, created_at, status, abandonment_reason, total, items_json FROM transactions WHERE id = ?"
   );
   const updateStatus = db.prepare(
-    "UPDATE transactions SET status = ? WHERE id = ?"
+    "UPDATE transactions SET status = ?, abandonment_reason = ? WHERE id = ?"
   );
   const listAll = db.prepare(
-    "SELECT id, created_at, status, total, items_json FROM transactions ORDER BY created_at DESC"
+    "SELECT id, created_at, status, abandonment_reason, total, items_json FROM transactions ORDER BY created_at DESC"
   );
 
   const mapRow = (row: {
     id: string;
     created_at: string;
     status: TransactionStatus;
+    abandonment_reason?: string | null;
     total: number;
     items_json: string;
   }): Transaction => ({
     id: row.id,
     createdAt: row.created_at,
     status: row.status,
+    abandonmentReason: row.abandonment_reason ?? undefined,
     total: row.total,
     items: JSON.parse(row.items_json) as Transaction["items"]
   });
@@ -63,6 +77,7 @@ export function createTransactionStore(dataDir: string): TransactionStore {
         id: transaction.id,
         createdAt: transaction.createdAt,
         status: transaction.status,
+        abandonmentReason: transaction.abandonmentReason ?? null,
         total: transaction.total,
         itemsJson: JSON.stringify(transaction.items)
       });
@@ -73,14 +88,15 @@ export function createTransactionStore(dataDir: string): TransactionStore {
             id: string;
             created_at: string;
             status: TransactionStatus;
+            abandonment_reason?: string | null;
             total: number;
             items_json: string;
           }
         | undefined;
       return row ? mapRow(row) : null;
     },
-    async updateStatus(id, status) {
-      updateStatus.run(status, id);
+    async updateStatus(id, status, reason) {
+      updateStatus.run(status, reason ?? null, id);
       return this.getById(id);
     },
     async list() {
@@ -88,6 +104,7 @@ export function createTransactionStore(dataDir: string): TransactionStore {
         id: string;
         created_at: string;
         status: TransactionStatus;
+        abandonment_reason?: string | null;
         total: number;
         items_json: string;
       }[];

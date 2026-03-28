@@ -71,7 +71,7 @@ export const CartItemInputSchema = z.object({
   isMemberPrice: z.boolean()
 });
 
-export const TransactionStatusSchema = z.enum(["pending", "completed", "canceled"]);
+export const TransactionStatusSchema = z.enum(["pending", "completed", "canceled", "abandoned"]);
 
 export const TransactionItemSchema = z.object({
   productId: z.string().min(1),
@@ -86,6 +86,7 @@ export const TransactionSchema = z.object({
   id: z.string().min(1),
   createdAt: z.string().min(1),
   status: TransactionStatusSchema,
+  abandonmentReason: z.string().optional(),
   total: z.number().nonnegative(),
   items: z.array(TransactionItemSchema)
 });
@@ -96,7 +97,8 @@ export const StartTransactionInputSchema = z.object({
 
 export const FinalizeTransactionInputSchema = z.object({
   id: z.string().min(1),
-  status: TransactionStatusSchema.exclude(["pending"])
+  status: TransactionStatusSchema.exclude(["pending"]),
+  reason: z.string().optional()
 });
 
 export const AdminExportTransactionsInputSchema = z.object({

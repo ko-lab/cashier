@@ -366,7 +366,11 @@ export default function App() {
 
       unloadCanceledTransactionIdRef.current = transaction.id;
       void client.transaction
-        .finalize({ id: transaction.id, status: "canceled" })
+        .finalize({
+          id: transaction.id,
+          status: "abandoned",
+          reason: "tab_closure"
+        })
         .catch(() => {
           // Best-effort cancellation during page unload.
         });
@@ -417,7 +421,7 @@ export default function App() {
     }
   };
 
-  const finalize = async (status: "completed" | "canceled") => {
+  const finalize = async (status: "completed" | "canceled" | "abandoned") => {
     if (!transaction) {
       return;
     }
@@ -523,7 +527,7 @@ export default function App() {
         accumulator[transaction.status] += 1;
         return accumulator;
       },
-      { count: 0, amount: 0, pending: 0, completed: 0, canceled: 0 }
+      { count: 0, amount: 0, pending: 0, completed: 0, canceled: 0, abandoned: 0 }
     );
   }, [adminFilteredTransactions]);
 
@@ -1056,6 +1060,7 @@ export default function App() {
                       <option value="pending">Pending</option>
                       <option value="completed">Completed</option>
                       <option value="canceled">Canceled</option>
+                      <option value="abandoned">Abandoned</option>
                     </select>
                   </label>
                   <label className="flex flex-col gap-2 text-sm">

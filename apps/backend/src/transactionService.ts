@@ -78,7 +78,8 @@ export type TransactionService = {
   startTransaction: (items: CartItemInput[]) => Promise<Transaction>;
   finalizeTransaction: (
     id: string,
-    status: Exclude<TransactionStatus, "pending">
+    status: Exclude<TransactionStatus, "pending">,
+    reason?: string
   ) => Promise<Transaction>;
 };
 
@@ -122,13 +123,13 @@ export function createTransactionService(
         data: { message: "Could not create transaction id" }
       });
     },
-    async finalizeTransaction(id, status) {
+    async finalizeTransaction(id, status, reason) {
       const existing = await transactionStore.getById(id);
       if (!existing) {
         throw new ORPCError("NOT_FOUND", { data: { message: "Transaction not found" } });
       }
 
-      const transaction = await transactionStore.updateStatus(id, status);
+      const transaction = await transactionStore.updateStatus(id, status, reason);
 
       if (!transaction) {
         throw new ORPCError("NOT_FOUND", { data: { message: "Transaction not found" } });
