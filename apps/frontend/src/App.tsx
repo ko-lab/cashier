@@ -630,7 +630,9 @@ export default function App() {
     setLoading(true);
     try {
       await client.transaction.finalize({ id: transaction.id, status });
-      setCart([]);
+      if (status === "completed") {
+        setCart([]);
+      }
       setTransaction(null);
       setView("cart");
       if (status === "completed") {
@@ -1075,7 +1077,7 @@ export default function App() {
             >
               {uiMode === "pos" ? (
                 <>
-                  <span className="sm:hidden">Admin</span>
+                  <span className="sm:hidden">Adm</span>
                   <span className="hidden sm:inline">Admin panel</span>
                 </>
               ) : (
@@ -1100,7 +1102,8 @@ export default function App() {
                   disabled={!hasCheckoutItems || isBusy}
                   className="rounded-full bg-accent-light px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
                 >
-                  Checkout ({totalLabel})
+                  <span className="sm:hidden">Pay ({totalLabel})</span>
+                  <span className="hidden sm:inline">Checkout ({totalLabel})</span>
                 </button>
               </div>
             )}
@@ -1862,6 +1865,17 @@ export default function App() {
               </div>
 
               <div className="mt-6 flex flex-wrap justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCart([]);
+                    setShowCheckoutConfirm(false);
+                  }}
+                  disabled={isBusy || cartItemsForCheckout.length === 0}
+                  className="rounded-xl border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:border-rose-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-600 dark:text-rose-300"
+                >
+                  Clear cart
+                </button>
                 <button
                   type="button"
                   onClick={() => setShowCheckoutConfirm(false)}
