@@ -14,6 +14,7 @@ jobs:
         env:
           DOKPLOY_WEBHOOK_URL: ${{ secrets.DOKPLOY_WEBHOOK_URL }}
           REF_NAME: ${{ github.ref_name }}
+          COMMIT_SHA: ${{ github.sha }}
         run: |
           if [ -z "$DOKPLOY_WEBHOOK_URL" ]; then
             echo "Missing required secret: DOKPLOY_WEBHOOK_URL"
@@ -24,7 +25,43 @@ jobs:
             -X POST \
             -H "Content-Type: application/json" \
             -H "X-GitHub-Event: push" \
-            --data "{\"ref\":\"refs/heads/${REF_NAME}\"}" \
+            --data "{\"ref\":\"refs/heads/${REF_NAME}\",\"after\":\"${COMMIT_SHA}\"}" \
             "$DOKPLOY_WEBHOOK_URL"
 
-          echo "Dokploy webhook triggered for refs/heads/${REF_NAME}."
+          echo "Dokploy webhook triggered for refs/heads/${REF_NAME} @ ${COMMIT_SHA}."
+
+  wait-live-commit:
+    needs: trigger-webhook
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for live page to serve deployed commit
+        env:
+          DEPLOY_CHECK_URL: ${{ vars.DEPLOY_CHECK_URL }}
+          EXPECTED_COMMIT: ${{ github.sha }}
+        run: |
+          if [ -z "$DEPLOY_CHECK_URL" ]; then
+            echo "Missing required repository variable: DEPLOY_CHECK_URL"
+            exit 1
+          fi
+
+          echo "Waiting for $DEPLOY_CHECK_URL to expose commit $EXPECTED_COMMIT"
+
+          max_attempts=40
+          sleep_seconds=15
+          attempt=1
+
+          while [ "$attempt" -le "$max_attempts" ]; do
+            html="$(curl --silent --show-error --location "$DEPLOY_CHECK_URL" || true)"
+
+            if echo "$html" | grep -q "<meta name=\"app-commit\" content=\"$EXPECTED_COMMIT\""; then
+              echo "Live page is up-to-date with commit $EXPECTED_COMMIT"
+              exit 0
+            fi
+
+            echo "Attempt $attempt/$max_attempts: commit not live yet. Retrying in ${sleep_seconds}s..."
+            sleep "$sleep_seconds"
+            attempt=$((attempt + 1))
+          done
+
+          echo "Timed out waiting for live page to serve commit $EXPECTED_COMMIT"
+          exit 1
