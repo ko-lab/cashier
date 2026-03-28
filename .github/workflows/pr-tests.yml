@@ -3,7 +3,7 @@ name: PR Tests
 on:
   pull_request:
     branches:
-      - try2
+      - master
   workflow_dispatch:
 
 permissions:
