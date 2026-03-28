@@ -686,14 +686,14 @@ export default function App() {
 
     let quantity: number | undefined;
     if (hasQuantityDraft) {
-      if (!/^\d+$/.test(draftValue)) {
-        setAdminError("Stock must be a non-negative integer.");
+      if (!/^-?\d+$/.test(draftValue)) {
+        setAdminError("Stock must be an integer.");
         return;
       }
 
       quantity = Number(draftValue);
-      if (!Number.isSafeInteger(quantity) || quantity < 0) {
-        setAdminError("Stock must be a non-negative integer.");
+      if (!Number.isSafeInteger(quantity)) {
+        setAdminError("Stock must be an integer.");
         return;
       }
     }
@@ -1151,11 +1151,11 @@ export default function App() {
                         <input
                           type="text"
                           inputMode="numeric"
-                          pattern="[0-9]*"
+                          pattern="-?[0-9]*"
                           value={stockCurrentValueFilter}
                           onChange={(event) => {
                             const next = event.target.value;
-                            if (!/^\d*$/.test(next)) {
+                            if (!/^-?\d*$/.test(next)) {
                               return;
                             }
                             setStockCurrentValueFilter(next);
@@ -1202,8 +1202,8 @@ export default function App() {
                             const draftValue = stockDraftByProductId[item.productId] ?? "";
                             const trimmedDraft = draftValue.trim();
                             const isEmptyDraft = trimmedDraft.length === 0;
-                            const isValidInteger = isEmptyDraft || /^\d+$/.test(trimmedDraft);
-                            const parsedDraft = /^\d+$/.test(trimmedDraft)
+                            const isValidInteger = isEmptyDraft || /^-?\d+$/.test(trimmedDraft);
+                            const parsedDraft = /^-?\d+$/.test(trimmedDraft)
                               ? Number(trimmedDraft)
                               : NaN;
                             const hasChanged = !isEmptyDraft && parsedDraft !== item.quantity;
@@ -1221,7 +1221,7 @@ export default function App() {
                                   <input
                                     type="text"
                                     inputMode="numeric"
-                                    pattern="[0-9]*"
+                                    pattern="-?[0-9]*"
                                     data-stock-input="true"
                                     placeholder={String(item.quantity)}
                                     value={draftValue}
@@ -1235,7 +1235,7 @@ export default function App() {
                                     }}
                                     onChange={(event) => {
                                       const nextValue = event.target.value;
-                                      if (!/^\d*$/.test(nextValue)) {
+                                      if (!/^-?\d*$/.test(nextValue)) {
                                         return;
                                       }
                                       setStockDraftByProductId((current) => ({
