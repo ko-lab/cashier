@@ -677,8 +677,14 @@ export default function App() {
             <button
               type="button"
               onClick={() => {
-                setUiMode((current) => (current === "pos" ? "admin" : "pos"));
-                setAdminError(null);
+                if (uiMode === "pos") {
+                  setUiMode("admin");
+                  setAdminError(null);
+                  return;
+                }
+
+                lockAdminPanel();
+                setUiMode("pos");
               }}
               className={`rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300 ${
                 uiMode === "pos" ? "hidden sm:inline-flex" : "inline-flex"
@@ -695,15 +701,7 @@ export default function App() {
             >
               {isDark ? "☀️" : "🌙"}
             </button>
-            {uiMode === "admin" && adminTransactions && (
-              <button
-                type="button"
-                onClick={lockAdminPanel}
-                className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:text-slate-300"
-              >
-Logout
-              </button>
-            )}
+
             {uiMode === "pos" && view === "cart" && (
               <div className="ml-auto flex items-center gap-3">
                 <button
