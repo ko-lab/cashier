@@ -717,6 +717,7 @@ Logout
             {!adminTransactions ? (
               <form
                 className="mx-auto flex w-full max-w-md flex-col gap-4"
+                autoComplete="off"
                 onSubmit={(event) => {
                   event.preventDefault();
                   void loadAdminTransactions();
@@ -729,11 +730,14 @@ Logout
                 </p>
                 <input
                   type="password"
+                  name="admin_unlock_password"
                   value={adminPassword}
                   onChange={(event) => setAdminPassword(event.target.value)}
                   placeholder="Admin password"
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
-                  autoComplete="current-password"
+                  autoComplete="new-password"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
                 />
                 <button
                   type="submit"
