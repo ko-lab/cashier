@@ -546,9 +546,20 @@ export default function App() {
                 setUiMode((current) => (current === "pos" ? "admin" : "pos"));
                 setAdminError(null);
               }}
-              className="rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
+              className={`rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300 ${
+                uiMode === "pos" ? "hidden sm:inline-flex" : "inline-flex"
+              }`}
             >
               {uiMode === "pos" ? "Admin panel" : "Back to checkout"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsDark((value) => !value)}
+              className="rounded-full border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
+              aria-label="Toggle theme"
+              title={isDark ? "Switch to light theme" : "Switch to dark theme"}
+            >
+              {isDark ? "☀️" : "🌙"}
             </button>
             {uiMode === "admin" && adminTransactions && (
               <button
