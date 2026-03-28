@@ -20,7 +20,7 @@ function applyEvent(current: number, event: StockEvent): number {
   if (event.type === "manual_set") {
     return event.quantity;
   }
-  if (event.type === "comment") {
+  if (event.type === "comment" || event.type === "counted_ok") {
     return current;
   }
   return current + event.quantity;

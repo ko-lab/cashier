@@ -726,7 +726,8 @@ export default function App() {
         password: adminSessionPassword,
         productId,
         quantity,
-        note: hasNote ? note : undefined
+        note: hasNote ? note : undefined,
+        action: hasQuantityDraft ? "set" : "comment"
       });
       setStockSnapshot(response);
       setStockDraftByProductId(
@@ -735,6 +736,39 @@ export default function App() {
       setStockNoteByProductId((current) => ({ ...current, [productId]: "" }));
     } catch {
       setAdminError("Could not update stock.");
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  const markStockCountedOk = async (productId: string) => {
+    if (!adminSessionPassword) {
+      setAdminError("Admin session expired. Please unlock again.");
+      return;
+    }
+
+    const note = stockNoteByProductId[productId]?.trim();
+    if (note && /[;,]/.test(note)) {
+      setAdminError("Comment cannot contain commas or semicolons.");
+      return;
+    }
+
+    setAdminError(null);
+    setAdminLoading(true);
+    try {
+      const response = await client.admin.setStock({
+        password: adminSessionPassword,
+        productId,
+        action: "counted_ok",
+        note: note || undefined
+      });
+      setStockSnapshot(response);
+      setStockDraftByProductId(
+        Object.fromEntries(response.items.map((item) => [item.productId, ""]))
+      );
+      setStockNoteByProductId((current) => ({ ...current, [productId]: "" }));
+    } catch {
+      setAdminError("Could not mark product as counted and correct.");
     } finally {
       setAdminLoading(false);
     }
@@ -1280,14 +1314,24 @@ export default function App() {
                                   />
                                 </td>
                                 <td className="px-3 py-2 text-right">
-                                  <button
-                                    type="button"
-                                    onClick={() => void updateStock(item.productId)}
-                                    disabled={!canSubmit || !isValidInteger || isBusy}
-                                    className="rounded-lg bg-accent-light px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-accent-dark dark:text-slate-900"
-                                  >
-                                    {actionLabel}
-                                  </button>
+                                  <div className="flex justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => void markStockCountedOk(item.productId)}
+                                      disabled={isBusy}
+                                      className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600"
+                                    >
+                                      Counted OK
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => void updateStock(item.productId)}
+                                      disabled={!canSubmit || !isValidInteger || isBusy}
+                                      className="rounded-lg bg-accent-light px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-accent-dark dark:text-slate-900"
+                                    >
+                                      {actionLabel}
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
