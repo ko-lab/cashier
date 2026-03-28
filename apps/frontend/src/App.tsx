@@ -58,6 +58,52 @@ function scrollToTop(): void {
   }
 }
 
+function playCashierCloseSound(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const AudioContextCtor = (
+    window.AudioContext ?? (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+  ) as typeof AudioContext | undefined;
+
+  if (!AudioContextCtor) {
+    return;
+  }
+
+  try {
+    const context = new AudioContextCtor();
+    const now = context.currentTime;
+
+    const playTone = (frequency: number, startAt: number, duration: number, gain: number) => {
+      const oscillator = context.createOscillator();
+      const volume = context.createGain();
+
+      oscillator.type = "triangle";
+      oscillator.frequency.setValueAtTime(frequency, startAt);
+      oscillator.connect(volume);
+      volume.connect(context.destination);
+
+      volume.gain.setValueAtTime(0.0001, startAt);
+      volume.gain.exponentialRampToValueAtTime(gain, startAt + 0.01);
+      volume.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+
+      oscillator.start(startAt);
+      oscillator.stop(startAt + duration + 0.01);
+    };
+
+    playTone(900, now, 0.08, 0.09);
+    playTone(520, now + 0.07, 0.16, 0.1);
+    playTone(260, now + 0.19, 0.22, 0.12);
+
+    window.setTimeout(() => {
+      void context.close();
+    }, 500);
+  } catch {
+    // Ignore audio errors and continue checkout flow.
+  }
+}
+
 function readStoredTheme(): boolean {
   try {
     const stored = localStorage.getItem("theme");
@@ -1499,7 +1545,10 @@ export default function App() {
               <div className="mt-6 flex flex-wrap gap-3">
                 <button
                   type="button"
-                  onClick={() => finalize("completed")}
+                  onClick={() => {
+                    playCashierCloseSound();
+                    void finalize("completed");
+                  }}
                   disabled={isBusy}
                   className="rounded-xl bg-emerald-500 px-6 py-3 text-base font-bold text-white transition hover:brightness-95 disabled:opacity-50"
                 >
