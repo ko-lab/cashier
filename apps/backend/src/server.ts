@@ -7,15 +7,23 @@ import { createProductStore } from "./productStore.ts";
 import { createTransactionStore } from "./transactionStore.ts";
 import { createTransactionService } from "./transactionService.ts";
 import { createAdminService } from "./adminService.ts";
+import { createStockEventStore } from "./stockEventStore.ts";
 
 const api = implement(contract);
 const defaultDataDir = fileURLToPath(new URL("../data/", import.meta.url));
 const dataDir = process.env.DATA_DIR ?? defaultDataDir;
-const productStore = createProductStore(dataDir);
+const stockEventStore = createStockEventStore(dataDir);
+const productStore = createProductStore(dataDir, stockEventStore);
 const transactionStore = createTransactionStore(dataDir);
-const transactionService = createTransactionService(productStore, transactionStore);
+const transactionService = createTransactionService(
+  productStore,
+  transactionStore,
+  stockEventStore
+);
 const adminService = createAdminService({
   transactionStore,
+  productStore,
+  stockEventStore,
   adminPanelPassword: process.env.ADMIN_PANEL_PASSWORD
 });
 
@@ -34,6 +42,16 @@ const router = {
   admin: {
     exportTransactions: api.admin.exportTransactions.handler(async ({ input }) =>
       adminService.exportTransactions(input.password)
+    ),
+    getStock: api.admin.getStock.handler(async ({ input }) =>
+      adminService.getStock(input.password)
+    ),
+    setStock: api.admin.setStock.handler(async ({ input }) =>
+      adminService.setStock(input.password, {
+        productId: input.productId,
+        quantity: input.quantity,
+        note: input.note
+      })
     )
   }
 };

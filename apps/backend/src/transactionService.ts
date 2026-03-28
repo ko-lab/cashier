@@ -9,6 +9,7 @@ import type {
   TransactionStatus
 } from "../../../shared/models.ts";
 import type { ProductStore } from "./productStore.ts";
+import type { StockEventStore } from "./stockEventStore.ts";
 import type { TransactionStore } from "./transactionStore.ts";
 
 function buildTransactionItems(
@@ -66,7 +67,8 @@ export type TransactionService = {
 
 export function createTransactionService(
   productStore: ProductStore,
-  transactionStore: TransactionStore
+  transactionStore: TransactionStore,
+  stockEventStore: StockEventStore
 ): TransactionService {
   return {
     async startTransaction(items) {
@@ -91,10 +93,26 @@ export function createTransactionService(
       return transaction;
     },
     async finalizeTransaction(id, status) {
+      const existing = await transactionStore.getById(id);
+      if (!existing) {
+        throw new ORPCError("NOT_FOUND", { data: { message: "Transaction not found" } });
+      }
+
       const transaction = await transactionStore.updateStatus(id, status);
 
       if (!transaction) {
         throw new ORPCError("NOT_FOUND", { data: { message: "Transaction not found" } });
+      }
+
+      if (existing.status !== "completed" && status === "completed") {
+        for (const item of existing.items) {
+          await stockEventStore.appendEvent({
+            productId: item.productId,
+            type: "sale_delta",
+            quantity: -item.quantity,
+            note: `Sale ${existing.id}`
+          });
+        }
       }
 
       return transaction;

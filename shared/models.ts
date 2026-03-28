@@ -15,6 +15,36 @@ export const ProductSchema = z.object({
   active: z.boolean()
 });
 
+export const StockEventTypeSchema = z.enum(["manual_set", "sale_delta"]);
+
+export const StockEventSchema = z.object({
+  id: z.string().min(1),
+  productId: z.string().min(1),
+  type: StockEventTypeSchema,
+  quantity: z.number().int(),
+  createdAt: z.string().min(1),
+  note: z.string().optional()
+});
+
+export const AdminSetStockInputSchema = z.object({
+  password: z.string().min(1),
+  productId: z.string().min(1),
+  quantity: z.number().int().nonnegative(),
+  note: z.string().max(200).optional()
+});
+
+export const AdminStockItemSchema = z.object({
+  productId: z.string().min(1),
+  productName: z.string().min(1),
+  quantity: z.number().int().nonnegative(),
+  updatedAt: z.string().min(1).optional()
+});
+
+export const AdminGetStockOutputSchema = z.object({
+  items: z.array(AdminStockItemSchema),
+  events: z.array(StockEventSchema)
+});
+
 export const ProductCatalogSchema = z.object({
   products: z.record(z.string(), ProductSchema),
   priceCategories: z.record(z.string(), PriceCategorySchema)
@@ -65,6 +95,8 @@ export const AdminExportTransactionsOutputSchema = z.object({
 export type Product = z.infer<typeof ProductSchema>;
 export type PriceCategory = z.infer<typeof PriceCategorySchema>;
 export type ProductCatalog = z.infer<typeof ProductCatalogSchema>;
+export type StockEventType = z.infer<typeof StockEventTypeSchema>;
+export type StockEvent = z.infer<typeof StockEventSchema>;
 export type CartItemInput = z.infer<typeof CartItemInputSchema>;
 export type TransactionStatus = z.infer<typeof TransactionStatusSchema>;
 export type TransactionItem = z.infer<typeof TransactionItemSchema>;
@@ -77,3 +109,6 @@ export type AdminExportTransactionsInput = z.infer<
 export type AdminExportTransactionsOutput = z.infer<
   typeof AdminExportTransactionsOutputSchema
 >;
+export type AdminSetStockInput = z.infer<typeof AdminSetStockInputSchema>;
+export type AdminStockItem = z.infer<typeof AdminStockItemSchema>;
+export type AdminGetStockOutput = z.infer<typeof AdminGetStockOutputSchema>;

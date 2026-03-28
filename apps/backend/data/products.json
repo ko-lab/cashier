@@ -21,14 +21,14 @@
     "juice": {
       "id": "juice",
       "name": "Juice",
-      "priceMember": 2.0,
-      "priceNonMember": 3.0
+      "priceMember": 2,
+      "priceNonMember": 3
     },
     "water": {
       "id": "water",
       "name": "Water",
-      "priceMember": 1.0,
-      "priceNonMember": 2.0
+      "priceMember": 1,
+      "priceNonMember": 2
     },
     "snack": {
       "id": "snack",
@@ -39,20 +39,20 @@
     "bier": {
       "id": "bier",
       "name": "Bier",
-      "priceMember": 3.0,
+      "priceMember": 3,
       "priceNonMember": 4.5
     },
     "premium-drink": {
       "id": "premium-drink",
       "name": "Premium drink",
-      "priceMember": 3.0,
+      "priceMember": 3,
       "priceNonMember": 4.5
     },
     "promo": {
       "id": "promo",
       "name": "Promo drink",
       "priceMember": 1.5,
-      "priceNonMember": 2.0
+      "priceNonMember": 2
     },
     "hot": {
       "id": "hot",
@@ -66,316 +66,271 @@
       "id": "gen-pils",
       "name": "Generic Pils",
       "priceCategoryId": "pils",
-      "inventoryCount": 0,
       "active": true
     },
     "gen-speciaal-bier": {
       "id": "gen-speciaal-bier",
       "name": "Generic Speciaal Bier",
       "priceCategoryId": "bier",
-      "inventoryCount": 0,
       "active": true
     },
     "mate-winter": {
-        "id": "mate-winter",
-        "name": "Club-Mate Winter",
-        "priceCategoryId": "premium-drink",
-        "inventoryCount": 22,
-        "active": true
+      "id": "mate-winter",
+      "name": "Club-Mate Winter",
+      "priceCategoryId": "premium-drink",
+      "active": true
     },
     "mate-zero": {
-        "id": "mate-zero",
-        "name": "Club-Mate Zero",
-        "priceCategoryId": "premium-drink",
-        "inventoryCount": 61,
-        "active": true
+      "id": "mate-zero",
+      "name": "Club-Mate Zero",
+      "priceCategoryId": "premium-drink",
+      "active": true
     },
     "mate-original": {
-        "id": "mate-original",
-        "name": "Club-Mate Original",
-        "priceCategoryId": "premium-drink",
-        "inventoryCount": 113,
-        "active": true
+      "id": "mate-original",
+      "name": "Club-Mate Original",
+      "priceCategoryId": "premium-drink",
+      "active": true
     },
     "spezi": {
-        "id": "spezi",
-        "name": "Paulaner Spezi",
-        "priceCategoryId": "premium-drink",
-        "inventoryCount": 23,
-        "active": true
+      "id": "spezi",
+      "name": "Paulaner Spezi",
+      "priceCategoryId": "premium-drink",
+      "active": true
     },
     "miomio-mate": {
-        "id": "miomio-mate",
-        "name": "MioMio mate",
-        "priceCategoryId": "premium-drink",
-        "inventoryCount": 7,
-        "active": true
+      "id": "miomio-mate",
+      "name": "MioMio mate",
+      "priceCategoryId": "premium-drink",
+      "active": true
     },
     "miomio-ginger": {
-        "id": "miomio-ginger",
-        "name": "MioMio ginger",
-        "priceCategoryId": "premium-drink",
-        "inventoryCount": 11,
-        "active": true
+      "id": "miomio-ginger",
+      "name": "MioMio ginger",
+      "priceCategoryId": "premium-drink",
+      "active": true
     },
     "miomio-banana": {
-        "id": "miomio-banana",
-        "name": "MioMio banana",
-        "priceCategoryId": "premium-drink",
-        "inventoryCount": 11,
-        "active": true
+      "id": "miomio-banana",
+      "name": "MioMio banana",
+      "priceCategoryId": "premium-drink",
+      "active": true
     },
     "icetea": {
-        "id": "icetea",
-        "name": "IceTea",
-        "priceCategoryId": "soft-medium",
-        "inventoryCount": 29,
-        "active": true
+      "id": "icetea",
+      "name": "IceTea",
+      "priceCategoryId": "soft-medium",
+      "active": true
     },
     "icetea-zero": {
-        "id": "icetea-zero",
-        "name": "IceTea zero",
-        "priceCategoryId": "soft-medium",
-        "inventoryCount": 51,
-        "active": true
+      "id": "icetea-zero",
+      "name": "IceTea zero",
+      "priceCategoryId": "soft-medium",
+      "active": true
     },
     "cola": {
-        "id": "cola",
-        "name": "Coca-Cola ",
-        "priceCategoryId": "soft-medium",
-        "inventoryCount": 2,
-        "active": true
+      "id": "cola",
+      "name": "Coca-Cola ",
+      "priceCategoryId": "soft-medium",
+      "active": true
     },
     "cola-zero": {
-        "id": "cola-zero",
-        "name": "Coca-Cola zero",
-        "priceCategoryId": "soft-medium",
-        "inventoryCount": 12,
-        "active": true
+      "id": "cola-zero",
+      "name": "Coca-Cola zero",
+      "priceCategoryId": "soft-medium",
+      "active": true
     },
     "fanta": {
-        "id": "fanta",
-        "name": "Fanta",
-        "priceCategoryId": "soft-medium",
-        "inventoryCount": 10,
-        "active": true
+      "id": "fanta",
+      "name": "Fanta",
+      "priceCategoryId": "soft-medium",
+      "active": true
     },
     "water": {
-        "id": "water",
-        "name": "Water",
-        "priceCategoryId": "water",
-        "inventoryCount": 5,
-        "active": true
+      "id": "water",
+      "name": "Water",
+      "priceCategoryId": "water",
+      "active": true
     },
     "bruiswater": {
-        "id": "bruiswater",
-        "name": "Bruiswater",
-        "priceCategoryId": "water",
-        "inventoryCount": 9,
-        "active": true
+      "id": "bruiswater",
+      "name": "Bruiswater",
+      "priceCategoryId": "water",
+      "active": true
     },
     "7up": {
-        "id": "7up",
-        "name": "7UP",
-        "priceCategoryId": "soft-medium",
-        "inventoryCount": 2,
-        "active": true
+      "id": "7up",
+      "name": "7UP",
+      "priceCategoryId": "soft-medium",
+      "active": true
     },
     "pepsi": {
-        "id": "pepsi",
-        "name": "Pepsi",
-        "priceCategoryId": "soft-medium",
-        "inventoryCount": 3,
-        "active": true
+      "id": "pepsi",
+      "name": "Pepsi",
+      "priceCategoryId": "soft-medium",
+      "active": true
     },
     "palm-dubbel": {
-        "id": "palm-dubbel",
-        "name": "PALM Dobbel",
-        "priceCategoryId": "pils",
-        "inventoryCount": 43,
-        "active": true
+      "id": "palm-dubbel",
+      "name": "PALM Dobbel",
+      "priceCategoryId": "pils",
+      "active": true
     },
     "primus": {
-        "id": "primus",
-        "name": "Primus",
-        "priceCategoryId": "pils",
-        "inventoryCount": 38,
-        "active": true
+      "id": "primus",
+      "name": "Primus",
+      "priceCategoryId": "pils",
+      "active": true
     },
     "aflligem-blond": {
-        "id": "aflligem-blond",
-        "name": "Affligem Blond 0.0",
-        "priceCategoryId": "bier",
-        "inventoryCount": 18,
-        "active": true
+      "id": "aflligem-blond",
+      "name": "Affligem Blond 0.0",
+      "priceCategoryId": "bier",
+      "active": true
     },
     "cornet-oaked-Na": {
-        "id": "cornet-oaked-Na",
-        "name": "Cornet oaked NA",
-        "priceCategoryId": "bier",
-        "inventoryCount": 7,
-        "active": true
+      "id": "cornet-oaked-Na",
+      "name": "Cornet oaked NA",
+      "priceCategoryId": "bier",
+      "active": true
     },
     "desperados-0": {
-        "id": "desperados-0",
-        "name": "Desperados 0.0",
-        "priceCategoryId": "promo",
-        "inventoryCount": 2,
-        "active": true
+      "id": "desperados-0",
+      "name": "Desperados 0.0",
+      "priceCategoryId": "promo",
+      "active": true
     },
     "liefmans-otr": {
-        "id": "liefmans-otr",
-        "name": "Liefmans On The Rocks 0.0",
-        "priceCategoryId": "bier",
-        "inventoryCount": 14,
-        "active": true
+      "id": "liefmans-otr",
+      "name": "Liefmans On The Rocks 0.0",
+      "priceCategoryId": "bier",
+      "active": true
     },
     "liefmans-otr-peach": {
-        "id": "liefmans-otr-peach",
-        "name": "Liefmans Peach 0.0",
-        "priceCategoryId": "bier",
-        "inventoryCount": 3,
-        "active": true
+      "id": "liefmans-otr-peach",
+      "name": "Liefmans Peach 0.0",
+      "priceCategoryId": "bier",
+      "active": true
     },
     "karmeliet-0.0": {
-        "id": "karmeliet-0.0",
-        "name": "Tripel karmeliet 0.4",
-        "priceCategoryId": "bier",
-        "inventoryCount": 5,
-        "active": true
+      "id": "karmeliet-0.0",
+      "name": "Tripel karmeliet 0.4",
+      "priceCategoryId": "bier",
+      "active": true
     },
     "abbaye-oubliee-imperiale": {
-        "id": "abbaye-oubliee-imperiale",
-        "name": "Abbaye Oubli\u00e9e Imperiale",
-        "priceCategoryId": "bier",
-        "inventoryCount": 6,
-        "active": true
+      "id": "abbaye-oubliee-imperiale",
+      "name": "Abbaye Oubliée Imperiale",
+      "priceCategoryId": "bier",
+      "active": true
     },
     "bloody-berry": {
-        "id": "bloody-berry",
-        "name": "Bloody berry",
-        "priceCategoryId": "bier",
-        "inventoryCount": 28,
-        "active": true
+      "id": "bloody-berry",
+      "name": "Bloody berry",
+      "priceCategoryId": "bier",
+      "active": true
     },
     "crime-of-passion": {
-        "id": "crime-of-passion",
-        "name": "Crime of passion",
-        "priceCategoryId": "bier",
-        "inventoryCount": 14,
-        "active": true
+      "id": "crime-of-passion",
+      "name": "Crime of passion",
+      "priceCategoryId": "bier",
+      "active": true
     },
     "grimbergen-blond": {
-        "id": "grimbergen-blond",
-        "name": "Grimbergen blond",
-        "priceCategoryId": "bier",
-        "inventoryCount": 24,
-        "active": true
+      "id": "grimbergen-blond",
+      "name": "Grimbergen blond",
+      "priceCategoryId": "bier",
+      "active": true
     },
     "grimbergen-dubbel": {
-        "id": "grimbergen-dubbel",
-        "name": "Grimbergen dubbel",
-        "priceCategoryId": "bier",
-        "inventoryCount": 19,
-        "active": true
+      "id": "grimbergen-dubbel",
+      "name": "Grimbergen dubbel",
+      "priceCategoryId": "bier",
+      "active": true
     },
     "grimbergen-prestige": {
-        "id": "grimbergen-prestige",
-        "name": "Grimbergen prestige",
-        "priceCategoryId": "bier",
-        "inventoryCount": 16,
-        "active": true
+      "id": "grimbergen-prestige",
+      "name": "Grimbergen prestige",
+      "priceCategoryId": "bier",
+      "active": true
     },
     "hapkin": {
-        "id": "hapkin",
-        "name": "Hapkin",
-        "priceCategoryId": "bier",
-        "inventoryCount": 31,
-        "active": true
+      "id": "hapkin",
+      "name": "Hapkin",
+      "priceCategoryId": "bier",
+      "active": true
     },
     "hapkin-bipa": {
-        "id": "hapkin-bipa",
-        "name": "Hapkin BIPA",
-        "priceCategoryId": "bier",
-        "inventoryCount": 41,
-        "active": true
+      "id": "hapkin-bipa",
+      "name": "Hapkin BIPA",
+      "priceCategoryId": "bier",
+      "active": true
     },
     "omer-lefort": {
-        "id": "omer-lefort",
-        "name": "Tripel LeFort",
-        "priceCategoryId": "bier",
-        "inventoryCount": 26,
-        "active": true
+      "id": "omer-lefort",
+      "name": "Tripel LeFort",
+      "priceCategoryId": "bier",
+      "active": true
     },
     "tongerlo-lux": {
-        "id": "tongerlo-lux",
-        "name": "Tongerlo Lux",
-        "priceCategoryId": "bier",
-        "inventoryCount": 7,
-        "active": true
+      "id": "tongerlo-lux",
+      "name": "Tongerlo Lux",
+      "priceCategoryId": "bier",
+      "active": true
     },
     "tripel-karmeliet": {
-        "id": "tripel-karmeliet",
-        "name": "Tripel Karmeliet",
-        "priceCategoryId": "bier",
-        "inventoryCount": 46,
-        "active": true
+      "id": "tripel-karmeliet",
+      "name": "Tripel Karmeliet",
+      "priceCategoryId": "bier",
+      "active": true
     },
     "tripel-karmeliet-blik": {
-        "id": "tripel-karmeliet-blik",
-        "name": "Tripel Karmeliet blik",
-        "priceCategoryId": "bier",
-        "inventoryCount": 1,
-        "active": true
+      "id": "tripel-karmeliet-blik",
+      "name": "Tripel Karmeliet blik",
+      "priceCategoryId": "bier",
+      "active": true
     },
     "cider": {
-        "id": "cider",
-        "name": "Ko-lab cider",
-        "priceCategoryId": "bier",
-        "inventoryCount": 60,
-        "active": true
+      "id": "cider",
+      "name": "Ko-lab cider",
+      "priceCategoryId": "bier",
+      "active": true
     },
     "chips": {
-        "id": "chips",
-        "name": "Chips",
-        "priceCategoryId": "snack",
-        "inventoryCount": 9,
-        "active": true
+      "id": "chips",
+      "name": "Chips",
+      "priceCategoryId": "snack",
+      "active": true
     },
     "gen-snack": {
-        "id": "gen-snack",
-        "name": "Generic snack",
-        "priceCategoryId": "snack",
-        "inventoryCount": -1,
-        "active": true
+      "id": "gen-snack",
+      "name": "Generic snack",
+      "priceCategoryId": "snack",
+      "active": true
     },
     "ole": {
-        "id": "ole",
-        "name": "Ole",
-        "priceCategoryId": "snack",
-        "inventoryCount": 11,
-        "active": true
+      "id": "ole",
+      "name": "Ole",
+      "priceCategoryId": "snack",
+      "active": true
     },
     "cornetto": {
-        "id": "cornetto",
-        "name": "Ijshoorntje",
-        "priceCategoryId": "snack",
-        "inventoryCount": 12,
-        "active": true
+      "id": "cornetto",
+      "name": "Ijshoorntje",
+      "priceCategoryId": "snack",
+      "active": true
     },
     "koffie": {
-        "id": "koffie",
-        "name": "Cappuccino",
-        "priceCategoryId": "hot",
-        "inventoryCount": 10,
-        "active": true
+      "id": "koffie",
+      "name": "Cappuccino",
+      "priceCategoryId": "hot",
+      "active": true
     },
     "thee": {
-        "id": "thee",
-        "name": "Thee",
-        "priceCategoryId": "hot",
-        "inventoryCount": 20,
-        "active": true
+      "id": "thee",
+      "name": "Thee",
+      "priceCategoryId": "hot",
+      "active": true
     }
   }
 }
