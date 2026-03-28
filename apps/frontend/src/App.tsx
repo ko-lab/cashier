@@ -569,9 +569,21 @@ export default function App() {
       return;
     }
 
-    const quantity = Number.parseInt(stockDraftByProductId[productId] ?? "", 10);
-    if (!Number.isFinite(quantity) || quantity < 0) {
+    const draftValue = (stockDraftByProductId[productId] ?? "").trim();
+    if (!/^\d+$/.test(draftValue)) {
       setAdminError("Stock must be a non-negative integer.");
+      return;
+    }
+
+    const quantity = Number(draftValue);
+    if (!Number.isSafeInteger(quantity) || quantity < 0) {
+      setAdminError("Stock must be a non-negative integer.");
+      return;
+    }
+
+    const currentQuantity =
+      stockSnapshot?.items.find((item) => item.productId === productId)?.quantity;
+    if (typeof currentQuantity === "number" && currentQuantity === quantity) {
       return;
     }
 
@@ -965,22 +977,37 @@ Logout
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                          {stockSnapshot.items.map((item) => (
+                          {stockSnapshot.items.map((item) => {
+                            const draftValue = stockDraftByProductId[item.productId] ?? "0";
+                            const isValidInteger = /^\d+$/.test(draftValue.trim());
+                            const parsedDraft = isValidInteger ? Number(draftValue) : NaN;
+                            const hasChanged = isValidInteger && parsedDraft !== item.quantity;
+
+                            return (
                             <tr key={item.productId}>
                               <td className="px-3 py-2">{item.productName}</td>
                               <td className="px-3 py-2 text-right font-semibold">{item.quantity}</td>
                               <td className="px-3 py-2 text-right">
                                 <input
-                                  type="number"
-                                  min={0}
-                                  value={stockDraftByProductId[item.productId] ?? "0"}
-                                  onChange={(event) =>
+                                  type="text"
+                                  inputMode="numeric"
+                                  pattern="[0-9]*"
+                                  value={draftValue}
+                                  onChange={(event) => {
+                                    const nextValue = event.target.value;
+                                    if (!/^\d*$/.test(nextValue)) {
+                                      return;
+                                    }
                                     setStockDraftByProductId((current) => ({
                                       ...current,
-                                      [item.productId]: event.target.value
-                                    }))
-                                  }
-                                  className="w-24 rounded-lg border border-slate-300 px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-900"
+                                      [item.productId]: nextValue
+                                    }));
+                                  }}
+                                  className={`w-24 rounded-lg border px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-900 ${
+                                    hasChanged
+                                      ? "border-slate-300 text-slate-900 dark:text-slate-100"
+                                      : "border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500"
+                                  }`}
                                 />
                               </td>
                               <td className="px-3 py-2">
@@ -1001,13 +1028,15 @@ Logout
                                 <button
                                   type="button"
                                   onClick={() => void updateStock(item.productId)}
-                                  className="rounded-lg bg-accent-light px-3 py-1 text-xs font-semibold text-white dark:bg-accent-dark dark:text-slate-900"
+                                  disabled={!hasChanged || !isValidInteger || isBusy}
+                                  className="rounded-lg bg-accent-light px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-accent-dark dark:text-slate-900"
                                 >
                                   Save
                                 </button>
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
