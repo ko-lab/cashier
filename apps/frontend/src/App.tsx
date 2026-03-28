@@ -97,6 +97,19 @@ function formatAdminDate(value: string): string {
   });
 }
 
+function buildCartBreakdownJson(items: Transaction["items"]): string {
+  return JSON.stringify(
+    items.map((item) => ({
+      productId: item.productId,
+      name: item.name,
+      quantity: item.quantity,
+      isMemberPrice: item.isMemberPrice,
+      unitPrice: item.unitPrice,
+      lineTotal: item.lineTotal
+    }))
+  );
+}
+
 function buildTransactionsCsv(transactions: Transaction[]): string {
   const header = [
     "id",
@@ -107,9 +120,7 @@ function buildTransactionsCsv(transactions: Transaction[]): string {
     "items"
   ];
   const lines = transactions.map((transaction) => {
-    const itemsSummary = transaction.items
-      .map((item) => `${item.name} x${item.quantity}`)
-      .join(" | ");
+    const itemsSummary = buildCartBreakdownJson(transaction.items);
     return [
       transaction.id,
       transaction.createdAt,
@@ -1108,8 +1119,8 @@ export default function App() {
                           <td className="whitespace-nowrap px-3 py-2 text-right">
                             {currencyFormatter.format(entry.total)}
                           </td>
-                          <td className="px-3 py-2 text-left">
-                            {entry.items.map((item) => `${item.name} x${item.quantity}`).join(" | ")}
+                          <td className="px-3 py-2 text-left font-mono text-xs">
+                            {buildCartBreakdownJson(entry.items)}
                           </td>
                         </tr>
                       ))}
