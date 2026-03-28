@@ -15,8 +15,8 @@
     "soft-medium": {
       "id": "soft-medium",
       "name": "Soft drink medium",
-      "priceMember": 2.5,
-      "priceNonMember": 3.5
+      "priceMember": 2.0,
+      "priceNonMember": 3.0
     },
     "juice": {
       "id": "juice",
@@ -40,13 +40,13 @@
       "id": "bier",
       "name": "Bier",
       "priceMember": 3,
-      "priceNonMember": 4.5
+      "priceNonMember": 4.0
     },
     "premium-drink": {
       "id": "premium-drink",
       "name": "Premium drink",
       "priceMember": 3,
-      "priceNonMember": 4.5
+      "priceNonMember": 4.0
     },
     "promo": {
       "id": "promo",
