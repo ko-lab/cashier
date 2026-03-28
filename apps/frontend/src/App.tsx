@@ -195,6 +195,63 @@ function playCashierCloseSound(): void {
   }
 }
 
+function playTypewriterAddSound(): void {
+  enableMediaPlaybackAudioMode();
+  const context = getCashierAudioContext();
+  if (!context) {
+    return;
+  }
+
+  try {
+    if (context.state === "suspended") {
+      void context.resume();
+    }
+
+    const now = context.currentTime;
+
+    const playClick = (startAt: number, frequency: number) => {
+      const oscillator = context.createOscillator();
+      const volume = context.createGain();
+
+      oscillator.type = "square";
+      oscillator.frequency.setValueAtTime(frequency, startAt);
+      oscillator.connect(volume);
+      volume.connect(context.destination);
+
+      volume.gain.setValueAtTime(0.0001, startAt);
+      volume.gain.exponentialRampToValueAtTime(0.08, startAt + 0.003);
+      volume.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.03);
+
+      oscillator.start(startAt);
+      oscillator.stop(startAt + 0.035);
+    };
+
+    // 5 key taps
+    playClick(now + 0.0, 1750);
+    playClick(now + 0.045, 1600);
+    playClick(now + 0.09, 1820);
+    playClick(now + 0.135, 1680);
+    playClick(now + 0.18, 1780);
+
+    // carriage-return / linefeed bell-ish ding
+    const ding = context.createOscillator();
+    const dingGain = context.createGain();
+    const dingStart = now + 0.24;
+    ding.type = "triangle";
+    ding.frequency.setValueAtTime(1320, dingStart);
+    ding.frequency.exponentialRampToValueAtTime(980, dingStart + 0.18);
+    ding.connect(dingGain);
+    dingGain.connect(context.destination);
+    dingGain.gain.setValueAtTime(0.0001, dingStart);
+    dingGain.gain.exponentialRampToValueAtTime(0.1, dingStart + 0.01);
+    dingGain.gain.exponentialRampToValueAtTime(0.0001, dingStart + 0.2);
+    ding.start(dingStart);
+    ding.stop(dingStart + 0.22);
+  } catch {
+    // Ignore audio errors.
+  }
+}
+
 function readStoredTheme(): boolean {
   try {
     const stored = localStorage.getItem("theme");
@@ -527,6 +584,10 @@ export default function App() {
     delta: number,
     isMemberPrice: boolean
   ) => {
+    if (delta > 0) {
+      playTypewriterAddSound();
+    }
+
     setCart((current) =>
       updateCartQuantity(current, productId, delta, isMemberPrice)
     );
