@@ -324,7 +324,7 @@ function transactionDisplayItems(transaction: Transaction): Transaction["items"]
         quantity: 1,
         unitPrice: transaction.total,
         lineTotal: transaction.total,
-        isMemberPrice: false
+        isMemberPrice: true
       }
     ];
   }
