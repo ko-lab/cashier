@@ -256,6 +256,30 @@ export function createTransactionService(
           });
         }
 
+        if (memberId && cappedCreditUsed > 0) {
+          try {
+            await memberStore.adjustBalance({
+              memberId,
+              delta: -cappedCreditUsed,
+              reason: "checkout_debit",
+              transactionId: existing.id,
+              preventNegative: true
+            });
+          } catch (error) {
+            if (error instanceof Error && error.message === "INSUFFICIENT_CREDIT") {
+              throw new ORPCError("BAD_REQUEST", {
+                data: { message: "Insufficient member credit." }
+              });
+            }
+            if (error instanceof Error && error.message === "MEMBER_NOT_FOUND") {
+              throw new ORPCError("BAD_REQUEST", {
+                data: { message: "Member account not found." }
+              });
+            }
+            throw error;
+          }
+        }
+
         await memberStore.adjustBalance({
           memberId: existing.memberId,
           delta: existing.total,

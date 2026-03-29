@@ -466,6 +466,9 @@ export default function App() {
   const [activeMember, setActiveMember] = useState<Member | null>(null);
   const [creditToUse, setCreditToUse] = useState("0.00");
   const [memberPinInput, setMemberPinInput] = useState("");
+  const [showPayWithCreditModal, setShowPayWithCreditModal] = useState(false);
+  const [paymentMemberQuery, setPaymentMemberQuery] = useState("");
+  const [selectedPaymentMemberId, setSelectedPaymentMemberId] = useState("");
   const [publicMembers, setPublicMembers] = useState<Member[]>([]);
   const [topupMemberQuery, setTopupMemberQuery] = useState("");
   const [selectedTopupMemberId, setSelectedTopupMemberId] = useState("");
@@ -492,8 +495,10 @@ export default function App() {
       setActiveMember(null);
       setCreditToUse("0.00");
       setMemberPinInput("");
+      setShowPayWithCreditModal(false);
       setPublicMembers([]);
       setSelectedTopupMemberId("");
+      setSelectedPaymentMemberId("");
       if (view === "topup") {
         setView("cart");
       }
@@ -504,7 +509,7 @@ export default function App() {
   }, [adminTab, memberCreditEnabled, view]);
 
   useEffect(() => {
-    if (!memberCreditEnabled || view !== "topup") {
+    if (!memberCreditEnabled || (view !== "topup" && view !== "checkout")) {
       return;
     }
 
@@ -524,6 +529,14 @@ export default function App() {
       mounted = false;
     };
   }, [memberCreditEnabled, view]);
+
+  useEffect(() => {
+    if (!showPayWithCreditModal) {
+      setPaymentMemberQuery("");
+      setSelectedPaymentMemberId("");
+      setMemberPinInput("");
+    }
+  }, [showPayWithCreditModal]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -716,7 +729,12 @@ export default function App() {
     try {
       const response = await client.member.authPin({ pin });
 
-      if (isTopupView && selectedTopupMemberId && response.member.id !== selectedTopupMemberId) {
+      if (showPayWithCreditModal && selectedPaymentMemberId && response.member.id !== selectedPaymentMemberId) {
+        setStatus({ tone: "error", text: "PIN does not match selected member." });
+        return;
+      }
+
+      if (!showPayWithCreditModal && isTopupView && selectedTopupMemberId && response.member.id !== selectedTopupMemberId) {
         setStatus({ tone: "error", text: "PIN does not match selected member." });
         return;
       }
@@ -754,10 +772,7 @@ export default function App() {
       return;
     }
 
-    if (!activeMember || activeMember.id !== selectedTopupMember.id) {
-      setStatus({ tone: "error", text: "Unlock selected member with PIN first." });
-      return;
-    }
+    // PIN is not required to start external top-up payment.
 
     const amount = Number.parseFloat(topupAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
@@ -769,7 +784,7 @@ export default function App() {
     setLoading(true);
     try {
       const response = await client.transaction.startTopup({
-        memberId: activeMember.id,
+        memberId: selectedTopupMember.id,
         amount
       });
       setTransaction(response);
@@ -777,6 +792,56 @@ export default function App() {
       scrollToTop();
     } catch {
       setStatus({ tone: "error", text: "Could not start top-up." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const payTransactionWithMemberCredit = async () => {
+    if (!transaction) {
+      return;
+    }
+
+    if (!selectedPaymentMember) {
+      setStatus({ tone: "error", text: "Select a member first." });
+      return;
+    }
+
+    if (!activeMember || activeMember.id !== selectedPaymentMember.id) {
+      setStatus({ tone: "error", text: "Enter valid PIN for selected member first." });
+      return;
+    }
+
+    if (activeMember.balance < transaction.total) {
+      const shortfall = transaction.total - activeMember.balance;
+      setStatus({
+        tone: "error",
+        text: `Not enough credit. Missing ${currencyFormatter.format(shortfall)}.`
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await client.transaction.finalize({
+        id: transaction.id,
+        status: "completed",
+        memberId: activeMember.id,
+        creditUsed: transaction.total
+      });
+
+      setShowPayWithCreditModal(false);
+      setTransaction(null);
+      setView("cart");
+      setActiveMember(null);
+      setCreditToUse("0.00");
+      if (transaction.type === "sale") {
+        setCart([]);
+      }
+      setStatus({ tone: "info", text: "Paid with member credit." });
+      scrollToTop();
+    } catch {
+      setStatus({ tone: "error", text: "Could not complete member-credit payment." });
     } finally {
       setLoading(false);
     }
@@ -842,6 +907,19 @@ export default function App() {
   const selectedTopupMember = useMemo(
     () => publicMembers.find((member) => member.id === selectedTopupMemberId) ?? null,
     [publicMembers, selectedTopupMemberId]
+  );
+  const filteredPaymentMembers = useMemo(() => {
+    const q = paymentMemberQuery.trim().toLowerCase();
+    if (!q) {
+      return publicMembers;
+    }
+    return publicMembers.filter((member) =>
+      member.displayName.toLowerCase().includes(q)
+    );
+  }, [paymentMemberQuery, publicMembers]);
+  const selectedPaymentMember = useMemo(
+    () => publicMembers.find((member) => member.id === selectedPaymentMemberId) ?? null,
+    [publicMembers, selectedPaymentMemberId]
   );
   const creditToUseNumber = Number.parseFloat(creditToUse);
   const normalizedCreditToUse = Number.isFinite(creditToUseNumber)
@@ -2339,27 +2417,6 @@ export default function App() {
                   </div>
 
                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <input
-                      type="password"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      autoComplete="one-time-code"
-                      value={memberPinInput}
-                      onChange={(event) => setMemberPinInput(event.target.value.replace(/\D+/g, ""))}
-                      placeholder="Member PIN"
-                      disabled={!selectedTopupMember}
-                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => void authenticateMemberPin()}
-                      disabled={!selectedTopupMember}
-                      className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:border-sky-500 disabled:opacity-50 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
-                    >
-                      {activeMember && selectedTopupMember && activeMember.id === selectedTopupMember.id
-                        ? "PIN verified"
-                        : "Unlock"}
-                    </button>
                     {selectedTopupMember && (
                       <span className="text-sm text-slate-600 dark:text-slate-300">
                         Selected: {selectedTopupMember.displayName}
@@ -2367,44 +2424,32 @@ export default function App() {
                     )}
                   </div>
 
-                  {activeMember && selectedTopupMember && activeMember.id === selectedTopupMember.id && (
-                    <>
-                      <div className="mt-3 text-sm text-slate-600 dark:text-slate-300">
-                        Balance: {currencyFormatter.format(activeMember.balance)}
-                      </div>
-                      <div className="mt-3 grid gap-2 sm:grid-cols-4">
-                        {[5, 10, 20].map((value) => (
-                          <button
-                            key={value}
-                            type="button"
-                            onClick={() => setTopupAmount(value.toFixed(2))}
-                            className="rounded-xl border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600"
-                          >
-                            € {value}
-                          </button>
-                        ))}
-                        <input
-                          type="number"
-                          min={0.01}
-                          step="0.01"
-                          value={topupAmount}
-                          onChange={(event) => setTopupAmount(event.target.value)}
-                          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
-                        />
-                      </div>
-                    </>
-                  )}
+                  <div className="mt-3 grid gap-2 sm:grid-cols-4">
+                    {[5, 10, 20].map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setTopupAmount(value.toFixed(2))}
+                        className="rounded-xl border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600"
+                      >
+                        € {value}
+                      </button>
+                    ))}
+                    <input
+                      type="number"
+                      min={0.01}
+                      step="0.01"
+                      value={topupAmount}
+                      onChange={(event) => setTopupAmount(event.target.value)}
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
+                    />
+                  </div>
 
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
                       type="button"
                       onClick={() => void startTopup()}
-                      disabled={
-                        !selectedTopupMember ||
-                        !activeMember ||
-                        activeMember.id !== selectedTopupMember.id ||
-                        isBusy
-                      }
+                      disabled={!selectedTopupMember || isBusy}
                       className="rounded-xl bg-accent-light px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
                     >
                       Start top-up payment
@@ -2420,50 +2465,19 @@ export default function App() {
                 </div>
               )}
 
-              {!isTopupView && memberCreditEnabled && (
-                <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50/70 p-3 dark:border-sky-800 dark:bg-sky-900/20">
-                  <p className="text-sm font-semibold text-sky-800 dark:text-sky-200">Use member credit</p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <input
-                      type="password"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      autoComplete="one-time-code"
-                      value={memberPinInput}
-                      onChange={(event) => setMemberPinInput(event.target.value.replace(/\D+/g, ""))}
-                      placeholder="Member PIN"
-                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => void authenticateMemberPin()}
-                      className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:border-sky-500 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
-                    >
-                      Unlock
-                    </button>
-                  </div>
+              {!isTopupView && memberCreditEnabled && transaction && (
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowPayWithCreditModal(true)}
+                    className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:border-sky-500 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
+                  >
+                    Pay with member credit
+                  </button>
                   {activeMember && (
-                    <div className="mt-2 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                      <div>{activeMember.displayName} · {currencyFormatter.format(cartCreditPreview)} credit</div>
-                      <label className="block">
-                        <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500">Credit to use</span>
-                        <input
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          value={creditToUse}
-                          onChange={(event) => setCreditToUse(event.target.value)}
-                          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
-                        />
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => selectCheckoutMember(null)}
-                        className="rounded-xl border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600"
-                      >
-                        Clear member
-                      </button>
-                    </div>
+                    <span className="text-sm text-slate-600 dark:text-slate-300">
+                      {activeMember.displayName} · {currencyFormatter.format(activeMember.balance)} balance
+                    </span>
                   )}
                 </div>
               )}
@@ -2482,6 +2496,16 @@ export default function App() {
                 )}
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
+                {memberCreditEnabled && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPayWithCreditModal(true)}
+                    disabled={isBusy}
+                    className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-700 transition hover:border-sky-500 disabled:opacity-50 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
+                  >
+                    Pay with member credit
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -2576,6 +2600,103 @@ export default function App() {
               </div>
             </aside>
           </section>
+        )}
+
+        {memberCreditEnabled && transaction && showPayWithCreditModal && (
+          <div
+            className="fixed inset-0 z-40 flex items-start justify-center bg-black/50 p-4 pt-6"
+            onClick={() => setShowPayWithCreditModal(false)}
+          >
+            <div
+              className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <h3 className="text-base font-semibold">Pay with member credit</h3>
+              <input
+                type="search"
+                value={paymentMemberQuery}
+                onChange={(event) => setPaymentMemberQuery(event.target.value)}
+                placeholder="Search member"
+                className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
+              />
+
+              <div className="mt-2 max-h-36 overflow-auto space-y-1">
+                {filteredPaymentMembers.map((member) => (
+                  <button
+                    key={member.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedPaymentMemberId(member.id);
+                      if (activeMember?.id !== member.id) {
+                        setActiveMember(null);
+                      }
+                    }}
+                    className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
+                      selectedPaymentMemberId === member.id
+                        ? "border-sky-500 bg-sky-50/60 dark:bg-sky-900/20"
+                        : "border-slate-300 hover:border-slate-500 dark:border-slate-600"
+                    }`}
+                  >
+                    {member.displayName}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoComplete="one-time-code"
+                  value={memberPinInput}
+                  onChange={(event) => setMemberPinInput(event.target.value.replace(/\D+/g, ""))}
+                  placeholder="Member PIN"
+                  disabled={!selectedPaymentMember}
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900"
+                />
+                <button
+                  type="button"
+                  onClick={() => void authenticateMemberPin()}
+                  disabled={!selectedPaymentMember}
+                  className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:border-sky-500 disabled:opacity-50 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
+                >
+                  Unlock
+                </button>
+              </div>
+
+              {activeMember && selectedPaymentMember && activeMember.id === selectedPaymentMember.id && (
+                <div className="mt-3 rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-700">
+                  <div className="font-medium">{activeMember.displayName}</div>
+                  <div className="text-slate-500 dark:text-slate-300">
+                    Balance: {currencyFormatter.format(activeMember.balance)}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void payTransactionWithMemberCredit()}
+                    className="mt-3 w-full rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95"
+                  >
+                    Pay
+                  </button>
+                  {activeMember.balance < transaction.total && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const shortfall = Math.max(0, transaction.total - activeMember.balance);
+                        setTopupAmount(Math.max(5, Math.ceil(shortfall)).toFixed(2));
+                        setSelectedTopupMemberId(activeMember.id);
+                        setShowPayWithCreditModal(false);
+                        setTransaction(null);
+                        setView("topup");
+                      }}
+                      className="mt-2 w-full rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:border-sky-500 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
+                    >
+                      Not enough credit — Top up first
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {uiMode === "pos" && view === "cart" && showCheckoutConfirm && (
