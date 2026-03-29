@@ -1120,16 +1120,14 @@ export default function App() {
               </button>
             )}
 
-            {uiMode === "pos" && (
-              <button
-                type="button"
-                onClick={() => setShowMobileMenu(true)}
-                className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 text-lg transition hover:border-slate-500 sm:hidden dark:border-slate-600 dark:hover:border-slate-300"
-                aria-label="Open menu"
-              >
-                ☰
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setShowMobileMenu(true)}
+              className="ml-2 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 text-lg transition hover:border-slate-500 sm:hidden dark:border-slate-600 dark:hover:border-slate-300"
+              aria-label="Open menu"
+            >
+              ☰
+            </button>
           </div>
         </header>
 
