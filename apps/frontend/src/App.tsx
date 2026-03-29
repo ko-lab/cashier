@@ -428,6 +428,7 @@ export default function App() {
   const [isDark, setIsDark] = useState(readStoredTheme);
   const [updateReady, setUpdateReady] = useState(false);
   const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [adminUnlockUsername] = useState(readAdminUnlockUsername);
   const unloadCanceledTransactionIdRef = useRef<string | null>(null);
 
@@ -1055,6 +1056,23 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
+  const toggleAdminMode = () => {
+    if (uiMode === "pos") {
+      setUiMode("admin");
+      setAdminError(null);
+      setShowMobileMenu(false);
+      return;
+    }
+
+    lockAdminPanel();
+    setUiMode("pos");
+    setShowMobileMenu(false);
+  };
+
+  const toggleTheme = () => {
+    setIsDark((value) => !value);
+  };
+
   return (
     <div className="min-h-screen px-3 py-8 sm:px-6">
       <div className="mx-auto flex max-w-4xl flex-col gap-8">
@@ -1063,31 +1081,15 @@ export default function App() {
             <h1 className="text-base font-semibold">Cashier</h1>
             <button
               type="button"
-              onClick={() => {
-                if (uiMode === "pos") {
-                  setUiMode("admin");
-                  setAdminError(null);
-                  return;
-                }
-
-                lockAdminPanel();
-                setUiMode("pos");
-              }}
-              className="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
+              onClick={toggleAdminMode}
+              className="hidden sm:inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
             >
-              {uiMode === "pos" ? (
-                <>
-                  <span className="sm:hidden">Adm</span>
-                  <span className="hidden sm:inline">Admin panel</span>
-                </>
-              ) : (
-                "Back to checkout"
-              )}
+              {uiMode === "pos" ? "Admin panel" : "Back to checkout"}
             </button>
             <button
               type="button"
-              onClick={() => setIsDark((value) => !value)}
-              className="rounded-full border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
+              onClick={toggleTheme}
+              className="hidden sm:inline-flex rounded-full border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
               aria-label="Toggle theme"
               title={isDark ? "Switch to light theme" : "Switch to dark theme"}
             >
@@ -1095,7 +1097,7 @@ export default function App() {
             </button>
 
             {uiMode === "pos" && view === "cart" && (
-              <div className="ml-auto flex items-center gap-3">
+              <div className="flex items-center gap-3 sm:ml-auto">
                 <button
                   type="button"
                   onClick={openCheckoutConfirm}
@@ -1107,8 +1109,59 @@ export default function App() {
                 </button>
               </div>
             )}
+
+            <button
+              type="button"
+              onClick={() => setShowMobileMenu(true)}
+              className="ml-auto inline-flex rounded-full border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-500 sm:hidden dark:border-slate-600 dark:hover:border-slate-300"
+              aria-label="Open menu"
+            >
+              ☰
+            </button>
           </div>
         </header>
+
+        {showMobileMenu && (
+          <div
+            className="fixed inset-0 z-50 bg-black/50 sm:hidden"
+            onClick={() => setShowMobileMenu(false)}
+          >
+            <aside
+              className="ml-auto flex h-full w-72 flex-col gap-3 border-l border-black/10 bg-white p-4 dark:border-white/10 dark:bg-slate-900"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-semibold">Menu</p>
+                <button
+                  type="button"
+                  onClick={() => setShowMobileMenu(false)}
+                  className="rounded-full border border-slate-300 px-3 py-1 text-xs transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
+                >
+                  Close
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={toggleAdminMode}
+                className="rounded-xl border border-slate-300 px-4 py-3 text-left text-sm font-semibold transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
+              >
+                {uiMode === "pos" ? "Adm" : "Back to pay"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  toggleTheme();
+                  setShowMobileMenu(false);
+                }}
+                className="rounded-xl border border-slate-300 px-4 py-3 text-left text-sm font-semibold transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
+              >
+                {isDark ? "Switch to light theme ☀️" : "Switch to dark theme 🌙"}
+              </button>
+            </aside>
+          </div>
+        )}
 
         {uiMode === "pos" && status && (
           <div
