@@ -315,9 +315,25 @@ function formatAdminDate(value: string): string {
   });
 }
 
-function buildCartBreakdownJson(items: Transaction["items"]): string {
+function transactionDisplayItems(transaction: Transaction): Transaction["items"] {
+  if (transaction.type === "credit_topup") {
+    return [
+      {
+        productId: "__member_credit__",
+        name: "Member credit top-up",
+        quantity: 1,
+        unitPrice: transaction.total,
+        lineTotal: transaction.total,
+        isMemberPrice: false
+      }
+    ];
+  }
+  return transaction.items;
+}
+
+function buildCartBreakdownJson(transaction: Transaction): string {
   return JSON.stringify(
-    items.map((item) => ({
+    transactionDisplayItems(transaction).map((item) => ({
       productId: item.productId,
       name: item.name,
       quantity: item.quantity,
@@ -332,19 +348,21 @@ function buildTransactionsCsv(transactions: Transaction[]): string {
   const header = [
     "id",
     "createdAt",
+    "type",
     "status",
     "total",
     "itemCount",
     "items"
   ];
   const lines = transactions.map((transaction) => {
-    const itemsSummary = buildCartBreakdownJson(transaction.items);
+    const itemsSummary = buildCartBreakdownJson(transaction);
     return [
       transaction.id,
       transaction.createdAt,
+      transaction.type,
       transaction.status,
       transaction.total.toFixed(2),
-      transaction.items.length,
+      transactionDisplayItems(transaction).length,
       itemsSummary
     ]
       .map(csvEscape)
@@ -481,6 +499,7 @@ export default function App() {
   const [memberTopupAmount, setMemberTopupAmount] = useState("");
   const [memberTopupNote, setMemberTopupNote] = useState("");
   const [creditLedger, setCreditLedger] = useState<CreditLedgerEntry[]>([]);
+  const [adminCreditEvents, setAdminCreditEvents] = useState<CreditLedgerEntry[]>([]);
   const [adminUnlockUsername] = useState(readAdminUnlockUsername);
   const unloadCanceledTransactionIdRef = useRef<string | null>(null);
 
@@ -1196,6 +1215,9 @@ export default function App() {
         : response.members[0]?.id ?? "";
     setSelectedMemberId(nextSelected);
 
+    const globalLedgerResponse = await client.admin.creditLedger({ password });
+    setAdminCreditEvents(globalLedgerResponse.entries);
+
     if (nextSelected) {
       const ledgerResponse = await client.admin.creditLedger({
         password,
@@ -1415,6 +1437,7 @@ export default function App() {
     setStockCurrentValueFilter("");
     setAdminMembers([]);
     setCreditLedger([]);
+    setAdminCreditEvents([]);
     setSelectedMemberId("");
     setAdminSessionPassword("");
     setAdminPassword("");
@@ -1907,6 +1930,7 @@ export default function App() {
                       <tr>
                         <th className="px-3 py-2 text-left font-semibold">ID</th>
                         <th className="px-3 py-2 text-left font-semibold">Date</th>
+                        <th className="px-3 py-2 text-left font-semibold">Type</th>
                         <th className="px-3 py-2 text-left font-semibold">Status</th>
                         <th className="px-3 py-2 text-right font-semibold">Total</th>
                         <th className="px-3 py-2 text-left font-semibold">Items</th>
@@ -1924,19 +1948,22 @@ export default function App() {
                           <td className="whitespace-nowrap px-3 py-2">
                             {formatAdminDate(entry.createdAt)}
                           </td>
+                          <td className="whitespace-nowrap px-3 py-2">
+                            {entry.type === "credit_topup" ? "credit_topup" : "sale"}
+                          </td>
                           <td className="whitespace-nowrap px-3 py-2">{entry.status}</td>
                           <td className="whitespace-nowrap px-3 py-2 text-right">
                             {currencyFormatter.format(entry.total)}
                           </td>
                           <td className="px-3 py-2 text-left font-mono text-xs">
-                            {buildCartBreakdownJson(entry.items)}
+                            {buildCartBreakdownJson(entry)}
                           </td>
                         </tr>
                       ))}
                       {adminFilteredTransactions.length === 0 && (
                         <tr>
                           <td
-                            colSpan={5}
+                            colSpan={6}
                             className="px-3 py-6 text-center text-slate-500 dark:text-slate-300"
                           >
                             No transactions match current filters.
@@ -2059,7 +2086,7 @@ export default function App() {
                           </div>
 
                           <div className="mt-4 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-                            <p className="text-xs uppercase tracking-wide text-slate-500">Ledger</p>
+                            <p className="text-xs uppercase tracking-wide text-slate-500">Selected member ledger</p>
                             <ul className="mt-2 space-y-1 text-sm">
                               {creditLedger.map((entry) => (
                                 <li key={entry.id} className="flex items-center justify-between gap-2">
@@ -2080,6 +2107,53 @@ export default function App() {
                           </div>
                         </>
                       )}
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700 lg:col-span-2">
+                      <h3 className="text-sm font-semibold">Member credit events</h3>
+                      <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+                        <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
+                          <thead className="bg-slate-50 dark:bg-slate-800/40">
+                            <tr>
+                              <th className="px-3 py-2 text-left font-semibold">Date</th>
+                              <th className="px-3 py-2 text-left font-semibold">Member</th>
+                              <th className="px-3 py-2 text-left font-semibold">Reason</th>
+                              <th className="px-3 py-2 text-left font-semibold">Transaction</th>
+                              <th className="px-3 py-2 text-left font-semibold">Item breakdown</th>
+                              <th className="px-3 py-2 text-right font-semibold">Delta</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                            {adminCreditEvents.map((entry) => {
+                              const memberName =
+                                adminMembers.find((member) => member.id === entry.memberId)?.displayName ??
+                                entry.memberId;
+                              return (
+                                <tr key={entry.id}>
+                                  <td className="whitespace-nowrap px-3 py-2">{formatAdminDate(entry.createdAt)}</td>
+                                  <td className="whitespace-nowrap px-3 py-2">{memberName}</td>
+                                  <td className="whitespace-nowrap px-3 py-2">{entry.reason}</td>
+                                  <td className="px-3 py-2 font-mono text-xs">{entry.transactionId ?? "-"}</td>
+                                  <td className="px-3 py-2 font-mono text-xs">
+                                    {entry.itemBreakdown ? JSON.stringify(entry.itemBreakdown) : "-"}
+                                  </td>
+                                  <td className={`whitespace-nowrap px-3 py-2 text-right ${entry.delta >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                                    {entry.delta >= 0 ? "+" : ""}
+                                    {currencyFormatter.format(entry.delta)}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                            {adminCreditEvents.length === 0 && (
+                              <tr>
+                                <td colSpan={6} className="px-3 py-6 text-center text-slate-500 dark:text-slate-300">
+                                  No member credit events yet.
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 )}
