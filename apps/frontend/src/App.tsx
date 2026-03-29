@@ -434,9 +434,10 @@ export default function App() {
   const [updateReady, setUpdateReady] = useState(false);
   const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [memberPinInput, setMemberPinInput] = useState("");
   const [activeMember, setActiveMember] = useState<Member | null>(null);
   const [creditToUse, setCreditToUse] = useState("0.00");
+  const [checkoutMemberQuery, setCheckoutMemberQuery] = useState("");
+  const [checkoutMembers, setCheckoutMembers] = useState<Member[]>([]);
   const [adminMembers, setAdminMembers] = useState<Member[]>([]);
   const [adminMemberName, setAdminMemberName] = useState("");
   const [adminMemberPin, setAdminMemberPin] = useState("");
@@ -619,28 +620,15 @@ export default function App() {
     setShowCheckoutConfirm(true);
   };
 
-  const authenticateMemberPin = async () => {
-    const pin = memberPinInput.trim();
-    if (!pin) {
-      setStatus({ tone: "error", text: "Enter member PIN." });
+  const selectCheckoutMember = (member: Member | null) => {
+    setActiveMember(member);
+    if (!member) {
+      setCreditToUse("0.00");
       return;
     }
 
-    try {
-      const response = await client.member.authPin({ pin });
-      setActiveMember(response.member);
-      const maxCredit = Math.min(summary.total, response.member.balance);
-      setCreditToUse(maxCredit.toFixed(2));
-      setMemberPinInput("");
-      setStatus({ tone: "info", text: `Member loaded: ${response.member.displayName}` });
-    } catch {
-      setStatus({ tone: "error", text: "Invalid member PIN." });
-    }
-  };
-
-  const clearActiveMember = () => {
-    setActiveMember(null);
-    setCreditToUse("0.00");
+    const maxCredit = Math.min(summary.total, member.balance);
+    setCreditToUse(maxCredit.toFixed(2));
   };
 
   const startCheckout = async () => {
@@ -648,13 +636,8 @@ export default function App() {
     setLoading(true);
 
     try {
-      const parsedCredit = Number.parseFloat(creditToUse);
-      const safeCreditToUse = Number.isFinite(parsedCredit) && parsedCredit > 0 ? parsedCredit : 0;
-
       const response = await client.transaction.start({
-        items: toTransactionItems(cart),
-        memberId: activeMember?.id,
-        creditToUse: safeCreditToUse
+        items: toTransactionItems(cart)
       });
       setShowCheckoutConfirm(false);
       setTransaction(response);
@@ -677,8 +660,8 @@ export default function App() {
       await client.transaction.finalize({
         id: transaction.id,
         status,
-        memberId: transaction.memberId,
-        creditUsed: transaction.creditUsed ?? 0
+        memberId: activeMember?.id,
+        creditUsed: cartCreditPreview
       });
       if (status === "completed") {
         setCart([]);
@@ -712,10 +695,11 @@ export default function App() {
     : 0;
   const checkoutCreditUsed = transaction?.creditUsed ?? 0;
   const checkoutExternalAmount = transaction?.externalAmount ?? transaction?.total ?? 0;
+  const payableTotal = view === "checkout" && transaction ? transaction.total : summary.total;
   const cartCreditPreview = activeMember
-    ? Math.min(activeMember.balance, summary.total, normalizedCreditToUse)
+    ? Math.min(activeMember.balance, payableTotal, normalizedCreditToUse)
     : 0;
-  const cartExternalDuePreview = Number((summary.total - cartCreditPreview).toFixed(2));
+  const cartExternalDuePreview = Number((payableTotal - cartCreditPreview).toFixed(2));
 
   const adminFilteredTransactions = useMemo(() => {
     if (!adminTransactions) {
@@ -891,6 +875,32 @@ export default function App() {
       window.location.reload();
     }
   }, [updateReady, isSafeToRefresh]);
+
+  useEffect(() => {
+    if (uiMode !== "pos" || view !== "checkout") {
+      return;
+    }
+
+    let mounted = true;
+    void client.member
+      .list()
+      .then((response) => {
+        if (!mounted) {
+          return;
+        }
+        setCheckoutMembers(response.members);
+      })
+      .catch(() => {
+        if (!mounted) {
+          return;
+        }
+        setCheckoutMembers([]);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [uiMode, view]);
 
   const getQuantity = (productId: string, isMemberPrice: boolean) =>
     cart.find(
@@ -1666,9 +1676,12 @@ export default function App() {
                           className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
                         />
                         <input
-                          type="password"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          autoComplete="off"
                           value={adminMemberPin}
-                          onChange={(event) => setAdminMemberPin(event.target.value)}
+                          onChange={(event) => setAdminMemberPin(event.target.value.replace(/\D+/g, ""))}
                           placeholder="PIN (4+ digits)"
                           className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
                         />
@@ -2011,61 +2024,6 @@ export default function App() {
                 />
               </div>
 
-              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-semibold">Member credit</h3>
-                  {activeMember ? (
-                    <button
-                      type="button"
-                      onClick={clearActiveMember}
-                      className="rounded-lg border border-slate-300 px-3 py-1 text-xs transition hover:border-slate-500 dark:border-slate-600"
-                    >
-                      Switch member
-                    </button>
-                  ) : null}
-                </div>
-
-                {activeMember ? (
-                  <div className="mt-3 space-y-2 text-sm">
-                    <p className="font-medium">{activeMember.displayName}</p>
-                    <p className="text-slate-500 dark:text-slate-300">
-                      Balance: {currencyFormatter.format(activeMember.balance)}
-                    </p>
-                    <div>
-                      <label className="text-xs uppercase tracking-wide text-slate-500">Credit to use</label>
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={creditToUse}
-                        onChange={(event) => setCreditToUse(event.target.value)}
-                        className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <input
-                      type="password"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      value={memberPinInput}
-                      onChange={(event) => setMemberPinInput(event.target.value)}
-                      placeholder="Enter PIN"
-                      className="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => void authenticateMemberPin()}
-                      disabled={isBusy}
-                      className="rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50"
-                    >
-                      Use credit
-                    </button>
-                  </div>
-                )}
-              </div>
-
               <div className="mt-4 flex flex-col gap-4">
                 {filteredProducts.length === 0 && (
                   <p className="text-sm text-slate-500">
@@ -2133,6 +2091,69 @@ export default function App() {
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-300">
                 Scan the QR code and pay the total. When done, press "I paid".
               </p>
+
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold">Member credit (optional)</h3>
+                  {activeMember && (
+                    <button
+                      type="button"
+                      onClick={() => selectCheckoutMember(null)}
+                      className="rounded-lg border border-slate-300 px-3 py-1 text-xs transition hover:border-slate-500 dark:border-slate-600"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="search"
+                  value={checkoutMemberQuery}
+                  onChange={(event) => setCheckoutMemberQuery(event.target.value)}
+                  placeholder="Search member"
+                  className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
+                />
+                <div className="mt-2 max-h-32 overflow-auto space-y-1">
+                  {checkoutMembers
+                    .filter((member) =>
+                      member.displayName.toLowerCase().includes(checkoutMemberQuery.trim().toLowerCase())
+                    )
+                    .slice(0, 12)
+                    .map((member) => (
+                      <button
+                        key={member.id}
+                        type="button"
+                        onClick={() => selectCheckoutMember(member)}
+                        className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition ${
+                          activeMember?.id === member.id
+                            ? "border-sky-500 bg-sky-50/60 dark:bg-sky-900/20"
+                            : "border-slate-300 hover:border-slate-500 dark:border-slate-600"
+                        }`}
+                      >
+                        <span>{member.displayName}</span>
+                        <span>{currencyFormatter.format(member.balance)}</span>
+                      </button>
+                    ))}
+                </div>
+                {activeMember && (
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <p className="text-sm text-slate-600 dark:text-slate-300">
+                      Selected: <span className="font-semibold">{activeMember.displayName}</span>
+                    </p>
+                    <label className="text-sm">
+                      <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500">Credit to use</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={creditToUse}
+                        onChange={(event) => setCreditToUse(event.target.value)}
+                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+
               <div className="mt-6 rounded-2xl border border-dashed border-slate-400/60 p-6 text-center dark:border-slate-500">
                 {qrImageSrc ? (
                   <img

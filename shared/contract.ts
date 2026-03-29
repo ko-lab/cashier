@@ -15,6 +15,7 @@ import {
   FinalizeTransactionInputSchema,
   MemberAuthInputSchema,
   MemberAuthOutputSchema,
+  MemberListOutputSchema,
   ProductCatalogSchema,
   StartTransactionInputSchema,
   TransactionSchema
@@ -48,6 +49,10 @@ export const memberAuthContract = oc
   .input(MemberAuthInputSchema)
   .output(MemberAuthOutputSchema);
 
+export const memberListContract = oc
+  .input(z.void())
+  .output(MemberListOutputSchema);
+
 export const adminMembersListContract = oc
   .input(AdminExportTransactionsInputSchema)
   .output(AdminMembersOutputSchema);
@@ -77,7 +82,8 @@ export const contract = {
     list: listProductsContract
   },
   member: {
-    authPin: memberAuthContract
+    authPin: memberAuthContract,
+    list: memberListContract
   },
   transaction: {
     start: startTransactionContract,

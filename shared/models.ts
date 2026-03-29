@@ -110,6 +110,10 @@ export const MemberAuthOutputSchema = z.object({
   member: MemberSchema
 });
 
+export const MemberListOutputSchema = z.object({
+  members: z.array(MemberSchema)
+});
+
 export const AdminCreateMemberInputSchema = z.object({
   password: z.string().min(1),
   displayName: z.string().min(1).max(80),
@@ -213,6 +217,7 @@ export type CreditLedgerReason = z.infer<typeof CreditLedgerReasonSchema>;
 export type CreditLedgerEntry = z.infer<typeof CreditLedgerEntrySchema>;
 export type MemberAuthInput = z.infer<typeof MemberAuthInputSchema>;
 export type MemberAuthOutput = z.infer<typeof MemberAuthOutputSchema>;
+export type MemberListOutput = z.infer<typeof MemberListOutputSchema>;
 export type TransactionStatus = z.infer<typeof TransactionStatusSchema>;
 export type TransactionItem = z.infer<typeof TransactionItemSchema>;
 export type Transaction = z.infer<typeof TransactionSchema>;

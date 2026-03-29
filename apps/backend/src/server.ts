@@ -40,7 +40,8 @@ const router = {
   member: {
     authPin: api.member.authPin.handler(async ({ input }) => ({
       member: await adminService.authenticateMemberByPin(input.pin)
-    }))
+    })),
+    list: api.member.list.handler(async () => adminService.listActiveMembersPublic())
   },
   transaction: {
     start: api.transaction.start.handler(async ({ input }) =>

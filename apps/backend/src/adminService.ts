@@ -24,6 +24,7 @@ export type AdminService = {
     }
   ) => Promise<AdminGetStockOutput>;
   authenticateMemberByPin: (pin: string) => Promise<Member>;
+  listActiveMembersPublic: () => Promise<AdminMembersOutput>;
   listMembers: (password: string) => Promise<AdminMembersOutput>;
   createMember: (
     password: string,
@@ -175,6 +176,10 @@ export function createAdminService({
         });
       }
       return member;
+    },
+    async listActiveMembersPublic() {
+      const snapshot = await buildMembersSnapshot();
+      return { members: snapshot.members.filter((member) => member.active) };
     },
     async listMembers(password) {
       assertPassword(password);
