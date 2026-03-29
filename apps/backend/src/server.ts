@@ -8,6 +8,7 @@ import { createTransactionStore } from "./transactionStore.ts";
 import { createTransactionService } from "./transactionService.ts";
 import { createAdminService } from "./adminService.ts";
 import { createStockEventStore } from "./stockEventStore.ts";
+import { createMemberStore } from "./memberStore.ts";
 
 const api = implement(contract);
 const defaultDataDir = fileURLToPath(new URL("../data/", import.meta.url));
@@ -17,15 +18,18 @@ const catalogDir = process.env.CATALOG_DIR ?? defaultCatalogDir;
 const stockEventStore = createStockEventStore(dataDir);
 const productStore = createProductStore(catalogDir, stockEventStore);
 const transactionStore = createTransactionStore(dataDir);
+const memberStore = createMemberStore(dataDir);
 const transactionService = createTransactionService(
   productStore,
   transactionStore,
-  stockEventStore
+  stockEventStore,
+  memberStore
 );
 const adminService = createAdminService({
   transactionStore,
   productStore,
   stockEventStore,
+  memberStore,
   adminPanelPassword: process.env.ADMIN_PANEL_PASSWORD
 });
 
@@ -33,12 +37,24 @@ const router = {
   product: {
     list: api.product.list.handler(async () => productStore.listCatalog())
   },
+  member: {
+    authPin: api.member.authPin.handler(async ({ input }) => ({
+      member: await adminService.authenticateMemberByPin(input.pin)
+    }))
+  },
   transaction: {
     start: api.transaction.start.handler(async ({ input }) =>
-      transactionService.startTransaction(input.items)
+      transactionService.startTransaction(input.items, {
+        memberId: input.memberId,
+        creditToUse: input.creditToUse
+      })
     ),
     finalize: api.transaction.finalize.handler(async ({ input }) =>
-      transactionService.finalizeTransaction(input.id, input.status, input.reason)
+      transactionService.finalizeTransaction(input.id, input.status, {
+        reason: input.reason,
+        memberId: input.memberId,
+        creditUsed: input.creditUsed
+      })
     )
   },
   admin: {
@@ -55,6 +71,24 @@ const router = {
         note: input.note,
         action: input.action
       })
+    ),
+    listMembers: api.admin.listMembers.handler(async ({ input }) =>
+      adminService.listMembers(input.password)
+    ),
+    createMember: api.admin.createMember.handler(async ({ input }) =>
+      adminService.createMember(input.password, input.displayName, input.pin)
+    ),
+    setMemberPin: api.admin.setMemberPin.handler(async ({ input }) =>
+      adminService.setMemberPin(input.password, input.memberId, input.pin)
+    ),
+    setMemberActive: api.admin.setMemberActive.handler(async ({ input }) =>
+      adminService.setMemberActive(input.password, input.memberId, input.active)
+    ),
+    topupCredit: api.admin.topupCredit.handler(async ({ input }) =>
+      adminService.topupCredit(input.password, input.memberId, input.amount, input.note)
+    ),
+    creditLedger: api.admin.creditLedger.handler(async ({ input }) =>
+      adminService.creditLedger(input.password, input.memberId)
     )
   }
 };

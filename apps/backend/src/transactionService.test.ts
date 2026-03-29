@@ -8,6 +8,7 @@ import { createTransactionStore } from "./transactionStore.ts";
 import { createTransactionService } from "./transactionService.ts";
 import { writeJson } from "./storage.ts";
 import { createStockEventStore } from "./stockEventStore.ts";
+import { createMemberStore } from "./memberStore.ts";
 import type { PriceCategory, Product } from "../../../shared/models.ts";
 
 const priceCategories: Record<string, PriceCategory> = {
@@ -50,10 +51,12 @@ describe("transaction service", () => {
     const stockEventStore = createStockEventStore(dataDir);
     const productStore = createProductStore(catalogDir, stockEventStore);
     const transactionStore = createTransactionStore(dataDir);
+    const memberStore = createMemberStore(dataDir);
     const service = createTransactionService(
       productStore,
       transactionStore,
-      stockEventStore
+      stockEventStore,
+      memberStore
     );
 
     const transaction = await service.startTransaction([
@@ -72,10 +75,12 @@ describe("transaction service", () => {
     const stockEventStore = createStockEventStore(dataDir);
     const productStore = createProductStore(catalogDir, stockEventStore);
     const transactionStore = createTransactionStore(dataDir);
+    const memberStore = createMemberStore(dataDir);
     const service = createTransactionService(
       productStore,
       transactionStore,
-      stockEventStore
+      stockEventStore,
+      memberStore
     );
 
     const transaction = await service.startTransaction([
@@ -93,10 +98,12 @@ describe("transaction service", () => {
     const stockEventStore = createStockEventStore(dataDir);
     const productStore = createProductStore(catalogDir, stockEventStore);
     const transactionStore = createTransactionStore(dataDir);
+    const memberStore = createMemberStore(dataDir);
     const service = createTransactionService(
       productStore,
       transactionStore,
-      stockEventStore
+      stockEventStore,
+      memberStore
     );
 
     await expect(

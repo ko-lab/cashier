@@ -11,6 +11,7 @@ import type {
 import type { ProductStore } from "./productStore.ts";
 import type { StockEventStore } from "./stockEventStore.ts";
 import type { TransactionStore } from "./transactionStore.ts";
+import type { MemberStore } from "./memberStore.ts";
 
 function buildTransactionItems(
   products: Product[],
@@ -75,21 +76,25 @@ function isUniqueConstraintError(error: unknown): boolean {
 }
 
 export type TransactionService = {
-  startTransaction: (items: CartItemInput[]) => Promise<Transaction>;
+  startTransaction: (
+    items: CartItemInput[],
+    options?: { memberId?: string; creditToUse?: number }
+  ) => Promise<Transaction>;
   finalizeTransaction: (
     id: string,
     status: Exclude<TransactionStatus, "pending">,
-    reason?: string
+    options?: { reason?: string; memberId?: string; creditUsed?: number }
   ) => Promise<Transaction>;
 };
 
 export function createTransactionService(
   productStore: ProductStore,
   transactionStore: TransactionStore,
-  stockEventStore: StockEventStore
+  stockEventStore: StockEventStore,
+  memberStore: MemberStore
 ): TransactionService {
   return {
-    async startTransaction(items) {
+    async startTransaction(items, options) {
       const catalog = await productStore.listCatalog();
       const lineItems = buildTransactionItems(
         Object.values(catalog.products),
@@ -99,11 +104,42 @@ export function createTransactionService(
       const total = sumTotal(lineItems);
       const createdAt = new Date().toISOString();
 
+      let memberId: string | undefined;
+      let memberName: string | undefined;
+      let creditUsed = 0;
+
+      if (options?.memberId) {
+        const member = await memberStore.getById(options.memberId);
+        if (!member || !member.active) {
+          throw new ORPCError("BAD_REQUEST", {
+            data: { message: "Selected member is not available." }
+          });
+        }
+
+        memberId = member.id;
+        memberName = member.displayName;
+
+        const requestedCredit = options.creditToUse ?? 0;
+        if (requestedCredit < 0) {
+          throw new ORPCError("BAD_REQUEST", {
+            data: { message: "Credit amount cannot be negative." }
+          });
+        }
+
+        creditUsed = Number(Math.min(requestedCredit, member.balance, total).toFixed(2));
+      }
+
+      const externalAmount = Number((total - creditUsed).toFixed(2));
+
       for (let attempt = 0; attempt < 5; attempt += 1) {
         const transaction: Transaction = {
           id: createStructuredTransactionId(),
           createdAt,
           status: "pending",
+          memberId,
+          memberName,
+          creditUsed,
+          externalAmount,
           total,
           items: lineItems
         };
@@ -123,13 +159,58 @@ export function createTransactionService(
         data: { message: "Could not create transaction id" }
       });
     },
-    async finalizeTransaction(id, status, reason) {
+    async finalizeTransaction(id, status, options) {
       const existing = await transactionStore.getById(id);
       if (!existing) {
         throw new ORPCError("NOT_FOUND", { data: { message: "Transaction not found" } });
       }
 
-      const transaction = await transactionStore.updateStatus(id, status, reason);
+      const memberId = options?.memberId ?? existing.memberId;
+      const requestedCreditUsed = options?.creditUsed ?? existing.creditUsed ?? 0;
+      const cappedCreditUsed = Number(
+        Math.max(0, Math.min(requestedCreditUsed, existing.total)).toFixed(2)
+      );
+      const externalAmount = Number((existing.total - cappedCreditUsed).toFixed(2));
+
+      if (status === "completed" && cappedCreditUsed > 0) {
+        if (!memberId) {
+          throw new ORPCError("BAD_REQUEST", {
+            data: { message: "Credit usage requires a member account." }
+          });
+        }
+
+        try {
+          await memberStore.adjustBalance({
+            memberId,
+            delta: -cappedCreditUsed,
+            reason: "checkout_debit",
+            transactionId: existing.id,
+            preventNegative: true
+          });
+        } catch (error) {
+          if (error instanceof Error && error.message === "INSUFFICIENT_CREDIT") {
+            throw new ORPCError("BAD_REQUEST", {
+              data: { message: "Insufficient member credit." }
+            });
+          }
+          if (error instanceof Error && error.message === "MEMBER_NOT_FOUND") {
+            throw new ORPCError("BAD_REQUEST", {
+              data: { message: "Member account not found." }
+            });
+          }
+          throw error;
+        }
+      }
+
+      const member = memberId ? await memberStore.getById(memberId) : null;
+
+      const transaction = await transactionStore.updateStatus(id, status, {
+        reason: options?.reason,
+        memberId: memberId ?? undefined,
+        memberName: member?.displayName ?? existing.memberName,
+        creditUsed: cappedCreditUsed,
+        externalAmount
+      });
 
       if (!transaction) {
         throw new ORPCError("NOT_FOUND", { data: { message: "Transaction not found" } });

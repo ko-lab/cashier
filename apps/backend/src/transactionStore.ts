@@ -9,7 +9,13 @@ export type TransactionStore = {
   updateStatus: (
     id: string,
     status: Exclude<TransactionStatus, "pending">,
-    reason?: string
+    options?: {
+      reason?: string;
+      memberId?: string;
+      memberName?: string;
+      creditUsed?: number;
+      externalAmount?: number;
+    }
   ) => Promise<Transaction | null>;
   list: () => Promise<Transaction[]>;
 };
@@ -26,6 +32,10 @@ export function createTransactionStore(dataDir: string): TransactionStore {
       created_at TEXT NOT NULL,
       status TEXT NOT NULL,
       abandonment_reason TEXT,
+      member_id TEXT,
+      member_name TEXT,
+      credit_used REAL,
+      external_amount REAL,
       total REAL NOT NULL,
       items_json TEXT NOT NULL
     );
@@ -40,19 +50,31 @@ export function createTransactionStore(dataDir: string): TransactionStore {
   if (!hasAbandonmentReasonColumn) {
     db.exec("ALTER TABLE transactions ADD COLUMN abandonment_reason TEXT");
   }
+  if (!tableInfo.some((column) => column.name === "member_id")) {
+    db.exec("ALTER TABLE transactions ADD COLUMN member_id TEXT");
+  }
+  if (!tableInfo.some((column) => column.name === "member_name")) {
+    db.exec("ALTER TABLE transactions ADD COLUMN member_name TEXT");
+  }
+  if (!tableInfo.some((column) => column.name === "credit_used")) {
+    db.exec("ALTER TABLE transactions ADD COLUMN credit_used REAL");
+  }
+  if (!tableInfo.some((column) => column.name === "external_amount")) {
+    db.exec("ALTER TABLE transactions ADD COLUMN external_amount REAL");
+  }
 
   const insertTransaction = db.prepare(`
-    INSERT INTO transactions (id, created_at, status, abandonment_reason, total, items_json)
-    VALUES (@id, @createdAt, @status, @abandonmentReason, @total, @itemsJson)
+    INSERT INTO transactions (id, created_at, status, abandonment_reason, member_id, member_name, credit_used, external_amount, total, items_json)
+    VALUES (@id, @createdAt, @status, @abandonmentReason, @memberId, @memberName, @creditUsed, @externalAmount, @total, @itemsJson)
   `);
   const selectById = db.prepare(
-    "SELECT id, created_at, status, abandonment_reason, total, items_json FROM transactions WHERE id = ?"
+    "SELECT id, created_at, status, abandonment_reason, member_id, member_name, credit_used, external_amount, total, items_json FROM transactions WHERE id = ?"
   );
   const updateStatus = db.prepare(
-    "UPDATE transactions SET status = ?, abandonment_reason = ? WHERE id = ?"
+    "UPDATE transactions SET status = ?, abandonment_reason = ?, member_id = ?, member_name = ?, credit_used = ?, external_amount = ? WHERE id = ?"
   );
   const listAll = db.prepare(
-    "SELECT id, created_at, status, abandonment_reason, total, items_json FROM transactions ORDER BY created_at DESC"
+    "SELECT id, created_at, status, abandonment_reason, member_id, member_name, credit_used, external_amount, total, items_json FROM transactions ORDER BY created_at DESC"
   );
 
   const mapRow = (row: {
@@ -60,6 +82,10 @@ export function createTransactionStore(dataDir: string): TransactionStore {
     created_at: string;
     status: TransactionStatus;
     abandonment_reason?: string | null;
+    member_id?: string | null;
+    member_name?: string | null;
+    credit_used?: number | null;
+    external_amount?: number | null;
     total: number;
     items_json: string;
   }): Transaction => ({
@@ -67,6 +93,10 @@ export function createTransactionStore(dataDir: string): TransactionStore {
     createdAt: row.created_at,
     status: row.status,
     abandonmentReason: row.abandonment_reason ?? undefined,
+    memberId: row.member_id ?? undefined,
+    memberName: row.member_name ?? undefined,
+    creditUsed: row.credit_used ?? undefined,
+    externalAmount: row.external_amount ?? undefined,
     total: row.total,
     items: JSON.parse(row.items_json) as Transaction["items"]
   });
@@ -78,6 +108,10 @@ export function createTransactionStore(dataDir: string): TransactionStore {
         createdAt: transaction.createdAt,
         status: transaction.status,
         abandonmentReason: transaction.abandonmentReason ?? null,
+        memberId: transaction.memberId ?? null,
+        memberName: transaction.memberName ?? null,
+        creditUsed: transaction.creditUsed ?? null,
+        externalAmount: transaction.externalAmount ?? null,
         total: transaction.total,
         itemsJson: JSON.stringify(transaction.items)
       });
@@ -89,14 +123,26 @@ export function createTransactionStore(dataDir: string): TransactionStore {
             created_at: string;
             status: TransactionStatus;
             abandonment_reason?: string | null;
+            member_id?: string | null;
+            member_name?: string | null;
+            credit_used?: number | null;
+            external_amount?: number | null;
             total: number;
             items_json: string;
           }
         | undefined;
       return row ? mapRow(row) : null;
     },
-    async updateStatus(id, status, reason) {
-      updateStatus.run(status, reason ?? null, id);
+    async updateStatus(id, status, options) {
+      updateStatus.run(
+        status,
+        options?.reason ?? null,
+        options?.memberId ?? null,
+        options?.memberName ?? null,
+        options?.creditUsed ?? null,
+        options?.externalAmount ?? null,
+        id
+      );
       return this.getById(id);
     },
     async list() {
@@ -105,6 +151,10 @@ export function createTransactionStore(dataDir: string): TransactionStore {
         created_at: string;
         status: TransactionStatus;
         abandonment_reason?: string | null;
+        member_id?: string | null;
+        member_name?: string | null;
+        credit_used?: number | null;
+        external_amount?: number | null;
         total: number;
         items_json: string;
       }[];

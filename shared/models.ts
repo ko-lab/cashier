@@ -71,6 +71,91 @@ export const CartItemInputSchema = z.object({
   isMemberPrice: z.boolean()
 });
 
+export const MemberSchema = z.object({
+  id: z.string().min(1),
+  displayName: z.string().min(1),
+  active: z.boolean(),
+  balance: z.number(),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1)
+});
+
+export const CreditLedgerReasonSchema = z.enum([
+  "topup",
+  "checkout_debit",
+  "admin_adjustment",
+  "refund"
+]);
+
+export const CreditLedgerEntrySchema = z.object({
+  id: z.string().min(1),
+  memberId: z.string().min(1),
+  delta: z.number(),
+  balanceAfter: z.number(),
+  reason: CreditLedgerReasonSchema,
+  transactionId: z.string().optional(),
+  note: z.string().optional(),
+  createdAt: z.string().min(1)
+});
+
+export const MemberAuthInputSchema = z.object({
+  pin: z
+    .string()
+    .min(4)
+    .max(12)
+    .regex(/^\d+$/, "PIN must contain only digits")
+});
+
+export const MemberAuthOutputSchema = z.object({
+  member: MemberSchema
+});
+
+export const AdminCreateMemberInputSchema = z.object({
+  password: z.string().min(1),
+  displayName: z.string().min(1).max(80),
+  pin: z
+    .string()
+    .min(4)
+    .max(12)
+    .regex(/^\d+$/, "PIN must contain only digits")
+});
+
+export const AdminSetMemberPinInputSchema = z.object({
+  password: z.string().min(1),
+  memberId: z.string().min(1),
+  pin: z
+    .string()
+    .min(4)
+    .max(12)
+    .regex(/^\d+$/, "PIN must contain only digits")
+});
+
+export const AdminSetMemberActiveInputSchema = z.object({
+  password: z.string().min(1),
+  memberId: z.string().min(1),
+  active: z.boolean()
+});
+
+export const AdminTopupCreditInputSchema = z.object({
+  password: z.string().min(1),
+  memberId: z.string().min(1),
+  amount: z.number().positive(),
+  note: z.string().max(200).optional()
+});
+
+export const AdminMembersOutputSchema = z.object({
+  members: z.array(MemberSchema)
+});
+
+export const AdminCreditLedgerInputSchema = z.object({
+  password: z.string().min(1),
+  memberId: z.string().min(1).optional()
+});
+
+export const AdminCreditLedgerOutputSchema = z.object({
+  entries: z.array(CreditLedgerEntrySchema)
+});
+
 export const TransactionStatusSchema = z.enum(["pending", "completed", "canceled", "abandoned"]);
 
 export const TransactionItemSchema = z.object({
@@ -87,18 +172,26 @@ export const TransactionSchema = z.object({
   createdAt: z.string().min(1),
   status: TransactionStatusSchema,
   abandonmentReason: z.string().optional(),
+  memberId: z.string().optional(),
+  memberName: z.string().optional(),
+  creditUsed: z.number().nonnegative().optional(),
+  externalAmount: z.number().nonnegative().optional(),
   total: z.number().nonnegative(),
   items: z.array(TransactionItemSchema)
 });
 
 export const StartTransactionInputSchema = z.object({
-  items: z.array(CartItemInputSchema).min(1)
+  items: z.array(CartItemInputSchema).min(1),
+  memberId: z.string().min(1).optional(),
+  creditToUse: z.number().nonnegative().optional()
 });
 
 export const FinalizeTransactionInputSchema = z.object({
   id: z.string().min(1),
   status: TransactionStatusSchema.exclude(["pending"]),
-  reason: z.string().optional()
+  reason: z.string().optional(),
+  memberId: z.string().optional(),
+  creditUsed: z.number().nonnegative().optional()
 });
 
 export const AdminExportTransactionsInputSchema = z.object({
@@ -115,6 +208,11 @@ export type ProductCatalog = z.infer<typeof ProductCatalogSchema>;
 export type StockEventType = z.infer<typeof StockEventTypeSchema>;
 export type StockEvent = z.infer<typeof StockEventSchema>;
 export type CartItemInput = z.infer<typeof CartItemInputSchema>;
+export type Member = z.infer<typeof MemberSchema>;
+export type CreditLedgerReason = z.infer<typeof CreditLedgerReasonSchema>;
+export type CreditLedgerEntry = z.infer<typeof CreditLedgerEntrySchema>;
+export type MemberAuthInput = z.infer<typeof MemberAuthInputSchema>;
+export type MemberAuthOutput = z.infer<typeof MemberAuthOutputSchema>;
 export type TransactionStatus = z.infer<typeof TransactionStatusSchema>;
 export type TransactionItem = z.infer<typeof TransactionItemSchema>;
 export type Transaction = z.infer<typeof TransactionSchema>;
@@ -129,3 +227,10 @@ export type AdminExportTransactionsOutput = z.infer<
 export type AdminSetStockInput = z.infer<typeof AdminSetStockInputSchema>;
 export type AdminStockItem = z.infer<typeof AdminStockItemSchema>;
 export type AdminGetStockOutput = z.infer<typeof AdminGetStockOutputSchema>;
+export type AdminCreateMemberInput = z.infer<typeof AdminCreateMemberInputSchema>;
+export type AdminSetMemberPinInput = z.infer<typeof AdminSetMemberPinInputSchema>;
+export type AdminSetMemberActiveInput = z.infer<typeof AdminSetMemberActiveInputSchema>;
+export type AdminTopupCreditInput = z.infer<typeof AdminTopupCreditInputSchema>;
+export type AdminMembersOutput = z.infer<typeof AdminMembersOutputSchema>;
+export type AdminCreditLedgerInput = z.infer<typeof AdminCreditLedgerInputSchema>;
+export type AdminCreditLedgerOutput = z.infer<typeof AdminCreditLedgerOutputSchema>;

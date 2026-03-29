@@ -1,8 +1,15 @@
 import { ORPCError } from "@orpc/server";
-import type { Transaction, AdminGetStockOutput } from "../../../shared/models.ts";
+import type {
+  AdminCreditLedgerOutput,
+  AdminGetStockOutput,
+  AdminMembersOutput,
+  Member,
+  Transaction
+} from "../../../shared/models.ts";
 import type { ProductStore } from "./productStore.ts";
 import type { StockEventStore } from "./stockEventStore.ts";
 import type { TransactionStore } from "./transactionStore.ts";
+import type { MemberStore } from "./memberStore.ts";
 
 export type AdminService = {
   exportTransactions: (password: string) => Promise<{ transactions: Transaction[] }>;
@@ -16,12 +23,33 @@ export type AdminService = {
       action?: "set" | "comment" | "counted_ok";
     }
   ) => Promise<AdminGetStockOutput>;
+  authenticateMemberByPin: (pin: string) => Promise<Member>;
+  listMembers: (password: string) => Promise<AdminMembersOutput>;
+  createMember: (
+    password: string,
+    displayName: string,
+    pin: string
+  ) => Promise<AdminMembersOutput>;
+  setMemberPin: (password: string, memberId: string, pin: string) => Promise<AdminMembersOutput>;
+  setMemberActive: (
+    password: string,
+    memberId: string,
+    active: boolean
+  ) => Promise<AdminMembersOutput>;
+  topupCredit: (
+    password: string,
+    memberId: string,
+    amount: number,
+    note?: string
+  ) => Promise<AdminMembersOutput>;
+  creditLedger: (password: string, memberId?: string) => Promise<AdminCreditLedgerOutput>;
 };
 
 type CreateAdminServiceOptions = {
   transactionStore: TransactionStore;
   productStore: ProductStore;
   stockEventStore: StockEventStore;
+  memberStore: MemberStore;
   adminPanelPassword: string | undefined;
 };
 
@@ -29,6 +57,7 @@ export function createAdminService({
   transactionStore,
   productStore,
   stockEventStore,
+  memberStore,
   adminPanelPassword
 }: CreateAdminServiceOptions): AdminService {
   const assertPassword = (password: string) => {
@@ -68,6 +97,11 @@ export function createAdminService({
       items,
       events: [...events].reverse().slice(0, 100)
     };
+  };
+
+  const buildMembersSnapshot = async (): Promise<AdminMembersOutput> => {
+    const members = await memberStore.listMembers();
+    return { members };
   };
 
   return {
@@ -132,6 +166,63 @@ export function createAdminService({
       }
 
       return buildStockSnapshot();
+    },
+    async authenticateMemberByPin(pin) {
+      const member = await memberStore.authenticateByPin(pin);
+      if (!member) {
+        throw new ORPCError("UNAUTHORIZED", {
+          data: { message: "Invalid member PIN." }
+        });
+      }
+      return member;
+    },
+    async listMembers(password) {
+      assertPassword(password);
+      return buildMembersSnapshot();
+    },
+    async createMember(password, displayName, pin) {
+      assertPassword(password);
+      await memberStore.createMember(displayName, pin);
+      return buildMembersSnapshot();
+    },
+    async setMemberPin(password, memberId, pin) {
+      assertPassword(password);
+      const updated = await memberStore.setMemberPin(memberId, pin);
+      if (!updated) {
+        throw new ORPCError("NOT_FOUND", { data: { message: "Member not found." } });
+      }
+      return buildMembersSnapshot();
+    },
+    async setMemberActive(password, memberId, active) {
+      assertPassword(password);
+      const updated = await memberStore.setMemberActive(memberId, active);
+      if (!updated) {
+        throw new ORPCError("NOT_FOUND", { data: { message: "Member not found." } });
+      }
+      return buildMembersSnapshot();
+    },
+    async topupCredit(password, memberId, amount, note) {
+      assertPassword(password);
+      try {
+        await memberStore.adjustBalance({
+          memberId,
+          delta: Number(amount.toFixed(2)),
+          reason: "topup",
+          note: note?.trim(),
+          preventNegative: true
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message === "MEMBER_NOT_FOUND") {
+          throw new ORPCError("NOT_FOUND", { data: { message: "Member not found." } });
+        }
+        throw error;
+      }
+      return buildMembersSnapshot();
+    },
+    async creditLedger(password, memberId) {
+      assertPassword(password);
+      const entries = await memberStore.listLedger(memberId);
+      return { entries };
     }
   };
 }

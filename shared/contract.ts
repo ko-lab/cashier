@@ -1,11 +1,20 @@
 import { oc } from "@orpc/contract";
 import * as z from "zod";
 import {
+  AdminCreateMemberInputSchema,
+  AdminCreditLedgerInputSchema,
+  AdminCreditLedgerOutputSchema,
   AdminExportTransactionsInputSchema,
   AdminExportTransactionsOutputSchema,
   AdminGetStockOutputSchema,
+  AdminMembersOutputSchema,
+  AdminSetMemberActiveInputSchema,
+  AdminSetMemberPinInputSchema,
   AdminSetStockInputSchema,
+  AdminTopupCreditInputSchema,
   FinalizeTransactionInputSchema,
+  MemberAuthInputSchema,
+  MemberAuthOutputSchema,
   ProductCatalogSchema,
   StartTransactionInputSchema,
   TransactionSchema
@@ -35,9 +44,40 @@ export const adminSetStockContract = oc
   .input(AdminSetStockInputSchema)
   .output(AdminGetStockOutputSchema);
 
+export const memberAuthContract = oc
+  .input(MemberAuthInputSchema)
+  .output(MemberAuthOutputSchema);
+
+export const adminMembersListContract = oc
+  .input(AdminExportTransactionsInputSchema)
+  .output(AdminMembersOutputSchema);
+
+export const adminMembersCreateContract = oc
+  .input(AdminCreateMemberInputSchema)
+  .output(AdminMembersOutputSchema);
+
+export const adminMembersSetPinContract = oc
+  .input(AdminSetMemberPinInputSchema)
+  .output(AdminMembersOutputSchema);
+
+export const adminMembersSetActiveContract = oc
+  .input(AdminSetMemberActiveInputSchema)
+  .output(AdminMembersOutputSchema);
+
+export const adminCreditTopupContract = oc
+  .input(AdminTopupCreditInputSchema)
+  .output(AdminMembersOutputSchema);
+
+export const adminCreditLedgerContract = oc
+  .input(AdminCreditLedgerInputSchema)
+  .output(AdminCreditLedgerOutputSchema);
+
 export const contract = {
   product: {
     list: listProductsContract
+  },
+  member: {
+    authPin: memberAuthContract
   },
   transaction: {
     start: startTransactionContract,
@@ -46,6 +86,12 @@ export const contract = {
   admin: {
     exportTransactions: adminExportTransactionsContract,
     getStock: adminGetStockContract,
-    setStock: adminSetStockContract
+    setStock: adminSetStockContract,
+    listMembers: adminMembersListContract,
+    createMember: adminMembersCreateContract,
+    setMemberPin: adminMembersSetPinContract,
+    setMemberActive: adminMembersSetActiveContract,
+    topupCredit: adminCreditTopupContract,
+    creditLedger: adminCreditLedgerContract
   }
 };

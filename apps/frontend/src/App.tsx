@@ -3,6 +3,8 @@ import QRCode from "qrcode-svg";
 import { client } from "./api/client";
 import type {
   AdminGetStockOutput,
+  CreditLedgerEntry,
+  Member,
   PriceCategory,
   Product,
   Transaction,
@@ -24,7 +26,7 @@ import { toStructuredCommunication } from "./domain/structuredCommunication";
 
 type View = "cart" | "checkout";
 type UiMode = "pos" | "admin";
-type AdminTab = "transactions" | "stock";
+type AdminTab = "transactions" | "stock" | "members";
 
 type StatusMessage = {
   tone: "error" | "info";
@@ -380,7 +382,10 @@ function readInitialAdminTab(): AdminTab {
   }
 
   const value = new URLSearchParams(window.location.search).get("tab");
-  return value === "stock" ? "stock" : "transactions";
+  if (value === "stock" || value === "members") {
+    return value;
+  }
+  return "transactions";
 }
 
 function readAdminUnlockUsername(): string {
@@ -429,6 +434,16 @@ export default function App() {
   const [updateReady, setUpdateReady] = useState(false);
   const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [memberPinInput, setMemberPinInput] = useState("");
+  const [activeMember, setActiveMember] = useState<Member | null>(null);
+  const [creditToUse, setCreditToUse] = useState("0.00");
+  const [adminMembers, setAdminMembers] = useState<Member[]>([]);
+  const [adminMemberName, setAdminMemberName] = useState("");
+  const [adminMemberPin, setAdminMemberPin] = useState("");
+  const [selectedMemberId, setSelectedMemberId] = useState<string>("");
+  const [memberTopupAmount, setMemberTopupAmount] = useState("");
+  const [memberTopupNote, setMemberTopupNote] = useState("");
+  const [creditLedger, setCreditLedger] = useState<CreditLedgerEntry[]>([]);
   const [adminUnlockUsername] = useState(readAdminUnlockUsername);
   const unloadCanceledTransactionIdRef = useRef<string | null>(null);
 
@@ -448,8 +463,8 @@ export default function App() {
 
     if (uiMode === "admin") {
       params.set("mode", "admin");
-      if (adminTab === "stock") {
-        params.set("tab", "stock");
+      if (adminTab !== "transactions") {
+        params.set("tab", adminTab);
       }
     }
 
@@ -604,13 +619,42 @@ export default function App() {
     setShowCheckoutConfirm(true);
   };
 
+  const authenticateMemberPin = async () => {
+    const pin = memberPinInput.trim();
+    if (!pin) {
+      setStatus({ tone: "error", text: "Enter member PIN." });
+      return;
+    }
+
+    try {
+      const response = await client.member.authPin({ pin });
+      setActiveMember(response.member);
+      const maxCredit = Math.min(summary.total, response.member.balance);
+      setCreditToUse(maxCredit.toFixed(2));
+      setMemberPinInput("");
+      setStatus({ tone: "info", text: `Member loaded: ${response.member.displayName}` });
+    } catch {
+      setStatus({ tone: "error", text: "Invalid member PIN." });
+    }
+  };
+
+  const clearActiveMember = () => {
+    setActiveMember(null);
+    setCreditToUse("0.00");
+  };
+
   const startCheckout = async () => {
     setStatus(null);
     setLoading(true);
 
     try {
+      const parsedCredit = Number.parseFloat(creditToUse);
+      const safeCreditToUse = Number.isFinite(parsedCredit) && parsedCredit > 0 ? parsedCredit : 0;
+
       const response = await client.transaction.start({
-        items: toTransactionItems(cart)
+        items: toTransactionItems(cart),
+        memberId: activeMember?.id,
+        creditToUse: safeCreditToUse
       });
       setShowCheckoutConfirm(false);
       setTransaction(response);
@@ -630,9 +674,16 @@ export default function App() {
 
     setLoading(true);
     try {
-      await client.transaction.finalize({ id: transaction.id, status });
+      await client.transaction.finalize({
+        id: transaction.id,
+        status,
+        memberId: transaction.memberId,
+        creditUsed: transaction.creditUsed ?? 0
+      });
       if (status === "completed") {
         setCart([]);
+        setActiveMember(null);
+        setCreditToUse("0.00");
       }
       setTransaction(null);
       setView("cart");
@@ -651,6 +702,21 @@ export default function App() {
   };
 
   const totalLabel = currencyFormatter.format(summary.total);
+  const selectedAdminMember = useMemo(
+    () => adminMembers.find((member) => member.id === selectedMemberId) ?? null,
+    [adminMembers, selectedMemberId]
+  );
+  const creditToUseNumber = Number.parseFloat(creditToUse);
+  const normalizedCreditToUse = Number.isFinite(creditToUseNumber)
+    ? Math.max(0, creditToUseNumber)
+    : 0;
+  const checkoutCreditUsed = transaction?.creditUsed ?? 0;
+  const checkoutExternalAmount = transaction?.externalAmount ?? transaction?.total ?? 0;
+  const cartCreditPreview = activeMember
+    ? Math.min(activeMember.balance, summary.total, normalizedCreditToUse)
+    : 0;
+  const cartExternalDuePreview = Number((summary.total - cartCreditPreview).toFixed(2));
+
   const adminFilteredTransactions = useMemo(() => {
     if (!adminTransactions) {
       return [];
@@ -868,6 +934,7 @@ export default function App() {
       const response = await client.admin.exportTransactions({ password });
       setAdminTransactions(response.transactions);
       await loadStockSnapshot(password);
+      await loadAdminMembers(password);
       setAdminSessionPassword(password);
       setAdminPassword("");
       setAdminStatusFilter("all");
@@ -878,6 +945,119 @@ export default function App() {
       setAdminToDate("");
     } catch {
       setAdminError("Invalid password or admin panel unavailable.");
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  const loadAdminMembers = async (password: string, preferredMemberId?: string) => {
+    const response = await client.admin.listMembers({ password });
+    setAdminMembers(response.members);
+
+    const nextSelected =
+      preferredMemberId && response.members.some((member) => member.id === preferredMemberId)
+        ? preferredMemberId
+        : response.members[0]?.id ?? "";
+    setSelectedMemberId(nextSelected);
+
+    if (nextSelected) {
+      const ledgerResponse = await client.admin.creditLedger({
+        password,
+        memberId: nextSelected
+      });
+      setCreditLedger(ledgerResponse.entries);
+    } else {
+      setCreditLedger([]);
+    }
+  };
+
+  const createAdminMember = async () => {
+    if (!adminSessionPassword) {
+      setAdminError("Admin session expired. Please unlock again.");
+      return;
+    }
+
+    const name = adminMemberName.trim();
+    const pin = adminMemberPin.trim();
+    if (!name || !pin) {
+      setAdminError("Member name and PIN are required.");
+      return;
+    }
+
+    setAdminLoading(true);
+    setAdminError(null);
+    try {
+      const response = await client.admin.createMember({
+        password: adminSessionPassword,
+        displayName: name,
+        pin
+      });
+      setAdminMembers(response.members);
+      const created = response.members.find((member) => member.displayName === name);
+      const nextSelected = created?.id ?? response.members[response.members.length - 1]?.id;
+      setSelectedMemberId(nextSelected ?? "");
+      setAdminMemberName("");
+      setAdminMemberPin("");
+      await loadAdminMembers(adminSessionPassword, nextSelected);
+    } catch {
+      setAdminError("Could not create member.");
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  const topupSelectedMember = async () => {
+    if (!adminSessionPassword || !selectedMemberId) {
+      setAdminError("Select a member first.");
+      return;
+    }
+
+    const amount = Number.parseFloat(memberTopupAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setAdminError("Top-up amount must be greater than zero.");
+      return;
+    }
+
+    setAdminLoading(true);
+    setAdminError(null);
+    try {
+      await client.admin.topupCredit({
+        password: adminSessionPassword,
+        memberId: selectedMemberId,
+        amount,
+        note: memberTopupNote.trim() || undefined
+      });
+      setMemberTopupAmount("");
+      setMemberTopupNote("");
+      await loadAdminMembers(adminSessionPassword, selectedMemberId);
+    } catch {
+      setAdminError("Could not top up credit.");
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  const toggleSelectedMemberActive = async () => {
+    if (!adminSessionPassword || !selectedMemberId) {
+      return;
+    }
+
+    const target = adminMembers.find((member) => member.id === selectedMemberId);
+    if (!target) {
+      return;
+    }
+
+    setAdminLoading(true);
+    setAdminError(null);
+    try {
+      await client.admin.setMemberActive({
+        password: adminSessionPassword,
+        memberId: selectedMemberId,
+        active: !target.active
+      });
+      await loadAdminMembers(adminSessionPassword, selectedMemberId);
+    } catch {
+      setAdminError("Could not update member status.");
     } finally {
       setAdminLoading(false);
     }
@@ -997,6 +1177,9 @@ export default function App() {
     setStockNoteByProductId({});
     setStockProductQuery("");
     setStockCurrentValueFilter("");
+    setAdminMembers([]);
+    setCreditLedger([]);
+    setSelectedMemberId("");
     setAdminSessionPassword("");
     setAdminPassword("");
     setAdminError(null);
@@ -1104,8 +1287,8 @@ export default function App() {
                   disabled={!hasCheckoutItems || isBusy}
                   className="rounded-full bg-accent-light px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
                 >
-                  <span className="sm:hidden">Pay ({totalLabel})</span>
-                  <span className="hidden sm:inline">Checkout ({totalLabel})</span>
+                  <span className="sm:hidden">Pay ({currencyFormatter.format(cartExternalDuePreview)})</span>
+                  <span className="hidden sm:inline">Checkout ({currencyFormatter.format(cartExternalDuePreview)})</span>
                 </button>
               </div>
             )}
@@ -1262,6 +1445,17 @@ export default function App() {
                     }`}
                   >
                     Stock
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAdminTab("members")}
+                    className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                      adminTab === "members"
+                        ? "bg-accent-light text-white dark:bg-accent-dark dark:text-slate-900"
+                        : "border border-slate-300 hover:border-slate-500 dark:border-slate-600"
+                    }`}
+                  >
+                    Members
                   </button>
                 </div>
                 {adminTab === "transactions" && (
@@ -1457,6 +1651,137 @@ export default function App() {
                   </table>
                 </div>
                 </>
+                )}
+
+                {adminTab === "members" && (
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                      <h3 className="text-sm font-semibold">Create member</h3>
+                      <div className="mt-3 grid gap-2">
+                        <input
+                          type="text"
+                          value={adminMemberName}
+                          onChange={(event) => setAdminMemberName(event.target.value)}
+                          placeholder="Display name"
+                          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                        />
+                        <input
+                          type="password"
+                          value={adminMemberPin}
+                          onChange={(event) => setAdminMemberPin(event.target.value)}
+                          placeholder="PIN (4+ digits)"
+                          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void createAdminMember()}
+                          className="rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50"
+                          disabled={adminLoading}
+                        >
+                          Add member
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                      <h3 className="text-sm font-semibold">Members</h3>
+                      <div className="mt-3 max-h-64 overflow-auto space-y-2">
+                        {adminMembers.map((member) => (
+                          <button
+                            type="button"
+                            key={member.id}
+                            onClick={() => {
+                              setSelectedMemberId(member.id);
+                              void loadAdminMembers(adminSessionPassword, member.id);
+                            }}
+                            className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition ${
+                              selectedMemberId === member.id
+                                ? "border-sky-500 bg-sky-50/60 dark:bg-sky-900/20"
+                                : "border-slate-300 hover:border-slate-500 dark:border-slate-600"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium">{member.displayName}</span>
+                              <span>{currencyFormatter.format(member.balance)}</span>
+                            </div>
+                            <div className="text-xs text-slate-500">{member.active ? "Active" : "Disabled"}</div>
+                          </button>
+                        ))}
+                        {adminMembers.length === 0 && (
+                          <p className="text-sm text-slate-500">No members yet.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700 lg:col-span-2">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <h3 className="text-sm font-semibold">
+                          {selectedAdminMember ? `${selectedAdminMember.displayName} • Credit tools` : "Select a member"}
+                        </h3>
+                        {selectedAdminMember && (
+                          <button
+                            type="button"
+                            onClick={() => void toggleSelectedMemberActive()}
+                            className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold transition hover:border-slate-500 dark:border-slate-600"
+                          >
+                            {selectedAdminMember.active ? "Disable" : "Enable"}
+                          </button>
+                        )}
+                      </div>
+
+                      {selectedAdminMember && (
+                        <>
+                          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                            <input
+                              type="number"
+                              min={0.01}
+                              step="0.01"
+                              value={memberTopupAmount}
+                              onChange={(event) => setMemberTopupAmount(event.target.value)}
+                              placeholder="Top-up amount"
+                              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                            />
+                            <input
+                              type="text"
+                              value={memberTopupNote}
+                              onChange={(event) => setMemberTopupNote(event.target.value)}
+                              placeholder="Note (optional)"
+                              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => void topupSelectedMember()}
+                              className="rounded-xl bg-emerald-500 px-3 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50"
+                              disabled={adminLoading}
+                            >
+                              Top up credit
+                            </button>
+                          </div>
+
+                          <div className="mt-4 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                            <p className="text-xs uppercase tracking-wide text-slate-500">Ledger</p>
+                            <ul className="mt-2 space-y-1 text-sm">
+                              {creditLedger.map((entry) => (
+                                <li key={entry.id} className="flex items-center justify-between gap-2">
+                                  <span className="truncate text-slate-600 dark:text-slate-300">
+                                    {formatAdminDate(entry.createdAt)} • {entry.reason}
+                                    {entry.note ? ` (${entry.note})` : ""}
+                                  </span>
+                                  <span className={entry.delta >= 0 ? "text-emerald-500" : "text-rose-500"}>
+                                    {entry.delta >= 0 ? "+" : ""}
+                                    {currencyFormatter.format(entry.delta)}
+                                  </span>
+                                </li>
+                              ))}
+                              {creditLedger.length === 0 && (
+                                <li className="text-slate-500">No credit events yet.</li>
+                              )}
+                            </ul>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 )}
 
                 {adminTab === "stock" && stockSnapshot && (
@@ -1685,6 +2010,62 @@ export default function App() {
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
                 />
               </div>
+
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold">Member credit</h3>
+                  {activeMember ? (
+                    <button
+                      type="button"
+                      onClick={clearActiveMember}
+                      className="rounded-lg border border-slate-300 px-3 py-1 text-xs transition hover:border-slate-500 dark:border-slate-600"
+                    >
+                      Switch member
+                    </button>
+                  ) : null}
+                </div>
+
+                {activeMember ? (
+                  <div className="mt-3 space-y-2 text-sm">
+                    <p className="font-medium">{activeMember.displayName}</p>
+                    <p className="text-slate-500 dark:text-slate-300">
+                      Balance: {currencyFormatter.format(activeMember.balance)}
+                    </p>
+                    <div>
+                      <label className="text-xs uppercase tracking-wide text-slate-500">Credit to use</label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={creditToUse}
+                        onChange={(event) => setCreditToUse(event.target.value)}
+                        className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={memberPinInput}
+                      onChange={(event) => setMemberPinInput(event.target.value)}
+                      placeholder="Enter PIN"
+                      className="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void authenticateMemberPin()}
+                      disabled={isBusy}
+                      className="rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50"
+                    >
+                      Use credit
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <div className="mt-4 flex flex-col gap-4">
                 {filteredProducts.length === 0 && (
                   <p className="text-sm text-slate-500">
@@ -1789,9 +2170,17 @@ export default function App() {
                   Manual transfer details
                 </p>
                 <div className="mt-3">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Amount due</p>
-                  <p className="text-xl font-semibold">{totalLabel}</p>
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Amount due (external)</p>
+                  <p className="text-xl font-semibold">
+                    {currencyFormatter.format(checkoutExternalAmount)}
+                  </p>
                 </div>
+                {checkoutCreditUsed > 0 && (
+                  <div className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+                    Credit used: <span className="font-semibold">{currencyFormatter.format(checkoutCreditUsed)}</span>
+                    {transaction?.memberName ? ` (${transaction.memberName})` : ""}
+                  </div>
+                )}
                 {structuredCommunication && (
                   <div className="mt-3">
                     <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -1838,6 +2227,11 @@ export default function App() {
                   : transaction?.items.some((item) => item.isMemberPrice)
                     ? "Member pricing applied"
                     : "Regular pricing applied"}
+                <div className="mt-3 space-y-1">
+                  <div>Total: {transaction ? currencyFormatter.format(transaction.total) : "-"}</div>
+                  <div>Credit: {currencyFormatter.format(checkoutCreditUsed)}</div>
+                  <div>External: {currencyFormatter.format(checkoutExternalAmount)}</div>
+                </div>
               </div>
             </aside>
           </section>
@@ -1868,7 +2262,7 @@ export default function App() {
                   disabled={!hasCheckoutItems || isBusy}
                   className="rounded-xl bg-accent-light px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
                 >
-                  Confirm ({totalLabel})
+                  Confirm ({currencyFormatter.format(cartExternalDuePreview)})
                 </button>
               </div>
 
@@ -1922,9 +2316,19 @@ export default function App() {
                 )}
               </div>
 
-              <div className="mt-4 flex items-center justify-between">
-                <p className="text-sm text-slate-600 dark:text-slate-300">Total</p>
-                <p className="text-xl font-semibold">{totalLabel}</p>
+              <div className="mt-4 space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <p className="text-slate-600 dark:text-slate-300">Total</p>
+                  <p className="font-semibold">{totalLabel}</p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-slate-600 dark:text-slate-300">Credit</p>
+                  <p className="font-semibold">{currencyFormatter.format(cartCreditPreview)}</p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-slate-600 dark:text-slate-300">External due</p>
+                  <p className="text-xl font-semibold">{currencyFormatter.format(cartExternalDuePreview)}</p>
+                </div>
               </div>
 
               <div className="mt-6 flex flex-wrap justify-end gap-3">
