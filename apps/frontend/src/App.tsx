@@ -492,6 +492,10 @@ export default function App() {
   const [paymentMemberQuery, setPaymentMemberQuery] = useState("");
   const [selectedPaymentMemberId, setSelectedPaymentMemberId] = useState("");
   const [publicCustomers, setPublicCustomers] = useState<Member[]>([]);
+  const [memberPricingCustomerId, setMemberPricingCustomerId] = useState("");
+  const [memberPricingAuthMode, setMemberPricingAuthMode] = useState<
+    "none" | "pin" | "username_only"
+  >("none");
   const [topupMemberQuery, setTopupMemberQuery] = useState("");
   const [selectedTopupMemberId, setSelectedTopupMemberId] = useState("");
   const [topupAmount, setTopupAmount] = useState("10.00");
@@ -562,6 +566,17 @@ export default function App() {
       setPayWithCreditModalError(null);
     }
   }, [showPayWithCreditModal]);
+
+  useEffect(() => {
+    if (view !== "checkout" || !transaction) {
+      setMemberPricingCustomerId("");
+      setMemberPricingAuthMode("none");
+      return;
+    }
+
+    setMemberPricingCustomerId(transaction.memberId ?? "");
+    setMemberPricingAuthMode(transaction.memberId ? "pin" : "none");
+  }, [transaction, view]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -768,8 +783,22 @@ export default function App() {
         return;
       }
 
+      if (
+        !showPayWithCreditModal &&
+        view === "checkout" &&
+        memberPricingCustomerId &&
+        response.member.id !== memberPricingCustomerId
+      ) {
+        setStatus({ tone: "error", text: "PIN does not match selected customer." });
+        return;
+      }
+
       setPayWithCreditModalError(null);
       selectCheckoutMember(response.member);
+      if (view === "checkout" && hasMemberPricedItemsInCheckout) {
+        setMemberPricingCustomerId(response.member.id);
+        setMemberPricingAuthMode("pin");
+      }
       setMemberPinInput("");
       setStatus({ tone: "info", text: `Customer loaded: ${response.member.displayName}` });
     } catch {
@@ -829,6 +858,16 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const acceptMemberPricingWithUsernameOnly = () => {
+    if (!memberPricingCustomerId) {
+      setStatus({ tone: "error", text: "Select a customer username first." });
+      return;
+    }
+
+    setMemberPricingAuthMode("username_only");
+    setStatus({ tone: "info", text: "Customer username accepted without PIN for this checkout." });
   };
 
   const payTransactionWithMemberCredit = async () => {
@@ -963,6 +1002,15 @@ export default function App() {
   const checkoutCreditUsed = transaction?.creditUsed ?? 0;
   const checkoutExternalAmount = transaction?.externalAmount ?? transaction?.total ?? 0;
   const payableTotal = (view === "checkout" || view === "topup") && transaction ? transaction.total : summary.total;
+  const hasMemberPricedItemsInCheckout =
+    view === "checkout" &&
+    !!transaction &&
+    transaction.type === "sale" &&
+    transaction.items.some((item) => item.isMemberPrice);
+  const memberPricingVerified =
+    !hasMemberPricedItemsInCheckout ||
+    (memberPricingCustomerId.length > 0 && memberPricingAuthMode !== "none");
+  const paymentBlockedByMemberAuth = hasMemberPricedItemsInCheckout && !memberPricingVerified;
   const cartCreditPreview = activeMember
     ? Math.min(activeMember.balance, payableTotal, normalizedCreditToUse)
     : 0;
@@ -2583,6 +2631,68 @@ export default function App() {
                   <div className="mx-auto h-56 w-56 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
                 )}
               </div>
+              {hasMemberPricedItemsInCheckout && (
+                <div className="mt-6 rounded-xl border border-amber-300 bg-amber-50 px-4 py-4 dark:border-amber-700 dark:bg-amber-900/20">
+                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                    Member-priced items require customer username + PIN
+                  </p>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                    <select
+                      value={memberPricingCustomerId}
+                      onChange={(event) => {
+                        setMemberPricingCustomerId(event.target.value);
+                        setMemberPricingAuthMode("none");
+                        setActiveMember(null);
+                      }}
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
+                    >
+                      <option value="">Select customer username</option>
+                      {publicCustomers.map((customer) => (
+                        <option key={customer.id} value={customer.id}>
+                          {customer.displayName}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="one-time-code"
+                      value={memberPinInput}
+                      onChange={(event) => setMemberPinInput(event.target.value.replace(/\D+/g, ""))}
+                      placeholder="Customer PIN"
+                      disabled={!memberPricingCustomerId}
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void authenticateMemberPin()}
+                      disabled={!memberPricingCustomerId}
+                      className="rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm font-semibold text-amber-700 transition hover:border-amber-500 disabled:opacity-50 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200"
+                    >
+                      Verify with PIN
+                    </button>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={acceptMemberPricingWithUsernameOnly}
+                      disabled={!memberPricingCustomerId}
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm transition hover:border-slate-500 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900"
+                    >
+                      Continue with username only (for now)
+                    </button>
+                    <span className="text-xs text-slate-600 dark:text-slate-300">
+                      Status: {memberPricingAuthMode === "pin"
+                        ? "verified by PIN"
+                        : memberPricingAuthMode === "username_only"
+                          ? "username-only accepted"
+                          : "not verified"}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div className="mt-6 flex flex-wrap gap-3">
                 <button
                   type="button"
@@ -2590,7 +2700,7 @@ export default function App() {
                     playCashierCloseSound(isDark);
                     void finalize("completed");
                   }}
-                  disabled={isBusy}
+                  disabled={isBusy || paymentBlockedByMemberAuth}
                   className="rounded-xl bg-emerald-500 px-6 py-3 text-base font-bold text-white transition hover:brightness-95 disabled:opacity-50"
                 >
                   I paid
@@ -2607,13 +2717,19 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setShowPayWithCreditModal(true)}
-                    disabled={isBusy}
+                    disabled={isBusy || paymentBlockedByMemberAuth}
                     className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-700 transition hover:border-sky-500 disabled:opacity-50 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
                   >
                     Pay with customer credit
                   </button>
                 )}
               </div>
+              {paymentBlockedByMemberAuth && (
+                <p className="mt-3 text-sm text-rose-600 dark:text-rose-300">
+                  Payment is locked until member-priced items are verified with customer username + PIN (or username-only fallback).
+                </p>
+              )}
+
               <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-left dark:border-slate-700 dark:bg-slate-900/40">
                 <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Manual transfer details
