@@ -466,6 +466,7 @@ export default function App() {
   const [activeMember, setActiveMember] = useState<Member | null>(null);
   const [creditToUse, setCreditToUse] = useState("0.00");
   const [memberPinInput, setMemberPinInput] = useState("");
+  const [payWithCreditModalError, setPayWithCreditModalError] = useState<string | null>(null);
   const [showPayWithCreditModal, setShowPayWithCreditModal] = useState(false);
   const [paymentMemberQuery, setPaymentMemberQuery] = useState("");
   const [selectedPaymentMemberId, setSelectedPaymentMemberId] = useState("");
@@ -535,6 +536,7 @@ export default function App() {
       setPaymentMemberQuery("");
       setSelectedPaymentMemberId("");
       setMemberPinInput("");
+      setPayWithCreditModalError(null);
     }
   }, [showPayWithCreditModal]);
 
@@ -722,7 +724,11 @@ export default function App() {
   const authenticateMemberPin = async () => {
     const pin = memberPinInput.trim();
     if (!pin) {
-      setStatus({ tone: "error", text: "Enter member PIN." });
+      if (showPayWithCreditModal) {
+        setPayWithCreditModalError("Enter member PIN.");
+      } else {
+        setStatus({ tone: "error", text: "Enter member PIN." });
+      }
       return;
     }
 
@@ -730,7 +736,7 @@ export default function App() {
       const response = await client.member.authPin({ pin });
 
       if (showPayWithCreditModal && selectedPaymentMemberId && response.member.id !== selectedPaymentMemberId) {
-        setStatus({ tone: "error", text: "PIN does not match selected member." });
+        setPayWithCreditModalError("PIN does not match selected member.");
         return;
       }
 
@@ -739,11 +745,16 @@ export default function App() {
         return;
       }
 
+      setPayWithCreditModalError(null);
       selectCheckoutMember(response.member);
       setMemberPinInput("");
       setStatus({ tone: "info", text: `Member loaded: ${response.member.displayName}` });
     } catch {
-      setStatus({ tone: "error", text: "Invalid member PIN." });
+      if (showPayWithCreditModal) {
+        setPayWithCreditModalError("Invalid member PIN.");
+      } else {
+        setStatus({ tone: "error", text: "Invalid member PIN." });
+      }
     }
   };
 
@@ -803,21 +814,20 @@ export default function App() {
     }
 
     if (!selectedPaymentMember) {
-      setStatus({ tone: "error", text: "Select a member first." });
+      setPayWithCreditModalError("Select a member first.");
       return;
     }
 
     if (!activeMember || activeMember.id !== selectedPaymentMember.id) {
-      setStatus({ tone: "error", text: "Enter valid PIN for selected member first." });
+      setPayWithCreditModalError("Enter valid PIN for selected member first.");
       return;
     }
 
     if (activeMember.balance < transaction.total) {
       const shortfall = transaction.total - activeMember.balance;
-      setStatus({
-        tone: "error",
-        text: `Not enough credit. Missing ${currencyFormatter.format(shortfall)}.`
-      });
+      setPayWithCreditModalError(
+        `Not enough credit. Missing ${currencyFormatter.format(shortfall)}.`
+      );
       return;
     }
 
@@ -831,6 +841,7 @@ export default function App() {
       });
 
       setShowPayWithCreditModal(false);
+      setPayWithCreditModalError(null);
       setTransaction(null);
       setView("cart");
       setActiveMember(null);
@@ -841,7 +852,7 @@ export default function App() {
       setStatus({ tone: "info", text: "Paid with member credit." });
       scrollToTop();
     } catch {
-      setStatus({ tone: "error", text: "Could not complete member-credit payment." });
+      setPayWithCreditModalError("Could not complete member-credit payment.");
     } finally {
       setLoading(false);
     }
@@ -2593,10 +2604,10 @@ export default function App() {
             onClick={() => setShowPayWithCreditModal(false)}
           >
             <div
-              className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
+              className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900"
               onClick={(event) => event.stopPropagation()}
             >
-              <h3 className="text-base font-semibold">Pay with member credit</h3>
+              <h3 className="text-lg font-semibold">Pay with member credit</h3>
               <input
                 type="search"
                 value={paymentMemberQuery}
@@ -2612,6 +2623,7 @@ export default function App() {
                     type="button"
                     onClick={() => {
                       setSelectedPaymentMemberId(member.id);
+                      setPayWithCreditModalError(null);
                       if (activeMember?.id !== member.id) {
                         setActiveMember(null);
                       }
@@ -2626,6 +2638,12 @@ export default function App() {
                   </button>
                 ))}
               </div>
+
+              {payWithCreditModalError && (
+                <div className="mt-3 rounded-xl bg-rose-100 px-3 py-2 text-sm text-rose-700 dark:bg-rose-500/20 dark:text-rose-200">
+                  {payWithCreditModalError}
+                </div>
+              )}
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <input
