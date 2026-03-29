@@ -1146,7 +1146,7 @@ export default function App() {
                 onClick={toggleAdminMode}
                 className="rounded-xl border border-slate-300 px-4 py-3 text-left text-sm font-semibold transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
               >
-                {uiMode === "pos" ? "Adm" : "Back to pay"}
+                {uiMode === "pos" ? "Admin Panel" : "Back to pay"}
               </button>
 
               <button
