@@ -31,6 +31,7 @@ export function createTransactionStore(dataDir: string): TransactionStore {
       id TEXT PRIMARY KEY,
       created_at TEXT NOT NULL,
       status TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'sale',
       abandonment_reason TEXT,
       member_id TEXT,
       member_name TEXT,
@@ -50,6 +51,9 @@ export function createTransactionStore(dataDir: string): TransactionStore {
   if (!hasAbandonmentReasonColumn) {
     db.exec("ALTER TABLE transactions ADD COLUMN abandonment_reason TEXT");
   }
+  if (!tableInfo.some((column) => column.name === "type")) {
+    db.exec("ALTER TABLE transactions ADD COLUMN type TEXT NOT NULL DEFAULT 'sale'");
+  }
   if (!tableInfo.some((column) => column.name === "member_id")) {
     db.exec("ALTER TABLE transactions ADD COLUMN member_id TEXT");
   }
@@ -64,23 +68,24 @@ export function createTransactionStore(dataDir: string): TransactionStore {
   }
 
   const insertTransaction = db.prepare(`
-    INSERT INTO transactions (id, created_at, status, abandonment_reason, member_id, member_name, credit_used, external_amount, total, items_json)
-    VALUES (@id, @createdAt, @status, @abandonmentReason, @memberId, @memberName, @creditUsed, @externalAmount, @total, @itemsJson)
+    INSERT INTO transactions (id, created_at, status, type, abandonment_reason, member_id, member_name, credit_used, external_amount, total, items_json)
+    VALUES (@id, @createdAt, @status, @type, @abandonmentReason, @memberId, @memberName, @creditUsed, @externalAmount, @total, @itemsJson)
   `);
   const selectById = db.prepare(
-    "SELECT id, created_at, status, abandonment_reason, member_id, member_name, credit_used, external_amount, total, items_json FROM transactions WHERE id = ?"
+    "SELECT id, created_at, status, type, abandonment_reason, member_id, member_name, credit_used, external_amount, total, items_json FROM transactions WHERE id = ?"
   );
   const updateStatus = db.prepare(
     "UPDATE transactions SET status = ?, abandonment_reason = ?, member_id = ?, member_name = ?, credit_used = ?, external_amount = ? WHERE id = ?"
   );
   const listAll = db.prepare(
-    "SELECT id, created_at, status, abandonment_reason, member_id, member_name, credit_used, external_amount, total, items_json FROM transactions ORDER BY created_at DESC"
+    "SELECT id, created_at, status, type, abandonment_reason, member_id, member_name, credit_used, external_amount, total, items_json FROM transactions ORDER BY created_at DESC"
   );
 
   const mapRow = (row: {
     id: string;
     created_at: string;
     status: TransactionStatus;
+    type?: "sale" | "credit_topup" | null;
     abandonment_reason?: string | null;
     member_id?: string | null;
     member_name?: string | null;
@@ -92,6 +97,7 @@ export function createTransactionStore(dataDir: string): TransactionStore {
     id: row.id,
     createdAt: row.created_at,
     status: row.status,
+    type: row.type === "credit_topup" ? "credit_topup" : "sale",
     abandonmentReason: row.abandonment_reason ?? undefined,
     memberId: row.member_id ?? undefined,
     memberName: row.member_name ?? undefined,
@@ -107,6 +113,7 @@ export function createTransactionStore(dataDir: string): TransactionStore {
         id: transaction.id,
         createdAt: transaction.createdAt,
         status: transaction.status,
+        type: transaction.type ?? "sale",
         abandonmentReason: transaction.abandonmentReason ?? null,
         memberId: transaction.memberId ?? null,
         memberName: transaction.memberName ?? null,
@@ -122,6 +129,7 @@ export function createTransactionStore(dataDir: string): TransactionStore {
             id: string;
             created_at: string;
             status: TransactionStatus;
+            type?: "sale" | "credit_topup" | null;
             abandonment_reason?: string | null;
             member_id?: string | null;
             member_name?: string | null;
@@ -150,6 +158,7 @@ export function createTransactionStore(dataDir: string): TransactionStore {
         id: string;
         created_at: string;
         status: TransactionStatus;
+        type?: "sale" | "credit_topup" | null;
         abandonment_reason?: string | null;
         member_id?: string | null;
         member_name?: string | null;

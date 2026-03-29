@@ -80,6 +80,7 @@ export type TransactionService = {
     items: CartItemInput[],
     options?: { memberId?: string; creditToUse?: number }
   ) => Promise<Transaction>;
+  startTopupTransaction: (memberId: string, amount: number) => Promise<Transaction>;
   finalizeTransaction: (
     id: string,
     status: Exclude<TransactionStatus, "pending">,
@@ -136,6 +137,7 @@ export function createTransactionService(
           id: createStructuredTransactionId(),
           createdAt,
           status: "pending",
+          type: "sale",
           memberId,
           memberName,
           creditUsed,
@@ -159,6 +161,51 @@ export function createTransactionService(
         data: { message: "Could not create transaction id" }
       });
     },
+    async startTopupTransaction(memberId, amount) {
+      const member = await memberStore.getById(memberId);
+      if (!member || !member.active) {
+        throw new ORPCError("BAD_REQUEST", {
+          data: { message: "Selected member is not available." }
+        });
+      }
+
+      const safeAmount = Number(amount.toFixed(2));
+      if (!Number.isFinite(safeAmount) || safeAmount <= 0) {
+        throw new ORPCError("BAD_REQUEST", {
+          data: { message: "Top-up amount must be positive." }
+        });
+      }
+
+      const createdAt = new Date().toISOString();
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const transaction: Transaction = {
+          id: createStructuredTransactionId(),
+          createdAt,
+          status: "pending",
+          type: "credit_topup",
+          memberId: member.id,
+          memberName: member.displayName,
+          creditUsed: 0,
+          externalAmount: safeAmount,
+          total: safeAmount,
+          items: []
+        };
+
+        try {
+          await transactionStore.create(transaction);
+          return transaction;
+        } catch (error) {
+          if (attempt < 4 && isUniqueConstraintError(error)) {
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      throw new ORPCError("INTERNAL_SERVER_ERROR", {
+        data: { message: "Could not create top-up transaction id" }
+      });
+    },
     async finalizeTransaction(id, status, options) {
       const existing = await transactionStore.getById(id);
       if (!existing) {
@@ -172,7 +219,7 @@ export function createTransactionService(
       );
       const externalAmount = Number((existing.total - cappedCreditUsed).toFixed(2));
 
-      if (status === "completed" && cappedCreditUsed > 0) {
+      if (status === "completed" && existing.type === "sale" && cappedCreditUsed > 0) {
         if (!memberId) {
           throw new ORPCError("BAD_REQUEST", {
             data: { message: "Credit usage requires a member account." }
@@ -202,6 +249,22 @@ export function createTransactionService(
         }
       }
 
+      if (status === "completed" && existing.type === "credit_topup") {
+        if (!existing.memberId) {
+          throw new ORPCError("BAD_REQUEST", {
+            data: { message: "Top-up transaction has no member." }
+          });
+        }
+
+        await memberStore.adjustBalance({
+          memberId: existing.memberId,
+          delta: existing.total,
+          reason: "topup",
+          transactionId: existing.id,
+          preventNegative: true
+        });
+      }
+
       const member = memberId ? await memberStore.getById(memberId) : null;
 
       const transaction = await transactionStore.updateStatus(id, status, {
@@ -216,7 +279,7 @@ export function createTransactionService(
         throw new ORPCError("NOT_FOUND", { data: { message: "Transaction not found" } });
       }
 
-      if (existing.status !== "completed" && status === "completed") {
+      if (existing.status !== "completed" && status === "completed" && existing.type === "sale") {
         for (const item of existing.items) {
           await stockEventStore.appendEvent({
             productId: item.productId,

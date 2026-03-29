@@ -17,6 +17,7 @@ import {
   MemberAuthOutputSchema,
   MemberListOutputSchema,
   ProductCatalogSchema,
+  StartTopupTransactionInputSchema,
   StartTransactionInputSchema,
   TransactionSchema
 } from "./models.ts";
@@ -31,6 +32,10 @@ export const startTransactionContract = oc
 
 export const finalizeTransactionContract = oc
   .input(FinalizeTransactionInputSchema)
+  .output(TransactionSchema);
+
+export const startTopupTransactionContract = oc
+  .input(StartTopupTransactionInputSchema)
   .output(TransactionSchema);
 
 export const adminExportTransactionsContract = oc
@@ -87,6 +92,7 @@ export const contract = {
   },
   transaction: {
     start: startTransactionContract,
+    startTopup: startTopupTransactionContract,
     finalize: finalizeTransactionContract
   },
   admin: {

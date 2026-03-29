@@ -171,10 +171,13 @@ export const TransactionItemSchema = z.object({
   isMemberPrice: z.boolean()
 });
 
+export const TransactionTypeSchema = z.enum(["sale", "credit_topup"]);
+
 export const TransactionSchema = z.object({
   id: z.string().min(1),
   createdAt: z.string().min(1),
   status: TransactionStatusSchema,
+  type: TransactionTypeSchema.default("sale"),
   abandonmentReason: z.string().optional(),
   memberId: z.string().optional(),
   memberName: z.string().optional(),
@@ -198,6 +201,11 @@ export const FinalizeTransactionInputSchema = z.object({
   creditUsed: z.number().nonnegative().optional()
 });
 
+export const StartTopupTransactionInputSchema = z.object({
+  memberId: z.string().min(1),
+  amount: z.number().positive()
+});
+
 export const AdminExportTransactionsInputSchema = z.object({
   password: z.string().min(1)
 });
@@ -219,10 +227,12 @@ export type MemberAuthInput = z.infer<typeof MemberAuthInputSchema>;
 export type MemberAuthOutput = z.infer<typeof MemberAuthOutputSchema>;
 export type MemberListOutput = z.infer<typeof MemberListOutputSchema>;
 export type TransactionStatus = z.infer<typeof TransactionStatusSchema>;
+export type TransactionType = z.infer<typeof TransactionTypeSchema>;
 export type TransactionItem = z.infer<typeof TransactionItemSchema>;
 export type Transaction = z.infer<typeof TransactionSchema>;
 export type StartTransactionInput = z.infer<typeof StartTransactionInputSchema>;
 export type FinalizeTransactionInput = z.infer<typeof FinalizeTransactionInputSchema>;
+export type StartTopupTransactionInput = z.infer<typeof StartTopupTransactionInputSchema>;
 export type AdminExportTransactionsInput = z.infer<
   typeof AdminExportTransactionsInputSchema
 >;

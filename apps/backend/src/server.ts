@@ -50,6 +50,9 @@ const router = {
         creditToUse: input.creditToUse
       })
     ),
+    startTopup: api.transaction.startTopup.handler(async ({ input }) =>
+      transactionService.startTopupTransaction(input.memberId, input.amount)
+    ),
     finalize: api.transaction.finalize.handler(async ({ input }) =>
       transactionService.finalizeTransaction(input.id, input.status, {
         reason: input.reason,

@@ -24,7 +24,7 @@ import {
 import { getUnitPrice } from "./domain/pricing";
 import { toStructuredCommunication } from "./domain/structuredCommunication";
 
-type View = "cart" | "checkout";
+type View = "cart" | "checkout" | "topup";
 type UiMode = "pos" | "admin";
 type AdminTab = "transactions" | "stock" | "members";
 
@@ -455,6 +455,7 @@ export default function App() {
   const [creditToUse, setCreditToUse] = useState("0.00");
   const [showMemberCreditModal, setShowMemberCreditModal] = useState(false);
   const [memberPinInput, setMemberPinInput] = useState("");
+  const [topupAmount, setTopupAmount] = useState("10.00");
   const [adminMembers, setAdminMembers] = useState<Member[]>([]);
   const [adminMemberName, setAdminMemberName] = useState("");
   const [adminMemberPin, setAdminMemberPin] = useState("");
@@ -699,6 +700,36 @@ export default function App() {
     }
   };
 
+  const startTopup = async () => {
+    if (!activeMember) {
+      setStatus({ tone: "error", text: "Authenticate member first." });
+      return;
+    }
+
+    const amount = Number.parseFloat(topupAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setStatus({ tone: "error", text: "Top-up amount must be greater than zero." });
+      return;
+    }
+
+    setStatus(null);
+    setLoading(true);
+    try {
+      const response = await client.transaction.startTopup({
+        memberId: activeMember.id,
+        amount
+      });
+      setShowMemberCreditModal(false);
+      setTransaction(response);
+      setView("topup");
+      scrollToTop();
+    } catch {
+      setStatus({ tone: "error", text: "Could not start top-up." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const finalize = async (status: "completed" | "canceled" | "abandoned") => {
     if (!transaction) {
       return;
@@ -706,14 +737,17 @@ export default function App() {
 
     setLoading(true);
     try {
+      const isTopup = transaction.type === "credit_topup";
       await client.transaction.finalize({
         id: transaction.id,
         status,
         memberId: activeMember?.id,
-        creditUsed: cartCreditPreview
+        creditUsed: isTopup ? 0 : cartCreditPreview
       });
       if (status === "completed") {
-        setCart([]);
+        if (!isTopup) {
+          setCart([]);
+        }
         setActiveMember(null);
         setCreditToUse("0.00");
       }
@@ -724,7 +758,12 @@ export default function App() {
       }
       setStatus({
         tone: "info",
-        text: status === "completed" ? "Thanks for paying!" : "Transaction cancelled."
+        text:
+          status === "completed"
+            ? isTopup
+              ? "Top-up completed!"
+              : "Thanks for paying!"
+            : "Transaction cancelled."
       });
     } catch {
       setStatus({ tone: "error", text: "Could not update transaction." });
@@ -742,9 +781,10 @@ export default function App() {
   const normalizedCreditToUse = Number.isFinite(creditToUseNumber)
     ? Math.max(0, creditToUseNumber)
     : 0;
+  const isTopupView = view === "topup";
   const checkoutCreditUsed = transaction?.creditUsed ?? 0;
   const checkoutExternalAmount = transaction?.externalAmount ?? transaction?.total ?? 0;
-  const payableTotal = view === "checkout" && transaction ? transaction.total : summary.total;
+  const payableTotal = (view === "checkout" || view === "topup") && transaction ? transaction.total : summary.total;
   const cartCreditPreview = activeMember
     ? Math.min(activeMember.balance, payableTotal, normalizedCreditToUse)
     : 0;
@@ -1316,6 +1356,18 @@ export default function App() {
 
             {uiMode === "pos" && view === "cart" && (
               <div className="flex items-center gap-3 sm:ml-auto">
+                {memberCreditEnabled && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setView("topup");
+                      setTransaction(null);
+                    }}
+                    className="rounded-full border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:border-sky-500 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
+                  >
+                    Top up credit
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={openCheckoutConfirm}
@@ -2122,12 +2174,80 @@ export default function App() {
         ) : (
           <section className="flex flex-col gap-6">
             <div className="rounded-2xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
-              <h2 className="text-lg font-semibold">Pay at the fridge</h2>
+              <h2 className="text-lg font-semibold">
+                {isTopupView ? "Top up member credit" : "Pay at the fridge"}
+              </h2>
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-300">
-                Scan the QR code and pay the total. When done, press "I paid".
+                {isTopupView
+                  ? "Scan the QR code to add credit. When done, press \"I paid\"."
+                  : "Scan the QR code and pay the total. When done, press \"I paid\"."}
               </p>
 
-              {memberCreditEnabled && (
+              {isTopupView && activeMember && (
+                <div className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+                  Member: <span className="font-semibold">{activeMember.displayName}</span>
+                </div>
+              )}
+
+              {isTopupView && !transaction && (
+                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+                  <p className="text-sm font-semibold">Setup top-up</p>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
+                    First choose a member via PIN, then start the top-up payment.
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowMemberCreditModal(true)}
+                      className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:border-sky-500 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
+                    >
+                      {activeMember ? "Change member" : "Select member"}
+                    </button>
+                    {activeMember && (
+                      <span className="text-sm text-slate-600 dark:text-slate-300">{activeMember.displayName}</span>
+                    )}
+                  </div>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-4">
+                    {[5, 10, 20].map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setTopupAmount(value.toFixed(2))}
+                        className="rounded-xl border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600"
+                      >
+                        € {value}
+                      </button>
+                    ))}
+                    <input
+                      type="number"
+                      min={0.01}
+                      step="0.01"
+                      value={topupAmount}
+                      onChange={(event) => setTopupAmount(event.target.value)}
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
+                    />
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void startTopup()}
+                      disabled={!activeMember || isBusy}
+                      className="rounded-xl bg-accent-light px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
+                    >
+                      Start top-up payment
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setView("cart")}
+                      className="rounded-xl border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600"
+                    >
+                      Back to cart
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!isTopupView && memberCreditEnabled && (
                 <div className="mt-4 flex items-center gap-3">
                   <button
                     type="button"
@@ -2144,6 +2264,8 @@ export default function App() {
                 </div>
               )}
 
+              {transaction && (
+                <>
               <div className="mt-6 rounded-2xl border border-dashed border-slate-400/60 p-6 text-center dark:border-slate-500">
                 {qrImageSrc ? (
                   <img
@@ -2181,12 +2303,14 @@ export default function App() {
                   Manual transfer details
                 </p>
                 <div className="mt-3">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Amount due (external)</p>
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                    {isTopupView ? "Top-up amount" : "Amount due (external)"}
+                  </p>
                   <p className="text-xl font-semibold">
                     {currencyFormatter.format(checkoutExternalAmount)}
                   </p>
                 </div>
-                {checkoutCreditUsed > 0 && (
+                {!isTopupView && checkoutCreditUsed > 0 && (
                   <div className="mt-3 text-sm text-slate-600 dark:text-slate-300">
                     Credit used: <span className="font-semibold">{currencyFormatter.format(checkoutCreditUsed)}</span>
                     {transaction?.memberName ? ` (${transaction.memberName})` : ""}
@@ -2214,6 +2338,8 @@ export default function App() {
                   </p>
                 </div>
               </div>
+                </>
+              )}
             </div>
             <aside className="rounded-2xl border border-black/10 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
               <h2 className="text-lg font-semibold">This transaction</h2>
@@ -2248,7 +2374,7 @@ export default function App() {
           </section>
         )}
 
-        {memberCreditEnabled && uiMode === "pos" && view === "checkout" && showMemberCreditModal && (
+        {memberCreditEnabled && uiMode === "pos" && (view === "checkout" || view === "topup") && showMemberCreditModal && (
           <div
             className="fixed inset-0 z-40 flex items-start justify-center bg-black/50 p-4 pt-6"
             onClick={() => setShowMemberCreditModal(false)}
@@ -2300,6 +2426,22 @@ export default function App() {
                       className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
                     />
                   </label>
+                  {!isTopupView && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setView("topup");
+                        setShowMemberCreditModal(false);
+                        const shortfall = Math.max(0, (transaction?.total ?? 0) - activeMember.balance);
+                        if (shortfall > 0) {
+                          setTopupAmount(Math.max(5, Math.ceil(shortfall)).toFixed(2));
+                        }
+                      }}
+                      className="rounded-xl border border-sky-300 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-700 transition hover:border-sky-500 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
+                    >
+                      Need more credit? Top up now
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => selectCheckoutMember(null)}
