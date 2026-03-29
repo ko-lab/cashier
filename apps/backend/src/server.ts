@@ -79,13 +79,25 @@ const router = {
     listMembers: api.admin.listMembers.handler(async ({ input }) =>
       adminService.listMembers(input.password)
     ),
+    listCustomers: api.admin.listCustomers.handler(async ({ input }) =>
+      adminService.listMembers(input.password)
+    ),
     createMember: api.admin.createMember.handler(async ({ input }) =>
+      adminService.createMember(input.password, input.displayName, input.pin, input.customerType)
+    ),
+    createCustomer: api.admin.createCustomer.handler(async ({ input }) =>
       adminService.createMember(input.password, input.displayName, input.pin, input.customerType)
     ),
     setMemberPin: api.admin.setMemberPin.handler(async ({ input }) =>
       adminService.setMemberPin(input.password, input.memberId, input.pin)
     ),
+    setCustomerPin: api.admin.setCustomerPin.handler(async ({ input }) =>
+      adminService.setMemberPin(input.password, input.memberId, input.pin)
+    ),
     setMemberActive: api.admin.setMemberActive.handler(async ({ input }) =>
+      adminService.setMemberActive(input.password, input.memberId, input.active)
+    ),
+    setCustomerActive: api.admin.setCustomerActive.handler(async ({ input }) =>
       adminService.setMemberActive(input.password, input.memberId, input.active)
     ),
     topupCredit: api.admin.topupCredit.handler(async ({ input }) =>

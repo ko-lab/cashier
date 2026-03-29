@@ -488,11 +488,11 @@ export default function App() {
   const [showPayWithCreditModal, setShowPayWithCreditModal] = useState(false);
   const [paymentMemberQuery, setPaymentMemberQuery] = useState("");
   const [selectedPaymentMemberId, setSelectedPaymentMemberId] = useState("");
-  const [publicMembers, setPublicMembers] = useState<Member[]>([]);
+  const [publicCustomers, setPublicCustomers] = useState<Member[]>([]);
   const [topupMemberQuery, setTopupMemberQuery] = useState("");
   const [selectedTopupMemberId, setSelectedTopupMemberId] = useState("");
   const [topupAmount, setTopupAmount] = useState("10.00");
-  const [adminMembers, setAdminMembers] = useState<Member[]>([]);
+  const [adminCustomers, setAdminCustomers] = useState<Member[]>([]);
   const [adminMemberName, setAdminMemberName] = useState("");
   const [adminCustomerType, setAdminCustomerType] = useState<"member" | "non_member">("member");
   const [adminMemberPin, setAdminMemberPin] = useState("");
@@ -517,7 +517,7 @@ export default function App() {
       setCreditToUse("0.00");
       setMemberPinInput("");
       setShowPayWithCreditModal(false);
-      setPublicMembers([]);
+      setPublicCustomers([]);
       setSelectedTopupMemberId("");
       setSelectedPaymentMemberId("");
       if (view === "topup") {
@@ -539,11 +539,11 @@ export default function App() {
       .list()
       .then((response) => {
         if (!mounted) return;
-        setPublicMembers(response.members);
+        setPublicCustomers(response.members);
       })
       .catch(() => {
         if (!mounted) return;
-        setPublicMembers([]);
+        setPublicCustomers([]);
       });
 
     return () => {
@@ -745,9 +745,9 @@ export default function App() {
     const pin = memberPinInput.trim();
     if (!pin) {
       if (showPayWithCreditModal) {
-        setPayWithCreditModalError("Enter member PIN.");
+        setPayWithCreditModalError("Enter customer PIN.");
       } else {
-        setStatus({ tone: "error", text: "Enter member PIN." });
+        setStatus({ tone: "error", text: "Enter customer PIN." });
       }
       return;
     }
@@ -756,24 +756,24 @@ export default function App() {
       const response = await client.member.authPin({ pin });
 
       if (showPayWithCreditModal && selectedPaymentMemberId && response.member.id !== selectedPaymentMemberId) {
-        setPayWithCreditModalError("PIN does not match selected member.");
+        setPayWithCreditModalError("PIN does not match selected customer.");
         return;
       }
 
       if (!showPayWithCreditModal && isTopupView && selectedTopupMemberId && response.member.id !== selectedTopupMemberId) {
-        setStatus({ tone: "error", text: "PIN does not match selected member." });
+        setStatus({ tone: "error", text: "PIN does not match selected customer." });
         return;
       }
 
       setPayWithCreditModalError(null);
       selectCheckoutMember(response.member);
       setMemberPinInput("");
-      setStatus({ tone: "info", text: `Member loaded: ${response.member.displayName}` });
+      setStatus({ tone: "info", text: `Customer loaded: ${response.member.displayName}` });
     } catch {
       if (showPayWithCreditModal) {
-        setPayWithCreditModalError("Invalid member PIN.");
+        setPayWithCreditModalError("Invalid customer PIN.");
       } else {
-        setStatus({ tone: "error", text: "Invalid member PIN." });
+        setStatus({ tone: "error", text: "Invalid customer PIN." });
       }
     }
   };
@@ -799,7 +799,7 @@ export default function App() {
 
   const startTopup = async () => {
     if (!selectedTopupMember) {
-      setStatus({ tone: "error", text: "Select a member first." });
+      setStatus({ tone: "error", text: "Select a customer first." });
       return;
     }
 
@@ -834,12 +834,12 @@ export default function App() {
     }
 
     if (!selectedPaymentMember) {
-      setPayWithCreditModalError("Select a member first.");
+      setPayWithCreditModalError("Select a customer first.");
       return;
     }
 
     if (!activeMember || activeMember.id !== selectedPaymentMember.id) {
-      setPayWithCreditModalError("Enter valid PIN for selected member first.");
+      setPayWithCreditModalError("Enter valid PIN for selected customer first.");
       return;
     }
 
@@ -869,10 +869,10 @@ export default function App() {
       if (transaction.type === "sale") {
         setCart([]);
       }
-      setStatus({ tone: "info", text: "Paid with member credit." });
+      setStatus({ tone: "info", text: "Paid with customer credit." });
       scrollToTop();
     } catch {
-      setPayWithCreditModalError("Could not complete member-credit payment.");
+      setPayWithCreditModalError("Could not complete customer-credit payment.");
     } finally {
       setLoading(false);
     }
@@ -922,35 +922,35 @@ export default function App() {
 
   const totalLabel = currencyFormatter.format(summary.total);
   const selectedAdminMember = useMemo(
-    () => adminMembers.find((member) => member.id === selectedMemberId) ?? null,
-    [adminMembers, selectedMemberId]
+    () => adminCustomers.find((member) => member.id === selectedMemberId) ?? null,
+    [adminCustomers, selectedMemberId]
   );
-  const filteredPublicMembers = useMemo(() => {
+  const filteredPublicCustomers = useMemo(() => {
     const q = topupMemberQuery.trim().toLowerCase();
     if (!q) {
-      return publicMembers;
+      return publicCustomers;
     }
 
-    return publicMembers.filter((member) =>
+    return publicCustomers.filter((member) =>
       member.displayName.toLowerCase().includes(q)
     );
-  }, [publicMembers, topupMemberQuery]);
+  }, [publicCustomers, topupMemberQuery]);
   const selectedTopupMember = useMemo(
-    () => publicMembers.find((member) => member.id === selectedTopupMemberId) ?? null,
-    [publicMembers, selectedTopupMemberId]
+    () => publicCustomers.find((member) => member.id === selectedTopupMemberId) ?? null,
+    [publicCustomers, selectedTopupMemberId]
   );
-  const filteredPaymentMembers = useMemo(() => {
+  const filteredPaymentCustomers = useMemo(() => {
     const q = paymentMemberQuery.trim().toLowerCase();
     if (!q) {
-      return publicMembers;
+      return publicCustomers;
     }
-    return publicMembers.filter((member) =>
+    return publicCustomers.filter((member) =>
       member.displayName.toLowerCase().includes(q)
     );
-  }, [paymentMemberQuery, publicMembers]);
+  }, [paymentMemberQuery, publicCustomers]);
   const selectedPaymentMember = useMemo(
-    () => publicMembers.find((member) => member.id === selectedPaymentMemberId) ?? null,
-    [publicMembers, selectedPaymentMemberId]
+    () => publicCustomers.find((member) => member.id === selectedPaymentMemberId) ?? null,
+    [publicCustomers, selectedPaymentMemberId]
   );
   const creditToUseNumber = Number.parseFloat(creditToUse);
   const normalizedCreditToUse = Number.isFinite(creditToUseNumber)
@@ -1189,7 +1189,7 @@ export default function App() {
       setAdminTransactions(response.transactions);
       await loadStockSnapshot(password);
       if (memberCreditEnabled) {
-        await loadAdminMembers(password);
+        await loadAdminCustomers(password);
       }
       setAdminSessionPassword(password);
       setAdminPassword("");
@@ -1206,9 +1206,9 @@ export default function App() {
     }
   };
 
-  const loadAdminMembers = async (password: string, preferredMemberId?: string) => {
-    const response = await client.admin.listMembers({ password });
-    setAdminMembers(response.members);
+  const loadAdminCustomers = async (password: string, preferredMemberId?: string) => {
+    const response = await client.admin.listCustomers({ password });
+    setAdminCustomers(response.members);
 
     const nextSelected =
       preferredMemberId && response.members.some((member) => member.id === preferredMemberId)
@@ -1252,14 +1252,14 @@ export default function App() {
         customerType: adminCustomerType,
         pin
       });
-      setAdminMembers(response.members);
+      setAdminCustomers(response.members);
       const created = response.members.find((member) => member.displayName === name);
       const nextSelected = created?.id ?? response.members[response.members.length - 1]?.id;
       setSelectedMemberId(nextSelected ?? "");
       setAdminMemberName("");
       setAdminCustomerType("member");
       setAdminMemberPin("");
-      await loadAdminMembers(adminSessionPassword, nextSelected);
+      await loadAdminCustomers(adminSessionPassword, nextSelected);
     } catch {
       setAdminError("Could not create member.");
     } finally {
@@ -1269,7 +1269,7 @@ export default function App() {
 
   const topupSelectedMember = async () => {
     if (!adminSessionPassword || !selectedMemberId) {
-      setAdminError("Select a member first.");
+      setAdminError("Select a customer first.");
       return;
     }
 
@@ -1290,7 +1290,7 @@ export default function App() {
       });
       setMemberTopupAmount("");
       setMemberTopupNote("");
-      await loadAdminMembers(adminSessionPassword, selectedMemberId);
+      await loadAdminCustomers(adminSessionPassword, selectedMemberId);
     } catch {
       setAdminError("Could not top up credit.");
     } finally {
@@ -1303,7 +1303,7 @@ export default function App() {
       return;
     }
 
-    const target = adminMembers.find((member) => member.id === selectedMemberId);
+    const target = adminCustomers.find((member) => member.id === selectedMemberId);
     if (!target) {
       return;
     }
@@ -1316,7 +1316,7 @@ export default function App() {
         memberId: selectedMemberId,
         active: !target.active
       });
-      await loadAdminMembers(adminSessionPassword, selectedMemberId);
+      await loadAdminCustomers(adminSessionPassword, selectedMemberId);
     } catch {
       setAdminError("Could not update member status.");
     } finally {
@@ -1438,7 +1438,7 @@ export default function App() {
     setStockNoteByProductId({});
     setStockProductQuery("");
     setStockCurrentValueFilter("");
-    setAdminMembers([]);
+    setAdminCustomers([]);
     setCreditLedger([]);
     setAdminCreditEvents([]);
     setSelectedMemberId("");
@@ -1752,7 +1752,7 @@ export default function App() {
                           : "border border-slate-300 hover:border-slate-500 dark:border-slate-600"
                       }`}
                     >
-                      Members
+                      Customers
                     </button>
                   )}
                 </div>
@@ -2018,21 +2018,21 @@ export default function App() {
                           className="rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50"
                           disabled={adminLoading}
                         >
-                          Add member
+                          Add customer
                         </button>
                       </div>
                     </div>
 
                     <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                      <h3 className="text-sm font-semibold">Members</h3>
+                      <h3 className="text-sm font-semibold">Customers</h3>
                       <div className="mt-3 max-h-64 overflow-auto space-y-2">
-                        {adminMembers.map((member) => (
+                        {adminCustomers.map((member) => (
                           <button
                             type="button"
                             key={member.id}
                             onClick={() => {
                               setSelectedMemberId(member.id);
-                              void loadAdminMembers(adminSessionPassword, member.id);
+                              void loadAdminCustomers(adminSessionPassword, member.id);
                             }}
                             className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition ${
                               selectedMemberId === member.id
@@ -2049,8 +2049,8 @@ export default function App() {
                             </div>
                           </button>
                         ))}
-                        {adminMembers.length === 0 && (
-                          <p className="text-sm text-slate-500">No members yet.</p>
+                        {adminCustomers.length === 0 && (
+                          <p className="text-sm text-slate-500">No customers yet.</p>
                         )}
                       </div>
                     </div>
@@ -2058,7 +2058,7 @@ export default function App() {
                     <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700 lg:col-span-2">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <h3 className="text-sm font-semibold">
-                          {selectedAdminMember ? `${selectedAdminMember.displayName} • Credit tools` : "Select a member"}
+                          {selectedAdminMember ? `${selectedAdminMember.displayName} • Credit tools` : "Select a customer"}
                         </h3>
                         {selectedAdminMember && (
                           <button
@@ -2101,7 +2101,7 @@ export default function App() {
                           </div>
 
                           <div className="mt-4 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-                            <p className="text-xs uppercase tracking-wide text-slate-500">Selected member ledger</p>
+                            <p className="text-xs uppercase tracking-wide text-slate-500">Selected customer ledger</p>
                             <ul className="mt-2 space-y-1 text-sm">
                               {creditLedger.map((entry) => (
                                 <li key={entry.id} className="flex items-center justify-between gap-2">
@@ -2125,7 +2125,7 @@ export default function App() {
                     </div>
 
                     <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700 lg:col-span-2">
-                      <h3 className="text-sm font-semibold">Member credit events</h3>
+                      <h3 className="text-sm font-semibold">Customer credit events</h3>
                       <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
                         <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
                           <thead className="bg-slate-50 dark:bg-slate-800/40">
@@ -2141,7 +2141,7 @@ export default function App() {
                           <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                             {adminCreditEvents.map((entry) => {
                               const memberName =
-                                adminMembers.find((member) => member.id === entry.memberId)?.displayName ??
+                                adminCustomers.find((member) => member.id === entry.memberId)?.displayName ??
                                 entry.memberId;
                               return (
                                 <tr key={entry.id}>
@@ -2162,7 +2162,7 @@ export default function App() {
                             {adminCreditEvents.length === 0 && (
                               <tr>
                                 <td colSpan={6} className="px-3 py-6 text-center text-slate-500 dark:text-slate-300">
-                                  No member credit events yet.
+                                  No customer credit events yet.
                                 </td>
                               </tr>
                             )}
@@ -2464,7 +2464,7 @@ export default function App() {
           <section className="flex flex-col gap-6">
             <div className="rounded-2xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
               <h2 className="text-lg font-semibold">
-                {isTopupView ? "Top up member credit" : "Pay at the fridge"}
+                {isTopupView ? "Top up customer credit" : "Pay at the fridge"}
               </h2>
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-300">
                 {isTopupView
@@ -2474,7 +2474,7 @@ export default function App() {
 
               {isTopupView && activeMember && (
                 <div className="mt-3 text-sm text-slate-600 dark:text-slate-300">
-                  Member: <span className="font-semibold">{activeMember.displayName}</span>
+                  Customer: <span className="font-semibold">{activeMember.displayName}</span>
                 </div>
               )}
 
@@ -2482,19 +2482,19 @@ export default function App() {
                 <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
                   <p className="text-sm font-semibold">Setup top-up</p>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
-                    Member list is public. Enter PIN to unlock details and top-up amount.
+                    Customer list is public. Enter PIN to unlock details and top-up amount.
                   </p>
 
                   <input
                     type="search"
                     value={topupMemberQuery}
                     onChange={(event) => setTopupMemberQuery(event.target.value)}
-                    placeholder="Search member"
+                    placeholder="Search customer"
                     className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
                   />
 
                   <div className="mt-2 max-h-36 overflow-auto space-y-1">
-                    {filteredPublicMembers.map((member) => (
+                    {filteredPublicCustomers.map((member) => (
                       <button
                         key={member.id}
                         type="button"
@@ -2513,7 +2513,7 @@ export default function App() {
                         {member.displayName}
                       </button>
                     ))}
-                    {filteredPublicMembers.length === 0 && (
+                    {filteredPublicCustomers.length === 0 && (
                       <p className="text-sm text-slate-500">No members found.</p>
                     )}
                   </div>
@@ -2521,7 +2521,7 @@ export default function App() {
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     {selectedTopupMember && (
                       <span className="text-sm text-slate-600 dark:text-slate-300">
-                        Selected: {selectedTopupMember.displayName}
+                        Selected customer: {selectedTopupMember.displayName}
                       </span>
                     )}
                   </div>
@@ -2607,7 +2607,7 @@ export default function App() {
                     disabled={isBusy}
                     className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-700 transition hover:border-sky-500 disabled:opacity-50 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
                   >
-                    Pay with member credit
+                    Pay with customer credit
                   </button>
                 )}
               </div>
@@ -2696,17 +2696,17 @@ export default function App() {
               className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900"
               onClick={(event) => event.stopPropagation()}
             >
-              <h3 className="text-lg font-semibold">Pay with member credit</h3>
+              <h3 className="text-lg font-semibold">Pay with customer credit</h3>
               <input
                 type="search"
                 value={paymentMemberQuery}
                 onChange={(event) => setPaymentMemberQuery(event.target.value)}
-                placeholder="Search member"
+                placeholder="Search customer"
                 className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
               />
 
               <div className="mt-2 max-h-36 overflow-auto space-y-1">
-                {filteredPaymentMembers.map((member) => (
+                {filteredPaymentCustomers.map((member) => (
                   <button
                     key={member.id}
                     type="button"
@@ -2742,7 +2742,7 @@ export default function App() {
                   autoComplete="one-time-code"
                   value={memberPinInput}
                   onChange={(event) => setMemberPinInput(event.target.value.replace(/\D+/g, ""))}
-                  placeholder="Member PIN"
+                  placeholder="Customer PIN"
                   disabled={!selectedPaymentMember}
                   className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900"
                 />

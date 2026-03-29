@@ -100,9 +100,13 @@ export const contract = {
     getStock: adminGetStockContract,
     setStock: adminSetStockContract,
     listMembers: adminMembersListContract,
+    listCustomers: adminMembersListContract,
     createMember: adminMembersCreateContract,
+    createCustomer: adminMembersCreateContract,
     setMemberPin: adminMembersSetPinContract,
+    setCustomerPin: adminMembersSetPinContract,
     setMemberActive: adminMembersSetActiveContract,
+    setCustomerActive: adminMembersSetActiveContract,
     topupCredit: adminCreditTopupContract,
     creditLedger: adminCreditLedgerContract
   }
