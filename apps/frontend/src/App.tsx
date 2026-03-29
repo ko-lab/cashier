@@ -414,6 +414,15 @@ function readInitialAdminTab(): AdminTab {
   return "transactions";
 }
 
+function readInitialView(): View {
+  if (typeof window === "undefined") {
+    return "cart";
+  }
+
+  const value = new URLSearchParams(window.location.search).get("screen");
+  return value === "topup" ? "topup" : "cart";
+}
+
 function readAdminUnlockUsername(): string {
   if (typeof window === "undefined") {
     return "cashier_admin";
@@ -431,7 +440,7 @@ export default function App() {
   >([]);
   const [defaultIsMemberPrice, setDefaultIsMemberPrice] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [view, setView] = useState<View>("cart");
+  const [view, setView] = useState<View>(readInitialView);
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [qrImageSrc, setQrImageSrc] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusMessage | null>(null);
@@ -494,11 +503,14 @@ export default function App() {
       setShowMemberCreditModal(false);
       setPublicMembers([]);
       setSelectedTopupMemberId("");
+      if (view === "topup") {
+        setView("cart");
+      }
       if (adminTab === "members") {
         setAdminTab("transactions");
       }
     }
-  }, [adminTab, memberCreditEnabled]);
+  }, [adminTab, memberCreditEnabled, view]);
 
   useEffect(() => {
     if (!memberCreditEnabled || view !== "topup") {
@@ -530,18 +542,21 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     params.delete("mode");
     params.delete("tab");
+    params.delete("screen");
 
     if (uiMode === "admin") {
       params.set("mode", "admin");
       if (adminTab !== "transactions") {
         params.set("tab", adminTab);
       }
+    } else if (view === "topup") {
+      params.set("screen", "topup");
     }
 
     const query = params.toString();
     const nextUrl = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
     window.history.replaceState(null, "", nextUrl);
-  }, [adminTab, uiMode]);
+  }, [adminTab, uiMode, view]);
 
   useEffect(() => {
     let isMounted = true;
