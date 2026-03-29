@@ -472,7 +472,6 @@ export default function App() {
   const [memberCreditEnabled, setMemberCreditEnabled] = useState(readMemberCreditFeatureFlag);
   const [activeMember, setActiveMember] = useState<Member | null>(null);
   const [creditToUse, setCreditToUse] = useState("0.00");
-  const [showMemberCreditModal, setShowMemberCreditModal] = useState(false);
   const [memberPinInput, setMemberPinInput] = useState("");
   const [publicMembers, setPublicMembers] = useState<Member[]>([]);
   const [topupMemberQuery, setTopupMemberQuery] = useState("");
@@ -500,7 +499,6 @@ export default function App() {
       setActiveMember(null);
       setCreditToUse("0.00");
       setMemberPinInput("");
-      setShowMemberCreditModal(false);
       setPublicMembers([]);
       setSelectedTopupMemberId("");
       if (view === "topup") {
@@ -732,7 +730,6 @@ export default function App() {
 
       selectCheckoutMember(response.member);
       setMemberPinInput("");
-      setShowMemberCreditModal(false);
       setStatus({ tone: "info", text: `Member loaded: ${response.member.displayName}` });
     } catch {
       setStatus({ tone: "error", text: "Invalid member PIN." });
@@ -782,7 +779,6 @@ export default function App() {
         memberId: activeMember.id,
         amount
       });
-      setShowMemberCreditModal(false);
       setTransaction(response);
       setView("topup");
       scrollToTop();
@@ -2338,15 +2334,26 @@ export default function App() {
                   </div>
 
                   <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="one-time-code"
+                      value={memberPinInput}
+                      onChange={(event) => setMemberPinInput(event.target.value.replace(/\D+/g, ""))}
+                      placeholder="Member PIN"
+                      disabled={!selectedTopupMember}
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900"
+                    />
                     <button
                       type="button"
-                      onClick={() => setShowMemberCreditModal(true)}
+                      onClick={() => void authenticateMemberPin()}
                       disabled={!selectedTopupMember}
                       className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:border-sky-500 disabled:opacity-50 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
                     >
                       {activeMember && selectedTopupMember && activeMember.id === selectedTopupMember.id
                         ? "PIN verified"
-                        : "Enter PIN"}
+                        : "Unlock"}
                     </button>
                     {selectedTopupMember && (
                       <span className="text-sm text-slate-600 dark:text-slate-300">
@@ -2409,17 +2416,48 @@ export default function App() {
               )}
 
               {!isTopupView && memberCreditEnabled && (
-                <div className="mt-4 flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowMemberCreditModal(true)}
-                    className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:border-sky-500 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
-                  >
-                    Use member credit
-                  </button>
+                <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50/70 p-3 dark:border-sky-800 dark:bg-sky-900/20">
+                  <p className="text-sm font-semibold text-sky-800 dark:text-sky-200">Use member credit</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="one-time-code"
+                      value={memberPinInput}
+                      onChange={(event) => setMemberPinInput(event.target.value.replace(/\D+/g, ""))}
+                      placeholder="Member PIN"
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void authenticateMemberPin()}
+                      className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:border-sky-500 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
+                    >
+                      Unlock
+                    </button>
+                  </div>
                   {activeMember && (
-                    <div className="text-sm text-slate-600 dark:text-slate-300">
-                      {activeMember.displayName} · {currencyFormatter.format(cartCreditPreview)} credit
+                    <div className="mt-2 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+                      <div>{activeMember.displayName} · {currencyFormatter.format(cartCreditPreview)} credit</div>
+                      <label className="block">
+                        <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500">Credit to use</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={creditToUse}
+                          onChange={(event) => setCreditToUse(event.target.value)}
+                          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => selectCheckoutMember(null)}
+                        className="rounded-xl border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600"
+                      >
+                        Clear member
+                      </button>
                     </div>
                   )}
                 </div>
@@ -2533,106 +2571,6 @@ export default function App() {
               </div>
             </aside>
           </section>
-        )}
-
-        {memberCreditEnabled && uiMode === "pos" && (view === "checkout" || view === "topup") && showMemberCreditModal && (
-          <div
-            className="fixed inset-0 z-40 flex items-start justify-center bg-black/50 p-4 pt-6"
-            onClick={() => setShowMemberCreditModal(false)}
-          >
-            <div
-              className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <h3 className="text-base font-semibold">Use member credit</h3>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
-                Enter member PIN to unlock credit usage.
-              </p>
-
-              {!activeMember ? (
-                <div className="mt-4 space-y-3">
-                  {isTopupView && selectedTopupMember && (
-                    <p className="text-sm text-slate-600 dark:text-slate-300">
-                      Selected member: <span className="font-semibold">{selectedTopupMember.displayName}</span>
-                    </p>
-                  )}
-                  <input
-                    type="password"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    autoComplete="one-time-code"
-                    value={memberPinInput}
-                    onChange={(event) => setMemberPinInput(event.target.value.replace(/\D+/g, ""))}
-                    placeholder="Member PIN"
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => void authenticateMemberPin()}
-                    className="w-full rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95"
-                  >
-                    Unlock credit
-                  </button>
-                </div>
-              ) : (
-                <div className="mt-4 space-y-3">
-                  <div className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-700">
-                    <p className="font-medium">{activeMember.displayName}</p>
-                    <p className="text-slate-500 dark:text-slate-300">
-                      Balance: {currencyFormatter.format(activeMember.balance)}
-                    </p>
-                  </div>
-                  {!isTopupView && (
-                    <label className="text-sm">
-                      <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500">Credit to use</span>
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={creditToUse}
-                        onChange={(event) => setCreditToUse(event.target.value)}
-                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
-                      />
-                    </label>
-                  )}
-                  {!isTopupView && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setView("topup");
-                        setSelectedTopupMemberId(activeMember.id);
-                        setShowMemberCreditModal(false);
-                        const shortfall = Math.max(0, (transaction?.total ?? 0) - activeMember.balance);
-                        if (shortfall > 0) {
-                          setTopupAmount(Math.max(5, Math.ceil(shortfall)).toFixed(2));
-                        }
-                      }}
-                      className="rounded-xl border border-sky-300 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-700 transition hover:border-sky-500 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
-                    >
-                      Need more credit? Top up now
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => selectCheckoutMember(null)}
-                    className="rounded-xl border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600"
-                  >
-                    Clear member
-                  </button>
-                </div>
-              )}
-
-              <div className="mt-5 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowMemberCreditModal(false)}
-                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600"
-                >
-                  Done
-                </button>
-              </div>
-            </div>
-          </div>
         )}
 
         {uiMode === "pos" && view === "cart" && showCheckoutConfirm && (
