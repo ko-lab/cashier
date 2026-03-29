@@ -1428,7 +1428,7 @@ export default function App() {
                   disabled={adminLoading || adminPassword.length === 0}
                   className="rounded-xl bg-accent-light px-4 py-3 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
                 >
-                  {adminLoading ? "Unlocking..." : "Load transactions"}
+                  {adminLoading ? "Unlocking..." : "Login"}
                 </button>
               </form>
             ) : (
