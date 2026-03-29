@@ -1864,6 +1864,7 @@ export default function App() {
                       <div className="mt-3 grid gap-2">
                         <input
                           type="text"
+                          autoComplete="off"
                           value={adminMemberName}
                           onChange={(event) => setAdminMemberName(event.target.value)}
                           placeholder="Display name"
@@ -1873,7 +1874,7 @@ export default function App() {
                           type="text"
                           inputMode="numeric"
                           pattern="[0-9]*"
-                          autoComplete="off"
+                          autoComplete="one-time-code"
                           value={adminMemberPin}
                           onChange={(event) => setAdminMemberPin(event.target.value.replace(/\D+/g, ""))}
                           placeholder="PIN (4+ digits)"
@@ -2559,6 +2560,7 @@ export default function App() {
                     type="password"
                     inputMode="numeric"
                     pattern="[0-9]*"
+                    autoComplete="one-time-code"
                     value={memberPinInput}
                     onChange={(event) => setMemberPinInput(event.target.value.replace(/\D+/g, ""))}
                     placeholder="Member PIN"
