@@ -277,12 +277,7 @@ function persistTheme(isDark: boolean): void {
 function readMemberCreditFeatureFlag(): boolean {
   try {
     const params = new URLSearchParams(window.location.search);
-    const queryValue = params.get("featureMemberCredit");
-    if (queryValue !== null) {
-      return queryValue === "on";
-    }
-
-    return localStorage.getItem("feature.memberCredit") === "on";
+    return params.get("featureMemberCredit") === "on";
   } catch {
     return false;
   }
@@ -290,13 +285,11 @@ function readMemberCreditFeatureFlag(): boolean {
 
 function persistMemberCreditFeatureFlag(enabled: boolean): void {
   try {
-    localStorage.setItem("feature.memberCredit", enabled ? "on" : "off");
-
     const url = new URL(window.location.href);
     url.searchParams.set("featureMemberCredit", enabled ? "on" : "off");
     window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
   } catch {
-    // Ignore storage/history failures
+    // Ignore history failures
   }
 }
 
