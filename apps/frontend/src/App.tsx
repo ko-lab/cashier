@@ -1494,8 +1494,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen px-3 py-8 sm:px-6">
-      <div className="mx-auto flex max-w-4xl flex-col gap-8">
+    <div className="min-h-screen px-3 py-6 sm:px-6">
+      <div className="mx-auto flex max-w-4xl flex-col gap-4">
         <header className="sticky top-0 z-30 rounded-2xl border border-black/10 bg-white/80 p-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/80">
           <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
             <h1 className="text-base font-semibold">Cashier</h1>
@@ -1518,18 +1518,6 @@ export default function App() {
 
             {uiMode === "pos" && view === "cart" && (
               <div className="flex items-center gap-3 sm:ml-auto">
-                {memberCreditEnabled && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setView("topup");
-                      setTransaction(null);
-                    }}
-                    className="rounded-full border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:border-sky-500 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
-                  >
-                    Top up credit
-                  </button>
-                )}
                 <button
                   type="button"
                   onClick={openCheckoutConfirm}
@@ -1590,6 +1578,20 @@ export default function App() {
               >
                 Admin Panel
               </button>
+
+              {uiMode === "pos" && memberCreditEnabled && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setView("topup");
+                    setTransaction(null);
+                    setShowMobileMenu(false);
+                  }}
+                  className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-3 text-left text-sm font-semibold text-sky-700 transition hover:border-sky-500 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
+                >
+                  Top up credit
+                </button>
+              )}
 
               <button
                 type="button"
