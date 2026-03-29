@@ -274,6 +274,22 @@ function persistTheme(isDark: boolean): void {
   }
 }
 
+function readMemberCreditFeatureFlag(): boolean {
+  try {
+    return localStorage.getItem("feature.memberCredit") === "on";
+  } catch {
+    return false;
+  }
+}
+
+function persistMemberCreditFeatureFlag(enabled: boolean): void {
+  try {
+    localStorage.setItem("feature.memberCredit", enabled ? "on" : "off");
+  } catch {
+    // Ignore storage failures
+  }
+}
+
 function csvEscape(value: string | number | boolean): string {
   const text = String(value);
   if (text.includes(",") || text.includes("\"") || text.includes("\n")) {
@@ -434,6 +450,7 @@ export default function App() {
   const [updateReady, setUpdateReady] = useState(false);
   const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [memberCreditEnabled, setMemberCreditEnabled] = useState(readMemberCreditFeatureFlag);
   const [activeMember, setActiveMember] = useState<Member | null>(null);
   const [creditToUse, setCreditToUse] = useState("0.00");
   const [showMemberCreditModal, setShowMemberCreditModal] = useState(false);
@@ -452,6 +469,20 @@ export default function App() {
     document.documentElement.classList.toggle("dark", isDark);
     persistTheme(isDark);
   }, [isDark]);
+
+  useEffect(() => {
+    persistMemberCreditFeatureFlag(memberCreditEnabled);
+
+    if (!memberCreditEnabled) {
+      setActiveMember(null);
+      setCreditToUse("0.00");
+      setMemberPinInput("");
+      setShowMemberCreditModal(false);
+      if (adminTab === "members") {
+        setAdminTab("transactions");
+      }
+    }
+  }, [adminTab, memberCreditEnabled]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -936,7 +967,9 @@ export default function App() {
       const response = await client.admin.exportTransactions({ password });
       setAdminTransactions(response.transactions);
       await loadStockSnapshot(password);
-      await loadAdminMembers(password);
+      if (memberCreditEnabled) {
+        await loadAdminMembers(password);
+      }
       setAdminSessionPassword(password);
       setAdminPassword("");
       setAdminStatusFilter("all");
@@ -1354,6 +1387,14 @@ export default function App() {
               >
                 {isDark ? "Switch to light theme ☀️" : "Switch to dark theme 🌙"}
               </button>
+
+              <button
+                type="button"
+                onClick={() => setMemberCreditEnabled((value) => !value)}
+                className="rounded-xl border border-slate-300 px-4 py-3 text-left text-sm font-semibold transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
+              >
+                Member credit feature: {memberCreditEnabled ? "On" : "Off"}
+              </button>
             </aside>
           </div>
         )}
@@ -1448,17 +1489,19 @@ export default function App() {
                   >
                     Stock
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setAdminTab("members")}
-                    className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                      adminTab === "members"
-                        ? "bg-accent-light text-white dark:bg-accent-dark dark:text-slate-900"
-                        : "border border-slate-300 hover:border-slate-500 dark:border-slate-600"
-                    }`}
-                  >
-                    Members
-                  </button>
+                  {memberCreditEnabled && (
+                    <button
+                      type="button"
+                      onClick={() => setAdminTab("members")}
+                      className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                        adminTab === "members"
+                          ? "bg-accent-light text-white dark:bg-accent-dark dark:text-slate-900"
+                          : "border border-slate-300 hover:border-slate-500 dark:border-slate-600"
+                      }`}
+                    >
+                      Members
+                    </button>
+                  )}
                 </div>
                 {adminTab === "transactions" && (
                 <>
@@ -1655,7 +1698,7 @@ export default function App() {
                 </>
                 )}
 
-                {adminTab === "members" && (
+                {memberCreditEnabled && adminTab === "members" && (
                   <div className="grid gap-4 lg:grid-cols-2">
                     <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                       <h3 className="text-sm font-semibold">Create member</h3>
@@ -2084,20 +2127,22 @@ export default function App() {
                 Scan the QR code and pay the total. When done, press "I paid".
               </p>
 
-              <div className="mt-4 flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowMemberCreditModal(true)}
-                  className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:border-sky-500 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
-                >
-                  Use member credit
-                </button>
-                {activeMember && (
-                  <div className="text-sm text-slate-600 dark:text-slate-300">
-                    {activeMember.displayName} · {currencyFormatter.format(cartCreditPreview)} credit
-                  </div>
-                )}
-              </div>
+              {memberCreditEnabled && (
+                <div className="mt-4 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowMemberCreditModal(true)}
+                    className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:border-sky-500 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
+                  >
+                    Use member credit
+                  </button>
+                  {activeMember && (
+                    <div className="text-sm text-slate-600 dark:text-slate-300">
+                      {activeMember.displayName} · {currencyFormatter.format(cartCreditPreview)} credit
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="mt-6 rounded-2xl border border-dashed border-slate-400/60 p-6 text-center dark:border-slate-500">
                 {qrImageSrc ? (
@@ -2203,7 +2248,7 @@ export default function App() {
           </section>
         )}
 
-        {uiMode === "pos" && view === "checkout" && showMemberCreditModal && (
+        {memberCreditEnabled && uiMode === "pos" && view === "checkout" && showMemberCreditModal && (
           <div
             className="fixed inset-0 z-40 flex items-start justify-center bg-black/50 p-4 pt-6"
             onClick={() => setShowMemberCreditModal(false)}
