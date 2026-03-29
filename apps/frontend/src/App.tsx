@@ -1403,6 +1403,18 @@ export default function App() {
     setIsDark((value) => !value);
   };
 
+  const showBackToCart = uiMode === "admin" || view !== "cart";
+  const handleBackToCart = () => {
+    if (uiMode === "admin") {
+      toggleAdminMode();
+      return;
+    }
+
+    setView("cart");
+    setTransaction(null);
+    setShowCheckoutConfirm(false);
+  };
+
   return (
     <div className="min-h-screen px-3 py-8 sm:px-6">
       <div className="mx-auto flex max-w-4xl flex-col gap-8">
@@ -1411,10 +1423,10 @@ export default function App() {
             <h1 className="text-base font-semibold">Cashier</h1>
             <button
               type="button"
-              onClick={toggleAdminMode}
+              onClick={showBackToCart ? handleBackToCart : toggleAdminMode}
               className="hidden sm:inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
             >
-              {uiMode === "pos" ? "Admin panel" : "Back to checkout"}
+              {showBackToCart ? "Back to Cart" : "Admin panel"}
             </button>
             <button
               type="button"
@@ -1452,13 +1464,13 @@ export default function App() {
               </div>
             )}
 
-            {uiMode === "admin" && (
+            {showBackToCart && (
               <button
                 type="button"
-                onClick={toggleAdminMode}
+                onClick={handleBackToCart}
                 className="ml-auto inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 sm:hidden dark:border-slate-600 dark:hover:border-slate-300"
               >
-                Back to checkout
+                Back to Cart
               </button>
             )}
 
