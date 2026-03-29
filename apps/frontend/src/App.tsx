@@ -884,7 +884,7 @@ export default function App() {
     );
   }, [adminFilteredTransactions]);
 
-  const hasActiveAdminFilters =
+  const hasActiveFilters =
     adminStatusFilter !== "all" ||
     adminProductFilter !== "all" ||
     adminFromDate.length > 0 ||
@@ -1577,7 +1577,7 @@ export default function App() {
                   <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                     <p className="text-xs uppercase tracking-wide text-slate-500">
                       Transactions
-                      {hasActiveAdminFilters && (
+                      {hasActiveFilters && (
                         <span className="ml-1 normal-case tracking-normal text-slate-400">
                           (Filtered)
                         </span>
@@ -1588,7 +1588,7 @@ export default function App() {
                   <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                     <p className="text-xs uppercase tracking-wide text-slate-500">
                       Completed
-                      {hasActiveAdminFilters && (
+                      {hasActiveFilters && (
                         <span className="ml-1 normal-case tracking-normal text-slate-400">
                           (Filtered)
                         </span>
@@ -1599,7 +1599,7 @@ export default function App() {
                   <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                     <p className="text-xs uppercase tracking-wide text-slate-500">
                       Canceled
-                      {hasActiveAdminFilters && (
+                      {hasActiveFilters && (
                         <span className="ml-1 normal-case tracking-normal text-slate-400">
                           (Filtered)
                         </span>
@@ -1610,7 +1610,7 @@ export default function App() {
                   <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                     <p className="text-xs uppercase tracking-wide text-slate-500">
                       Amount
-                      {hasActiveAdminFilters && (
+                      {hasActiveFilters && (
                         <span className="ml-1 normal-case tracking-normal text-slate-400">
                           (Filtered)
                         </span>
