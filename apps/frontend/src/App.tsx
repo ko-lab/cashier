@@ -2465,23 +2465,6 @@ export default function App() {
                 </div>
               )}
 
-              {!isTopupView && memberCreditEnabled && transaction && (
-                <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowPayWithCreditModal(true)}
-                    className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:border-sky-500 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
-                  >
-                    Pay with member credit
-                  </button>
-                  {activeMember && (
-                    <span className="text-sm text-slate-600 dark:text-slate-300">
-                      {activeMember.displayName} · {currencyFormatter.format(activeMember.balance)} balance
-                    </span>
-                  )}
-                </div>
-              )}
-
               {transaction && (
                 <>
               <div className="mt-6 rounded-2xl border border-dashed border-slate-400/60 p-6 text-center dark:border-slate-500">
@@ -2496,16 +2479,6 @@ export default function App() {
                 )}
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
-                {memberCreditEnabled && (
-                  <button
-                    type="button"
-                    onClick={() => setShowPayWithCreditModal(true)}
-                    disabled={isBusy}
-                    className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-700 transition hover:border-sky-500 disabled:opacity-50 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
-                  >
-                    Pay with member credit
-                  </button>
-                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -2525,6 +2498,16 @@ export default function App() {
                 >
                   Cancel
                 </button>
+                {memberCreditEnabled && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPayWithCreditModal(true)}
+                    disabled={isBusy}
+                    className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-700 transition hover:border-sky-500 disabled:opacity-50 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
+                  >
+                    Pay with member credit
+                  </button>
+                )}
               </div>
               <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-left dark:border-slate-700 dark:bg-slate-900/40">
                 <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
