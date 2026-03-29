@@ -93,6 +93,7 @@ export const CreditItemBreakdownSchema = z.object({
   productId: z.string().min(1),
   name: z.string().min(1),
   quantity: z.number().int().min(1),
+  isMemberPrice: z.boolean().optional(),
   lineTotal: z.number().nonnegative(),
   creditAllocated: z.number().nonnegative()
 });

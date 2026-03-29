@@ -258,6 +258,7 @@ export function createTransactionService(
               productId: item.productId,
               name: item.name,
               quantity: item.quantity,
+              isMemberPrice: item.isMemberPrice,
               lineTotal: item.lineTotal,
               creditAllocated: Number((cappedCreditUsed - allocatedBefore).toFixed(2))
             };
@@ -266,6 +267,7 @@ export function createTransactionService(
             productId: item.productId,
             name: item.name,
             quantity: item.quantity,
+            isMemberPrice: item.isMemberPrice,
             lineTotal: item.lineTotal,
             creditAllocated: Number(((item.lineTotal / totalForAllocation) * cappedCreditUsed).toFixed(2))
           };
@@ -316,6 +318,7 @@ export function createTransactionService(
                   productId: "__member_credit__",
                   name: "Member credit top-up",
                   quantity: 1,
+                  isMemberPrice: true,
                   lineTotal: existing.total,
                   creditAllocated: cappedCreditUsed
                 }
@@ -347,6 +350,7 @@ export function createTransactionService(
               productId: "__member_credit__",
               name: "Member credit top-up",
               quantity: 1,
+              isMemberPrice: true,
               lineTotal: existing.total,
               creditAllocated: existing.total
             }
