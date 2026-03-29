@@ -339,7 +339,10 @@ function buildCartBreakdownJson(transaction: Transaction): string {
       quantity: item.quantity,
       isMemberPrice: item.isMemberPrice,
       unitPrice: item.unitPrice,
-      lineTotal: item.lineTotal
+      lineTotal: item.lineTotal,
+      ...(transaction.type === "credit_topup" && transaction.memberId
+        ? { customerId: transaction.memberId }
+        : {})
     }))
   );
 }
