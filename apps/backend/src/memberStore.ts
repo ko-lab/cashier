@@ -2,7 +2,12 @@ import path from "node:path";
 import { mkdirSync } from "node:fs";
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import Database from "better-sqlite3";
-import type { CreditLedgerEntry, CreditLedgerReason, Member } from "../../../shared/models.ts";
+import type {
+  CreditItemBreakdown,
+  CreditLedgerEntry,
+  CreditLedgerReason,
+  Member
+} from "../../../shared/models.ts";
 
 export type MemberStore = {
   listMembers: () => Promise<Member[]>;
@@ -12,11 +17,14 @@ export type MemberStore = {
   setMemberPin: (memberId: string, pin: string) => Promise<Member | null>;
   setMemberActive: (memberId: string, active: boolean) => Promise<Member | null>;
   adjustBalance: (input: {
+    eventId?: string;
     memberId: string;
     delta: number;
     reason: CreditLedgerReason;
     note?: string;
     transactionId?: string;
+    itemBreakdown?: CreditItemBreakdown[];
+    stockEventIds?: string[];
     preventNegative?: boolean;
   }) => Promise<{ member: Member; entry: CreditLedgerEntry }>;
   listLedger: (memberId?: string) => Promise<CreditLedgerEntry[]>;
@@ -68,6 +76,8 @@ export function createMemberStore(dataDir: string): MemberStore {
       reason TEXT NOT NULL,
       transaction_id TEXT,
       note TEXT,
+      item_breakdown_json TEXT,
+      stock_event_ids_json TEXT,
       created_at TEXT NOT NULL,
       FOREIGN KEY(member_id) REFERENCES members(id)
     );
@@ -75,6 +85,16 @@ export function createMemberStore(dataDir: string): MemberStore {
     CREATE INDEX IF NOT EXISTS idx_credit_ledger_member_id_created_at
       ON credit_ledger(member_id, created_at DESC);
   `);
+
+  const creditTableInfo = db
+    .prepare("PRAGMA table_info(credit_ledger)")
+    .all() as { name: string }[];
+  if (!creditTableInfo.some((column) => column.name === "item_breakdown_json")) {
+    db.exec("ALTER TABLE credit_ledger ADD COLUMN item_breakdown_json TEXT");
+  }
+  if (!creditTableInfo.some((column) => column.name === "stock_event_ids_json")) {
+    db.exec("ALTER TABLE credit_ledger ADD COLUMN stock_event_ids_json TEXT");
+  }
 
   const insertMember = db.prepare(`
     INSERT INTO members (id, display_name, pin_hash, active, balance, created_at, updated_at)
@@ -124,19 +144,19 @@ export function createMemberStore(dataDir: string): MemberStore {
   `);
 
   const insertLedger = db.prepare(`
-    INSERT INTO credit_ledger (id, member_id, delta, balance_after, reason, transaction_id, note, created_at)
-    VALUES (@id, @memberId, @delta, @balanceAfter, @reason, @transactionId, @note, @createdAt)
+    INSERT INTO credit_ledger (id, member_id, delta, balance_after, reason, transaction_id, note, item_breakdown_json, stock_event_ids_json, created_at)
+    VALUES (@id, @memberId, @delta, @balanceAfter, @reason, @transactionId, @note, @itemBreakdownJson, @stockEventIdsJson, @createdAt)
   `);
 
   const listLedger = db.prepare(`
-    SELECT id, member_id, delta, balance_after, reason, transaction_id, note, created_at
+    SELECT id, member_id, delta, balance_after, reason, transaction_id, note, item_breakdown_json, stock_event_ids_json, created_at
     FROM credit_ledger
     ORDER BY created_at DESC
     LIMIT 500
   `);
 
   const listLedgerByMember = db.prepare(`
-    SELECT id, member_id, delta, balance_after, reason, transaction_id, note, created_at
+    SELECT id, member_id, delta, balance_after, reason, transaction_id, note, item_breakdown_json, stock_event_ids_json, created_at
     FROM credit_ledger
     WHERE member_id = ?
     ORDER BY created_at DESC
@@ -167,6 +187,8 @@ export function createMemberStore(dataDir: string): MemberStore {
     reason: CreditLedgerReason;
     transaction_id?: string | null;
     note?: string | null;
+    item_breakdown_json?: string | null;
+    stock_event_ids_json?: string | null;
     created_at: string;
   }): CreditLedgerEntry => ({
     id: row.id,
@@ -176,16 +198,25 @@ export function createMemberStore(dataDir: string): MemberStore {
     reason: row.reason,
     transactionId: row.transaction_id ?? undefined,
     note: row.note ?? undefined,
+    itemBreakdown: row.item_breakdown_json
+      ? (JSON.parse(row.item_breakdown_json) as CreditItemBreakdown[])
+      : undefined,
+    stockEventIds: row.stock_event_ids_json
+      ? (JSON.parse(row.stock_event_ids_json) as string[])
+      : undefined,
     createdAt: row.created_at
   });
 
   const adjustBalanceTx = db.transaction(
     (input: {
+      eventId?: string;
       memberId: string;
       delta: number;
       reason: CreditLedgerReason;
       note?: string;
       transactionId?: string;
+      itemBreakdown?: CreditItemBreakdown[];
+      stockEventIds?: string[];
       preventNegative?: boolean;
     }) => {
       const existing = selectMemberForUpdate.get(input.memberId) as
@@ -211,7 +242,7 @@ export function createMemberStore(dataDir: string): MemberStore {
       const updatedAt = new Date().toISOString();
       updateMemberBalance.run(nextBalance, updatedAt, input.memberId);
 
-      const entryId = randomBytes(8).toString("hex");
+      const entryId = input.eventId ?? randomBytes(8).toString("hex");
       const createdAt = new Date().toISOString();
       insertLedger.run({
         id: entryId,
@@ -221,6 +252,8 @@ export function createMemberStore(dataDir: string): MemberStore {
         reason: input.reason,
         transactionId: input.transactionId ?? null,
         note: input.note?.trim() || null,
+        itemBreakdownJson: input.itemBreakdown ? JSON.stringify(input.itemBreakdown) : null,
+        stockEventIdsJson: input.stockEventIds ? JSON.stringify(input.stockEventIds) : null,
         createdAt
       });
 
@@ -241,6 +274,8 @@ export function createMemberStore(dataDir: string): MemberStore {
         reason: input.reason,
         transaction_id: input.transactionId ?? null,
         note: input.note?.trim() || null,
+        item_breakdown_json: input.itemBreakdown ? JSON.stringify(input.itemBreakdown) : null,
+        stock_event_ids_json: input.stockEventIds ? JSON.stringify(input.stockEventIds) : null,
         created_at: createdAt
       };
 
@@ -339,6 +374,8 @@ export function createMemberStore(dataDir: string): MemberStore {
         reason: CreditLedgerReason;
         transaction_id?: string | null;
         note?: string | null;
+        item_breakdown_json?: string | null;
+        stock_event_ids_json?: string | null;
         created_at: string;
       }[];
 

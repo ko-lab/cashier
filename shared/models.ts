@@ -23,7 +23,9 @@ export const StockEventSchema = z.object({
   type: StockEventTypeSchema,
   quantity: z.number().int(),
   createdAt: z.string().min(1),
-  note: z.string().optional()
+  note: z.string().optional(),
+  transactionId: z.string().optional(),
+  memberCreditEventId: z.string().optional()
 });
 
 export const AdminSetStockInputSchema = z
@@ -87,6 +89,14 @@ export const CreditLedgerReasonSchema = z.enum([
   "refund"
 ]);
 
+export const CreditItemBreakdownSchema = z.object({
+  productId: z.string().min(1),
+  name: z.string().min(1),
+  quantity: z.number().int().min(1),
+  lineTotal: z.number().nonnegative(),
+  creditAllocated: z.number().nonnegative()
+});
+
 export const CreditLedgerEntrySchema = z.object({
   id: z.string().min(1),
   memberId: z.string().min(1),
@@ -95,6 +105,8 @@ export const CreditLedgerEntrySchema = z.object({
   reason: CreditLedgerReasonSchema,
   transactionId: z.string().optional(),
   note: z.string().optional(),
+  itemBreakdown: z.array(CreditItemBreakdownSchema).optional(),
+  stockEventIds: z.array(z.string().min(1)).optional(),
   createdAt: z.string().min(1)
 });
 
@@ -222,6 +234,7 @@ export type StockEvent = z.infer<typeof StockEventSchema>;
 export type CartItemInput = z.infer<typeof CartItemInputSchema>;
 export type Member = z.infer<typeof MemberSchema>;
 export type CreditLedgerReason = z.infer<typeof CreditLedgerReasonSchema>;
+export type CreditItemBreakdown = z.infer<typeof CreditItemBreakdownSchema>;
 export type CreditLedgerEntry = z.infer<typeof CreditLedgerEntrySchema>;
 export type MemberAuthInput = z.infer<typeof MemberAuthInputSchema>;
 export type MemberAuthOutput = z.infer<typeof MemberAuthOutputSchema>;

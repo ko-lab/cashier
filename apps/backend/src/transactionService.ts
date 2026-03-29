@@ -1,5 +1,5 @@
 import { ORPCError } from "@orpc/server";
-import { randomInt } from "node:crypto";
+import { randomBytes, randomInt } from "node:crypto";
 import type {
   CartItemInput,
   PriceCategory,
@@ -219,6 +219,26 @@ export function createTransactionService(
       );
       const externalAmount = Number((existing.total - cappedCreditUsed).toFixed(2));
 
+      const pendingCreditEventId =
+        status === "completed" && existing.type === "sale" && cappedCreditUsed > 0 && memberId
+          ? randomBytes(8).toString("hex")
+          : undefined;
+
+      const stockEventIds: string[] = [];
+      if (existing.status !== "completed" && status === "completed" && existing.type === "sale") {
+        for (const item of existing.items) {
+          const stockEvent = await stockEventStore.appendEvent({
+            productId: item.productId,
+            type: "sale_delta",
+            quantity: -item.quantity,
+            note: `Sale ${existing.id}`,
+            transactionId: existing.id,
+            memberCreditEventId: pendingCreditEventId
+          });
+          stockEventIds.push(stockEvent.id);
+        }
+      }
+
       if (status === "completed" && existing.type === "sale" && cappedCreditUsed > 0) {
         if (!memberId) {
           throw new ORPCError("BAD_REQUEST", {
@@ -226,12 +246,40 @@ export function createTransactionService(
           });
         }
 
+        const totalForAllocation = existing.total || 1;
+        const breakdown = existing.items.map((item, index, all) => {
+          if (index === all.length - 1) {
+            const allocatedBefore = all
+              .slice(0, -1)
+              .reduce((sum, prev) =>
+                sum + Number(((prev.lineTotal / totalForAllocation) * cappedCreditUsed).toFixed(2)),
+              0);
+            return {
+              productId: item.productId,
+              name: item.name,
+              quantity: item.quantity,
+              lineTotal: item.lineTotal,
+              creditAllocated: Number((cappedCreditUsed - allocatedBefore).toFixed(2))
+            };
+          }
+          return {
+            productId: item.productId,
+            name: item.name,
+            quantity: item.quantity,
+            lineTotal: item.lineTotal,
+            creditAllocated: Number(((item.lineTotal / totalForAllocation) * cappedCreditUsed).toFixed(2))
+          };
+        });
+
         try {
           await memberStore.adjustBalance({
+            eventId: pendingCreditEventId,
             memberId,
             delta: -cappedCreditUsed,
             reason: "checkout_debit",
             transactionId: existing.id,
+            itemBreakdown: breakdown,
+            stockEventIds,
             preventNegative: true
           });
         } catch (error) {
@@ -263,6 +311,15 @@ export function createTransactionService(
               delta: -cappedCreditUsed,
               reason: "checkout_debit",
               transactionId: existing.id,
+              itemBreakdown: [
+                {
+                  productId: "__member_credit__",
+                  name: "Member credit top-up",
+                  quantity: 1,
+                  lineTotal: existing.total,
+                  creditAllocated: cappedCreditUsed
+                }
+              ],
               preventNegative: true
             });
           } catch (error) {
@@ -285,6 +342,15 @@ export function createTransactionService(
           delta: existing.total,
           reason: "topup",
           transactionId: existing.id,
+          itemBreakdown: [
+            {
+              productId: "__member_credit__",
+              name: "Member credit top-up",
+              quantity: 1,
+              lineTotal: existing.total,
+              creditAllocated: existing.total
+            }
+          ],
           preventNegative: true
         });
       }
@@ -301,17 +367,6 @@ export function createTransactionService(
 
       if (!transaction) {
         throw new ORPCError("NOT_FOUND", { data: { message: "Transaction not found" } });
-      }
-
-      if (existing.status !== "completed" && status === "completed" && existing.type === "sale") {
-        for (const item of existing.items) {
-          await stockEventStore.appendEvent({
-            productId: item.productId,
-            type: "sale_delta",
-            quantity: -item.quantity,
-            note: `Sale ${existing.id}`
-          });
-        }
       }
 
       return transaction;

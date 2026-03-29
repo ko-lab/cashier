@@ -8,6 +8,8 @@ type CreateStockEventInput = {
   type: StockEvent["type"];
   quantity: number;
   note?: string;
+  transactionId?: string;
+  memberCreditEventId?: string;
 };
 
 export type StockEventStore = {
@@ -42,7 +44,9 @@ export function createStockEventStore(dataDir: string): StockEventStore {
         type: input.type,
         quantity: Math.trunc(input.quantity),
         createdAt: new Date().toISOString(),
-        note: input.note
+        note: input.note,
+        transactionId: input.transactionId,
+        memberCreditEventId: input.memberCreditEventId
       };
       events.push(event);
       await writeJson(eventsPath, events);
