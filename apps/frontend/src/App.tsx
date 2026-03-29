@@ -874,6 +874,12 @@ export default function App() {
     );
   }, [adminFilteredTransactions]);
 
+  const hasActiveAdminFilters =
+    adminStatusFilter !== "all" ||
+    adminProductFilter !== "all" ||
+    adminFromDate.length > 0 ||
+    adminToDate.length > 0;
+
   const filteredStockItems = useMemo(() => {
     if (!stockSnapshot) {
       return [];
@@ -1559,22 +1565,46 @@ export default function App() {
                 <>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Filtered tx</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-500">
+                      Transactions
+                      {hasActiveAdminFilters && (
+                        <span className="ml-1 normal-case tracking-normal text-slate-400">
+                          (Filtered)
+                        </span>
+                      )}
+                    </p>
                     <p className="mt-2 text-xl font-semibold">{adminTotals.count}</p>
                   </div>
                   <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                     <p className="text-xs uppercase tracking-wide text-slate-500">
                       Completed
+                      {hasActiveAdminFilters && (
+                        <span className="ml-1 normal-case tracking-normal text-slate-400">
+                          (Filtered)
+                        </span>
+                      )}
                     </p>
                     <p className="mt-2 text-xl font-semibold">{adminTotals.completed}</p>
                   </div>
                   <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Canceled</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-500">
+                      Canceled
+                      {hasActiveAdminFilters && (
+                        <span className="ml-1 normal-case tracking-normal text-slate-400">
+                          (Filtered)
+                        </span>
+                      )}
+                    </p>
                     <p className="mt-2 text-xl font-semibold">{adminTotals.canceled}</p>
                   </div>
                   <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                     <p className="text-xs uppercase tracking-wide text-slate-500">
-                      Filtered amount
+                      Amount
+                      {hasActiveAdminFilters && (
+                        <span className="ml-1 normal-case tracking-normal text-slate-400">
+                          (Filtered)
+                        </span>
+                      )}
                     </p>
                     <p className="mt-2 text-xl font-semibold">
                       {currencyFormatter.format(adminTotals.amount)}
