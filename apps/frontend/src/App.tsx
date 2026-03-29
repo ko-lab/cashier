@@ -1110,14 +1110,26 @@ export default function App() {
               </div>
             )}
 
-            <button
-              type="button"
-              onClick={() => setShowMobileMenu(true)}
-              className="ml-1 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 text-lg transition hover:border-slate-500 sm:hidden dark:border-slate-600 dark:hover:border-slate-300"
-              aria-label="Open menu"
-            >
-              ☰
-            </button>
+            {uiMode === "admin" && (
+              <button
+                type="button"
+                onClick={toggleAdminMode}
+                className="ml-auto inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 sm:hidden dark:border-slate-600 dark:hover:border-slate-300"
+              >
+                Back to checkout
+              </button>
+            )}
+
+            {uiMode === "pos" && (
+              <button
+                type="button"
+                onClick={() => setShowMobileMenu(true)}
+                className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 text-lg transition hover:border-slate-500 sm:hidden dark:border-slate-600 dark:hover:border-slate-300"
+                aria-label="Open menu"
+              >
+                ☰
+              </button>
+            )}
           </div>
         </header>
 
@@ -1146,7 +1158,7 @@ export default function App() {
                 onClick={toggleAdminMode}
                 className="rounded-xl border border-slate-300 px-4 py-3 text-left text-sm font-semibold transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
               >
-                {uiMode === "pos" ? "Admin Panel" : "Back to pay"}
+                Admin Panel
               </button>
 
               <button
