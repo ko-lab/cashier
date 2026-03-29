@@ -436,8 +436,8 @@ export default function App() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [activeMember, setActiveMember] = useState<Member | null>(null);
   const [creditToUse, setCreditToUse] = useState("0.00");
-  const [checkoutMemberQuery, setCheckoutMemberQuery] = useState("");
-  const [checkoutMembers, setCheckoutMembers] = useState<Member[]>([]);
+  const [showMemberCreditModal, setShowMemberCreditModal] = useState(false);
+  const [memberPinInput, setMemberPinInput] = useState("");
   const [adminMembers, setAdminMembers] = useState<Member[]>([]);
   const [adminMemberName, setAdminMemberName] = useState("");
   const [adminMemberPin, setAdminMemberPin] = useState("");
@@ -627,8 +627,26 @@ export default function App() {
       return;
     }
 
-    const maxCredit = Math.min(summary.total, member.balance);
+    const maxCredit = Math.min(payableTotal, member.balance);
     setCreditToUse(maxCredit.toFixed(2));
+  };
+
+  const authenticateMemberPin = async () => {
+    const pin = memberPinInput.trim();
+    if (!pin) {
+      setStatus({ tone: "error", text: "Enter member PIN." });
+      return;
+    }
+
+    try {
+      const response = await client.member.authPin({ pin });
+      selectCheckoutMember(response.member);
+      setMemberPinInput("");
+      setShowMemberCreditModal(false);
+      setStatus({ tone: "info", text: `Member loaded: ${response.member.displayName}` });
+    } catch {
+      setStatus({ tone: "error", text: "Invalid member PIN." });
+    }
   };
 
   const startCheckout = async () => {
@@ -875,32 +893,6 @@ export default function App() {
       window.location.reload();
     }
   }, [updateReady, isSafeToRefresh]);
-
-  useEffect(() => {
-    if (uiMode !== "pos" || view !== "checkout") {
-      return;
-    }
-
-    let mounted = true;
-    void client.member
-      .list()
-      .then((response) => {
-        if (!mounted) {
-          return;
-        }
-        setCheckoutMembers(response.members);
-      })
-      .catch(() => {
-        if (!mounted) {
-          return;
-        }
-        setCheckoutMembers([]);
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, [uiMode, view]);
 
   const getQuantity = (productId: string, isMemberPrice: boolean) =>
     cart.find(
@@ -2092,64 +2084,17 @@ export default function App() {
                 Scan the QR code and pay the total. When done, press "I paid".
               </p>
 
-              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-semibold">Member credit (optional)</h3>
-                  {activeMember && (
-                    <button
-                      type="button"
-                      onClick={() => selectCheckoutMember(null)}
-                      className="rounded-lg border border-slate-300 px-3 py-1 text-xs transition hover:border-slate-500 dark:border-slate-600"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-                <input
-                  type="search"
-                  value={checkoutMemberQuery}
-                  onChange={(event) => setCheckoutMemberQuery(event.target.value)}
-                  placeholder="Search member"
-                  className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
-                />
-                <div className="mt-2 max-h-32 overflow-auto space-y-1">
-                  {checkoutMembers
-                    .filter((member) =>
-                      member.displayName.toLowerCase().includes(checkoutMemberQuery.trim().toLowerCase())
-                    )
-                    .slice(0, 12)
-                    .map((member) => (
-                      <button
-                        key={member.id}
-                        type="button"
-                        onClick={() => selectCheckoutMember(member)}
-                        className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition ${
-                          activeMember?.id === member.id
-                            ? "border-sky-500 bg-sky-50/60 dark:bg-sky-900/20"
-                            : "border-slate-300 hover:border-slate-500 dark:border-slate-600"
-                        }`}
-                      >
-                        <span>{member.displayName}</span>
-                        <span>{currencyFormatter.format(member.balance)}</span>
-                      </button>
-                    ))}
-                </div>
+              <div className="mt-4 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowMemberCreditModal(true)}
+                  className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:border-sky-500 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
+                >
+                  Use member credit
+                </button>
                 {activeMember && (
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                    <p className="text-sm text-slate-600 dark:text-slate-300">
-                      Selected: <span className="font-semibold">{activeMember.displayName}</span>
-                    </p>
-                    <label className="text-sm">
-                      <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500">Credit to use</span>
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={creditToUse}
-                        onChange={(event) => setCreditToUse(event.target.value)}
-                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
-                      />
-                    </label>
+                  <div className="text-sm text-slate-600 dark:text-slate-300">
+                    {activeMember.displayName} · {currencyFormatter.format(cartCreditPreview)} credit
                   </div>
                 )}
               </div>
@@ -2256,6 +2201,81 @@ export default function App() {
               </div>
             </aside>
           </section>
+        )}
+
+        {uiMode === "pos" && view === "checkout" && showMemberCreditModal && (
+          <div
+            className="fixed inset-0 z-40 flex items-start justify-center bg-black/50 p-4 pt-6"
+            onClick={() => setShowMemberCreditModal(false)}
+          >
+            <div
+              className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <h3 className="text-base font-semibold">Use member credit</h3>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
+                Enter member PIN to unlock credit usage.
+              </p>
+
+              {!activeMember ? (
+                <div className="mt-4 space-y-3">
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={memberPinInput}
+                    onChange={(event) => setMemberPinInput(event.target.value.replace(/\D+/g, ""))}
+                    placeholder="Member PIN"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void authenticateMemberPin()}
+                    className="w-full rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95"
+                  >
+                    Unlock credit
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  <div className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-700">
+                    <p className="font-medium">{activeMember.displayName}</p>
+                    <p className="text-slate-500 dark:text-slate-300">
+                      Balance: {currencyFormatter.format(activeMember.balance)}
+                    </p>
+                  </div>
+                  <label className="text-sm">
+                    <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500">Credit to use</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={creditToUse}
+                      onChange={(event) => setCreditToUse(event.target.value)}
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => selectCheckoutMember(null)}
+                    className="rounded-xl border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600"
+                  >
+                    Clear member
+                  </button>
+                </div>
+              )}
+
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowMemberCreditModal(false)}
+                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {uiMode === "pos" && view === "cart" && showCheckoutConfirm && (
