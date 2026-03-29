@@ -29,7 +29,8 @@ export type AdminService = {
   createMember: (
     password: string,
     displayName: string,
-    pin: string
+    pin: string,
+    customerType?: "member" | "non_member"
   ) => Promise<AdminMembersOutput>;
   setMemberPin: (password: string, memberId: string, pin: string) => Promise<AdminMembersOutput>;
   setMemberActive: (
@@ -185,9 +186,9 @@ export function createAdminService({
       assertPassword(password);
       return buildMembersSnapshot();
     },
-    async createMember(password, displayName, pin) {
+    async createMember(password, displayName, pin, customerType) {
       assertPassword(password);
-      await memberStore.createMember(displayName, pin);
+      await memberStore.createMember(displayName, pin, customerType);
       return buildMembersSnapshot();
     },
     async setMemberPin(password, memberId, pin) {

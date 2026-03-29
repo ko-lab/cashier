@@ -73,9 +73,12 @@ export const CartItemInputSchema = z.object({
   isMemberPrice: z.boolean()
 });
 
+export const CustomerTypeSchema = z.enum(["member", "non_member"]);
+
 export const MemberSchema = z.object({
   id: z.string().min(1),
   displayName: z.string().min(1),
+  customerType: CustomerTypeSchema.default("member"),
   active: z.boolean(),
   balance: z.number(),
   createdAt: z.string().min(1),
@@ -130,6 +133,7 @@ export const MemberListOutputSchema = z.object({
 export const AdminCreateMemberInputSchema = z.object({
   password: z.string().min(1),
   displayName: z.string().min(1).max(80),
+  customerType: CustomerTypeSchema.default("member"),
   pin: z
     .string()
     .min(4)
@@ -233,7 +237,9 @@ export type ProductCatalog = z.infer<typeof ProductCatalogSchema>;
 export type StockEventType = z.infer<typeof StockEventTypeSchema>;
 export type StockEvent = z.infer<typeof StockEventSchema>;
 export type CartItemInput = z.infer<typeof CartItemInputSchema>;
+export type CustomerType = z.infer<typeof CustomerTypeSchema>;
 export type Member = z.infer<typeof MemberSchema>;
+export type Customer = Member;
 export type CreditLedgerReason = z.infer<typeof CreditLedgerReasonSchema>;
 export type CreditItemBreakdown = z.infer<typeof CreditItemBreakdownSchema>;
 export type CreditLedgerEntry = z.infer<typeof CreditLedgerEntrySchema>;

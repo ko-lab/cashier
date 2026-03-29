@@ -13,7 +13,7 @@ export type MemberStore = {
   listMembers: () => Promise<Member[]>;
   getById: (id: string) => Promise<Member | null>;
   authenticateByPin: (pin: string) => Promise<Member | null>;
-  createMember: (displayName: string, pin: string) => Promise<Member>;
+  createMember: (displayName: string, pin: string, customerType?: "member" | "non_member") => Promise<Member>;
   setMemberPin: (memberId: string, pin: string) => Promise<Member | null>;
   setMemberActive: (memberId: string, active: boolean) => Promise<Member | null>;
   adjustBalance: (input: {
@@ -61,6 +61,7 @@ export function createMemberStore(dataDir: string): MemberStore {
     CREATE TABLE IF NOT EXISTS members (
       id TEXT PRIMARY KEY,
       display_name TEXT NOT NULL,
+      customer_type TEXT NOT NULL DEFAULT 'member',
       pin_hash TEXT NOT NULL,
       active INTEGER NOT NULL DEFAULT 1,
       balance REAL NOT NULL DEFAULT 0,
@@ -86,6 +87,13 @@ export function createMemberStore(dataDir: string): MemberStore {
       ON credit_ledger(member_id, created_at DESC);
   `);
 
+  const membersTableInfo = db
+    .prepare("PRAGMA table_info(members)")
+    .all() as { name: string }[];
+  if (!membersTableInfo.some((column) => column.name === "customer_type")) {
+    db.exec("ALTER TABLE members ADD COLUMN customer_type TEXT NOT NULL DEFAULT 'member'");
+  }
+
   const creditTableInfo = db
     .prepare("PRAGMA table_info(credit_ledger)")
     .all() as { name: string }[];
@@ -97,24 +105,24 @@ export function createMemberStore(dataDir: string): MemberStore {
   }
 
   const insertMember = db.prepare(`
-    INSERT INTO members (id, display_name, pin_hash, active, balance, created_at, updated_at)
-    VALUES (@id, @displayName, @pinHash, @active, @balance, @createdAt, @updatedAt)
+    INSERT INTO members (id, display_name, customer_type, pin_hash, active, balance, created_at, updated_at)
+    VALUES (@id, @displayName, @customerType, @pinHash, @active, @balance, @createdAt, @updatedAt)
   `);
 
   const selectMemberById = db.prepare(`
-    SELECT id, display_name, active, balance, created_at, updated_at
+    SELECT id, display_name, customer_type, active, balance, created_at, updated_at
     FROM members
     WHERE id = ?
   `);
 
   const selectMemberByPin = db.prepare(`
-    SELECT id, display_name, pin_hash, active, balance, created_at, updated_at
+    SELECT id, display_name, customer_type, pin_hash, active, balance, created_at, updated_at
     FROM members
     WHERE active = 1
   `);
 
   const listMembers = db.prepare(`
-    SELECT id, display_name, active, balance, created_at, updated_at
+    SELECT id, display_name, customer_type, active, balance, created_at, updated_at
     FROM members
     ORDER BY display_name COLLATE NOCASE ASC
   `);
@@ -132,7 +140,7 @@ export function createMemberStore(dataDir: string): MemberStore {
   `);
 
   const selectMemberForUpdate = db.prepare(`
-    SELECT id, display_name, active, balance, created_at, updated_at
+    SELECT id, display_name, customer_type, active, balance, created_at, updated_at
     FROM members
     WHERE id = ?
   `);
@@ -166,6 +174,7 @@ export function createMemberStore(dataDir: string): MemberStore {
   const mapMember = (row: {
     id: string;
     display_name: string;
+    customer_type?: string | null;
     active: number;
     balance: number;
     created_at: string;
@@ -173,6 +182,7 @@ export function createMemberStore(dataDir: string): MemberStore {
   }): Member => ({
     id: row.id,
     displayName: row.display_name,
+    customerType: row.customer_type === "non_member" ? "non_member" : "member",
     active: Boolean(row.active),
     balance: Number(row.balance.toFixed(2)),
     createdAt: row.created_at,
@@ -329,12 +339,13 @@ export function createMemberStore(dataDir: string): MemberStore {
 
       return mapMember(row);
     },
-    async createMember(displayName, pin) {
+    async createMember(displayName, pin, customerType = "member") {
       const now = new Date().toISOString();
       const id = randomBytes(8).toString("hex");
       insertMember.run({
         id,
         displayName: displayName.trim(),
+        customerType,
         pinHash: hashPin(pin),
         active: 1,
         balance: 0,

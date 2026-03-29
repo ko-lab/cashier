@@ -494,6 +494,7 @@ export default function App() {
   const [topupAmount, setTopupAmount] = useState("10.00");
   const [adminMembers, setAdminMembers] = useState<Member[]>([]);
   const [adminMemberName, setAdminMemberName] = useState("");
+  const [adminCustomerType, setAdminCustomerType] = useState<"member" | "non_member">("member");
   const [adminMemberPin, setAdminMemberPin] = useState("");
   const [selectedMemberId, setSelectedMemberId] = useState<string>("");
   const [memberTopupAmount, setMemberTopupAmount] = useState("");
@@ -1248,6 +1249,7 @@ export default function App() {
       const response = await client.admin.createMember({
         password: adminSessionPassword,
         displayName: name,
+        customerType: adminCustomerType,
         pin
       });
       setAdminMembers(response.members);
@@ -1255,6 +1257,7 @@ export default function App() {
       const nextSelected = created?.id ?? response.members[response.members.length - 1]?.id;
       setSelectedMemberId(nextSelected ?? "");
       setAdminMemberName("");
+      setAdminCustomerType("member");
       setAdminMemberPin("");
       await loadAdminMembers(adminSessionPassword, nextSelected);
     } catch {
@@ -1979,7 +1982,7 @@ export default function App() {
                 {memberCreditEnabled && adminTab === "members" && (
                   <div className="grid gap-4 lg:grid-cols-2">
                     <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                      <h3 className="text-sm font-semibold">Create member</h3>
+                      <h3 className="text-sm font-semibold">Create customer</h3>
                       <div className="mt-3 grid gap-2">
                         <input
                           type="text"
@@ -1989,6 +1992,16 @@ export default function App() {
                           placeholder="Display name"
                           className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
                         />
+                        <select
+                          value={adminCustomerType}
+                          onChange={(event) =>
+                            setAdminCustomerType(event.target.value as "member" | "non_member")
+                          }
+                          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                        >
+                          <option value="member">Member customer</option>
+                          <option value="non_member">Non-member customer</option>
+                        </select>
                         <input
                           type="text"
                           inputMode="numeric"
@@ -2031,7 +2044,9 @@ export default function App() {
                               <span className="font-medium">{member.displayName}</span>
                               <span>{currencyFormatter.format(member.balance)}</span>
                             </div>
-                            <div className="text-xs text-slate-500">{member.active ? "Active" : "Disabled"}</div>
+                            <div className="text-xs text-slate-500">
+                              {member.customerType === "member" ? "Member" : "Non-member"} · {member.active ? "Active" : "Disabled"}
+                            </div>
                           </button>
                         ))}
                         {adminMembers.length === 0 && (

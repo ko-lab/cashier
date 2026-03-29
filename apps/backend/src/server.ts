@@ -80,7 +80,7 @@ const router = {
       adminService.listMembers(input.password)
     ),
     createMember: api.admin.createMember.handler(async ({ input }) =>
-      adminService.createMember(input.password, input.displayName, input.pin)
+      adminService.createMember(input.password, input.displayName, input.pin, input.customerType)
     ),
     setMemberPin: api.admin.setMemberPin.handler(async ({ input }) =>
       adminService.setMemberPin(input.password, input.memberId, input.pin)
