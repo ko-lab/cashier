@@ -383,7 +383,11 @@ function readMemberCreditFeatureFlag(): boolean {
 function persistMemberCreditFeatureFlag(enabled: boolean): void {
   try {
     const url = new URL(window.location.href);
-    url.searchParams.set("featureMemberCredit", enabled ? "on" : "off");
+    if (enabled) {
+      url.searchParams.set("featureMemberCredit", "on");
+    } else {
+      url.searchParams.delete("featureMemberCredit");
+    }
     window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
   } catch {
     // Ignore history failures
