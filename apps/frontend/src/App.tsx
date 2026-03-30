@@ -483,14 +483,14 @@ function buildStockEventsCsv(
     const delta =
       event.type === "manual_set"
         ? event.quantity - currentQuantity
-        : event.type === "sale_delta"
+        : event.type === "sale_delta" || event.type === "refill_delta"
           ? event.quantity
           : 0;
 
     const nextQuantity =
       event.type === "manual_set"
         ? event.quantity
-        : event.type === "sale_delta"
+        : event.type === "sale_delta" || event.type === "refill_delta"
           ? currentQuantity + event.quantity
           : currentQuantity;
     runningQuantityByProductId.set(event.productId, nextQuantity);
@@ -592,6 +592,7 @@ export default function App() {
   const [adminSessionPassword, setAdminSessionPassword] = useState("");
   const [stockSnapshot, setStockSnapshot] = useState<AdminGetStockOutput | null>(null);
   const [stockDraftByProductId, setStockDraftByProductId] = useState<Record<string, string>>({});
+  const [stockRefillByProductId, setStockRefillByProductId] = useState<Record<string, string>>({});
   const [stockNoteByProductId, setStockNoteByProductId] = useState<Record<string, string>>({});
   const [stockProductQuery, setStockProductQuery] = useState("");
   const [stockCurrentValueFilter, setStockCurrentValueFilter] = useState("");
@@ -674,7 +675,6 @@ export default function App() {
 
   useEffect(() => {
     if (!showPayWithCreditModal) {
-      setPaymentMemberQuery("");
       setSelectedPaymentMemberId("");
       setMemberPinInput("");
       setPayWithCreditModalError(null);
@@ -1321,9 +1321,11 @@ export default function App() {
   const loadStockSnapshot = async (password: string) => {
     const response = await client.admin.getStock({ password });
     setStockSnapshot(response);
-    setStockDraftByProductId(
-      Object.fromEntries(response.items.map((item) => [item.productId, ""]))
+    const emptyByProductId = Object.fromEntries(
+      response.items.map((item) => [item.productId, ""])
     );
+    setStockDraftByProductId(emptyByProductId);
+    setStockRefillByProductId(emptyByProductId);
   };
 
   const loadAdminTransactions = async () => {
@@ -1525,12 +1527,63 @@ export default function App() {
         action: hasQuantityDraft ? "set" : "comment"
       });
       setStockSnapshot(response);
-      setStockDraftByProductId(
-        Object.fromEntries(response.items.map((item) => [item.productId, ""]))
+      const emptyByProductId = Object.fromEntries(
+        response.items.map((item) => [item.productId, ""])
       );
+      setStockDraftByProductId(emptyByProductId);
+      setStockRefillByProductId(emptyByProductId);
       setStockNoteByProductId((current) => ({ ...current, [productId]: "" }));
     } catch {
       setAdminError("Could not update stock.");
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  const addStockRefill = async (productId: string) => {
+    if (!adminSessionPassword) {
+      setAdminError("Admin session expired. Please unlock again.");
+      return;
+    }
+
+    const refillValue = (stockRefillByProductId[productId] ?? "").trim();
+    const note = stockNoteByProductId[productId]?.trim() ?? "";
+
+    if (!/^\d+$/.test(refillValue)) {
+      setAdminError("Refill must be a positive integer.");
+      return;
+    }
+
+    const quantity = Number(refillValue);
+    if (!Number.isSafeInteger(quantity) || quantity <= 0) {
+      setAdminError("Refill must be a positive integer.");
+      return;
+    }
+
+    if (note && /[;,]/.test(note)) {
+      setAdminError("Comment cannot contain commas or semicolons.");
+      return;
+    }
+
+    setAdminError(null);
+    setAdminLoading(true);
+    try {
+      const response = await client.admin.setStock({
+        password: adminSessionPassword,
+        productId,
+        quantity,
+        note: note || undefined,
+        action: "refill"
+      });
+      setStockSnapshot(response);
+      const emptyByProductId = Object.fromEntries(
+        response.items.map((item) => [item.productId, ""])
+      );
+      setStockDraftByProductId(emptyByProductId);
+      setStockRefillByProductId(emptyByProductId);
+      setStockNoteByProductId((current) => ({ ...current, [productId]: "" }));
+    } catch {
+      setAdminError("Could not add stock refill.");
     } finally {
       setAdminLoading(false);
     }
@@ -1566,9 +1619,11 @@ export default function App() {
         note: note || undefined
       });
       setStockSnapshot(response);
-      setStockDraftByProductId(
-        Object.fromEntries(response.items.map((item) => [item.productId, ""]))
+      const emptyByProductId = Object.fromEntries(
+        response.items.map((item) => [item.productId, ""])
       );
+      setStockDraftByProductId(emptyByProductId);
+      setStockRefillByProductId(emptyByProductId);
       setStockNoteByProductId((current) => ({ ...current, [productId]: "" }));
     } catch {
       setAdminError("Could not mark product as counted and correct.");
@@ -1581,6 +1636,7 @@ export default function App() {
     setAdminTransactions(null);
     setStockSnapshot(null);
     setStockDraftByProductId({});
+    setStockRefillByProductId({});
     setStockNoteByProductId({});
     setStockProductQuery("");
     setStockCurrentValueFilter("");
@@ -2382,7 +2438,8 @@ export default function App() {
                           <tr>
                             <th className="px-3 py-2 text-left font-semibold">Product</th>
                             <th className="px-3 py-2 text-right font-semibold">Current</th>
-                            <th className="px-3 py-2 text-right font-semibold">New stock</th>
+                            <th className="px-3 py-2 text-right font-semibold">Set stock</th>
+                            <th className="px-3 py-2 text-right font-semibold">Refill (+)</th>
                             <th className="px-3 py-2 text-left font-semibold">Note</th>
                             <th className="px-3 py-2 text-right font-semibold">Action</th>
                           </tr>
@@ -2397,11 +2454,15 @@ export default function App() {
                               ? Number(trimmedDraft)
                               : NaN;
                             const hasChanged = !isEmptyDraft && parsedDraft !== item.quantity;
+
+                            const refillValue = stockRefillByProductId[item.productId] ?? "";
+                            const trimmedRefill = refillValue.trim();
+                            const isRefillValid = /^\d+$/.test(trimmedRefill) && Number(trimmedRefill) > 0;
+
                             const noteValue = stockNoteByProductId[item.productId] ?? "";
                             const trimmedNote = noteValue.trim();
                             const hasNoteOnly = hasChanged === false && trimmedNote.length > 0;
-                            const canSubmit = hasChanged || hasNoteOnly;
-                            const actionLabel = hasNoteOnly ? "Add comment" : "Update stock";
+                            const canSubmitSet = hasChanged || hasNoteOnly;
 
                             return (
                               <tr key={item.productId}>
@@ -2440,6 +2501,30 @@ export default function App() {
                                     }`}
                                   />
                                 </td>
+                                <td className="px-3 py-2 text-right">
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                    placeholder="0"
+                                    value={refillValue}
+                                    onChange={(event) => {
+                                      const nextValue = event.target.value;
+                                      if (!/^\d*$/.test(nextValue)) {
+                                        return;
+                                      }
+                                      setStockRefillByProductId((current) => ({
+                                        ...current,
+                                        [item.productId]: nextValue
+                                      }));
+                                    }}
+                                    className={`w-24 rounded-lg border px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-900 ${
+                                      isRefillValid
+                                        ? "border-emerald-500 text-slate-900 dark:text-slate-100"
+                                        : "border-slate-300 text-slate-900 dark:text-slate-100"
+                                    }`}
+                                  />
+                                </td>
                                 <td className="px-3 py-2">
                                   <input
                                     type="text"
@@ -2471,10 +2556,18 @@ export default function App() {
                                     <button
                                       type="button"
                                       onClick={() => void updateStock(item.productId)}
-                                      disabled={!canSubmit || !isValidInteger || isBusy}
+                                      disabled={!canSubmitSet || !isValidInteger || isBusy}
                                       className="rounded-lg bg-accent-light px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-accent-dark dark:text-slate-900"
                                     >
-                                      {actionLabel}
+                                      {hasNoteOnly ? "Add comment" : "Set stock"}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => void addStockRefill(item.productId)}
+                                      disabled={!isRefillValid || isBusy}
+                                      className="rounded-lg bg-emerald-500 px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                      Add refill
                                     </button>
                                   </div>
                                 </td>
@@ -2484,7 +2577,7 @@ export default function App() {
                           {filteredStockItems.length === 0 && (
                             <tr>
                               <td
-                                colSpan={5}
+                                colSpan={6}
                                 className="px-3 py-6 text-center text-slate-500 dark:text-slate-300"
                               >
                                 No stock items match current filters.

@@ -20,7 +20,7 @@ export type AdminService = {
       productId: string;
       quantity?: number;
       note?: string;
-      action?: "set" | "comment" | "counted_ok";
+      action?: "set" | "refill" | "comment" | "counted_ok";
     }
   ) => Promise<AdminGetStockOutput>;
   authenticateMemberByPin: (pin: string) => Promise<Member>;
@@ -151,6 +151,19 @@ export function createAdminService({
         await stockEventStore.appendEvent({
           productId: input.productId,
           type: "manual_set",
+          quantity: input.quantity,
+          note: trimmedNote
+        });
+      } else if (action === "refill" && typeof input.quantity === "number") {
+        if (input.quantity <= 0) {
+          throw new ORPCError("BAD_REQUEST", {
+            data: { message: "Refill quantity must be greater than zero." }
+          });
+        }
+
+        await stockEventStore.appendEvent({
+          productId: input.productId,
+          type: "refill_delta",
           quantity: input.quantity,
           note: trimmedNote
         });

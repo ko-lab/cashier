@@ -15,7 +15,7 @@ export const ProductSchema = z.object({
   active: z.boolean()
 });
 
-export const StockEventTypeSchema = z.enum(["manual_set", "sale_delta", "comment", "counted_ok"]);
+export const StockEventTypeSchema = z.enum(["manual_set", "refill_delta", "sale_delta", "comment", "counted_ok"]);
 
 export const StockEventSchema = z.object({
   id: z.string().min(1),
@@ -38,7 +38,7 @@ export const AdminSetStockInputSchema = z
       .max(200)
       .regex(/^[^,;]*$/, "Note cannot contain commas or semicolons")
       .optional(),
-    action: z.enum(["set", "comment", "counted_ok"]).optional()
+    action: z.enum(["set", "refill", "comment", "counted_ok"]).optional()
   })
   .refine(
     (input) =>

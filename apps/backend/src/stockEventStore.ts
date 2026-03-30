@@ -22,10 +22,13 @@ function applyEvent(current: number, event: StockEvent): number {
   if (event.type === "manual_set") {
     return event.quantity;
   }
+  if (event.type === "refill_delta" || event.type === "sale_delta") {
+    return current + event.quantity;
+  }
   if (event.type === "comment" || event.type === "counted_ok") {
     return current;
   }
-  return current + event.quantity;
+  return current;
 }
 
 export function createStockEventStore(dataDir: string): StockEventStore {
