@@ -54,6 +54,103 @@ const currencyFormatter =
         }
       };
 
+
+type CustomerAutocompleteProps = {
+  customers: Member[];
+  selectedCustomerId: string;
+  onSelectCustomer: (member: Member | null) => void;
+  placeholder: string;
+  noResultsText?: string;
+  disabled?: boolean;
+  className?: string;
+};
+
+function CustomerAutocomplete({
+  customers,
+  selectedCustomerId,
+  onSelectCustomer,
+  placeholder,
+  noResultsText = "No customers found.",
+  disabled = false,
+  className
+}: CustomerAutocompleteProps): JSX.Element {
+  const selectedCustomer = useMemo(
+    () => customers.find((member) => member.id === selectedCustomerId) ?? null,
+    [customers, selectedCustomerId]
+  );
+  const [query, setQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    setQuery(selectedCustomer?.displayName ?? "");
+  }, [selectedCustomer]);
+
+  const trimmedQuery = query.trim().toLowerCase();
+  const filteredCustomers = useMemo(() => {
+    if (!trimmedQuery) {
+      return [];
+    }
+
+    return customers
+      .filter((member) => member.displayName.toLowerCase().includes(trimmedQuery))
+      .slice(0, 10);
+  }, [customers, trimmedQuery]);
+
+  return (
+    <div className={className ?? "relative"}>
+      <input
+        type="search"
+        value={query}
+        onChange={(event) => {
+          if (selectedCustomerId) {
+            onSelectCustomer(null);
+          }
+          setQuery(event.target.value);
+          setIsOpen(true);
+        }}
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => {
+          window.setTimeout(() => {
+            setIsOpen(false);
+            if (!selectedCustomerId) {
+              return;
+            }
+            const stillSelected = customers.find((member) => member.id === selectedCustomerId);
+            setQuery(stillSelected?.displayName ?? "");
+          }, 120);
+        }}
+        disabled={disabled}
+        placeholder={placeholder}
+        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900"
+      />
+
+      {isOpen && trimmedQuery.length > 0 && (
+        <div className="absolute z-20 mt-1 max-h-52 w-full overflow-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          {filteredCustomers.map((member) => (
+            <button
+              key={member.id}
+              type="button"
+              onClick={() => {
+                onSelectCustomer(member);
+                setQuery(member.displayName);
+                setIsOpen(false);
+              }}
+              className={`w-full rounded-lg px-3 py-2 text-left text-sm transition hover:bg-sky-50 dark:hover:bg-sky-900/20 ${
+                selectedCustomerId === member.id ? "bg-sky-50 dark:bg-sky-900/20" : ""
+              }`}
+            >
+              {member.displayName}
+            </button>
+          ))}
+          {filteredCustomers.length === 0 && (
+            <p className="px-3 py-2 text-sm text-slate-500">{noResultsText}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function scrollToTop(): void {
   if (typeof window !== "undefined") {
     window.scrollTo(0, 0);
@@ -489,14 +586,12 @@ export default function App() {
   const [memberPinInput, setMemberPinInput] = useState("");
   const [payWithCreditModalError, setPayWithCreditModalError] = useState<string | null>(null);
   const [showPayWithCreditModal, setShowPayWithCreditModal] = useState(false);
-  const [paymentMemberQuery, setPaymentMemberQuery] = useState("");
   const [selectedPaymentMemberId, setSelectedPaymentMemberId] = useState("");
   const [publicCustomers, setPublicCustomers] = useState<Member[]>([]);
   const [memberPricingCustomerId, setMemberPricingCustomerId] = useState("");
   const [memberPricingAuthMode, setMemberPricingAuthMode] = useState<
     "none" | "pin" | "username_only"
   >("none");
-  const [topupMemberQuery, setTopupMemberQuery] = useState("");
   const [selectedTopupMemberId, setSelectedTopupMemberId] = useState("");
   const [topupAmount, setTopupAmount] = useState("10.00");
   const [adminCustomers, setAdminCustomers] = useState<Member[]>([]);
@@ -967,29 +1062,10 @@ export default function App() {
     () => adminCustomers.find((member) => member.id === selectedMemberId) ?? null,
     [adminCustomers, selectedMemberId]
   );
-  const filteredPublicCustomers = useMemo(() => {
-    const q = topupMemberQuery.trim().toLowerCase();
-    if (!q) {
-      return publicCustomers;
-    }
-
-    return publicCustomers.filter((member) =>
-      member.displayName.toLowerCase().includes(q)
-    );
-  }, [publicCustomers, topupMemberQuery]);
   const selectedTopupMember = useMemo(
     () => publicCustomers.find((member) => member.id === selectedTopupMemberId) ?? null,
     [publicCustomers, selectedTopupMemberId]
   );
-  const filteredPaymentCustomers = useMemo(() => {
-    const q = paymentMemberQuery.trim().toLowerCase();
-    if (!q) {
-      return publicCustomers;
-    }
-    return publicCustomers.filter((member) =>
-      member.displayName.toLowerCase().includes(q)
-    );
-  }, [paymentMemberQuery, publicCustomers]);
   const selectedPaymentMember = useMemo(
     () => publicCustomers.find((member) => member.id === selectedPaymentMemberId) ?? null,
     [publicCustomers, selectedPaymentMemberId]
@@ -2076,34 +2152,34 @@ export default function App() {
 
                     <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                       <h3 className="text-sm font-semibold">Customers</h3>
-                      <div className="mt-3 max-h-64 overflow-auto space-y-2">
-                        {adminCustomers.map((member) => (
-                          <button
-                            type="button"
-                            key={member.id}
-                            onClick={() => {
-                              setSelectedMemberId(member.id);
-                              void loadAdminCustomers(adminSessionPassword, member.id);
-                            }}
-                            className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition ${
-                              selectedMemberId === member.id
-                                ? "border-sky-500 bg-sky-50/60 dark:bg-sky-900/20"
-                                : "border-slate-300 hover:border-slate-500 dark:border-slate-600"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium">{member.displayName}</span>
-                              <span>{currencyFormatter.format(member.balance)}</span>
-                            </div>
-                            <div className="text-xs text-slate-500">
-                              {member.customerType === "member" ? "Member" : "Non-member"} · {member.active ? "Active" : "Disabled"}
-                            </div>
-                          </button>
-                        ))}
-                        {adminCustomers.length === 0 && (
-                          <p className="text-sm text-slate-500">No customers yet.</p>
-                        )}
-                      </div>
+                      <CustomerAutocomplete
+                        className="mt-3"
+                        customers={adminCustomers}
+                        selectedCustomerId={selectedMemberId}
+                        onSelectCustomer={(member) => {
+                          const nextMemberId = member?.id ?? "";
+                          setSelectedMemberId(nextMemberId);
+                          if (nextMemberId) {
+                            void loadAdminCustomers(adminSessionPassword, nextMemberId);
+                          }
+                        }}
+                        placeholder="Search customer"
+                        noResultsText="No customers found."
+                      />
+                      {selectedAdminMember && (
+                        <div className="mt-3 rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">{selectedAdminMember.displayName}</span>
+                            <span>{currencyFormatter.format(selectedAdminMember.balance)}</span>
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {selectedAdminMember.customerType === "member" ? "Member" : "Non-member"} · {selectedAdminMember.active ? "Active" : "Disabled"}
+                          </div>
+                        </div>
+                      )}
+                      {adminCustomers.length === 0 && (
+                        <p className="mt-3 text-sm text-slate-500">No customers yet.</p>
+                      )}
                     </div>
 
                     <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700 lg:col-span-2">
@@ -2536,38 +2612,20 @@ export default function App() {
                     Customer list is public. Enter PIN to unlock details and top-up amount.
                   </p>
 
-                  <input
-                    type="search"
-                    value={topupMemberQuery}
-                    onChange={(event) => setTopupMemberQuery(event.target.value)}
+                  <CustomerAutocomplete
+                    className="mt-3"
+                    customers={publicCustomers}
+                    selectedCustomerId={selectedTopupMemberId}
+                    onSelectCustomer={(member) => {
+                      const nextMemberId = member?.id ?? "";
+                      setSelectedTopupMemberId(nextMemberId);
+                      if (!member || activeMember?.id !== member.id) {
+                        setActiveMember(null);
+                      }
+                    }}
                     placeholder="Search customer"
-                    className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
+                    noResultsText="No customers found."
                   />
-
-                  <div className="mt-2 max-h-36 overflow-auto space-y-1">
-                    {filteredPublicCustomers.map((member) => (
-                      <button
-                        key={member.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedTopupMemberId(member.id);
-                          if (activeMember?.id !== member.id) {
-                            setActiveMember(null);
-                          }
-                        }}
-                        className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
-                          selectedTopupMemberId === member.id
-                            ? "border-sky-500 bg-sky-50/60 dark:bg-sky-900/20"
-                            : "border-slate-300 hover:border-slate-500 dark:border-slate-600"
-                        }`}
-                      >
-                        {member.displayName}
-                      </button>
-                    ))}
-                    {filteredPublicCustomers.length === 0 && (
-                      <p className="text-sm text-slate-500">No members found.</p>
-                    )}
-                  </div>
 
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     {selectedTopupMember && (
@@ -2637,22 +2695,17 @@ export default function App() {
                     Member-priced items require customer username + PIN
                   </p>
                   <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                    <select
-                      value={memberPricingCustomerId}
-                      onChange={(event) => {
-                        setMemberPricingCustomerId(event.target.value);
+                    <CustomerAutocomplete
+                      customers={publicCustomers}
+                      selectedCustomerId={memberPricingCustomerId}
+                      onSelectCustomer={(member) => {
+                        setMemberPricingCustomerId(member?.id ?? "");
                         setMemberPricingAuthMode("none");
                         setActiveMember(null);
                       }}
-                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
-                    >
-                      <option value="">Select customer username</option>
-                      {publicCustomers.map((customer) => (
-                        <option key={customer.id} value={customer.id}>
-                          {customer.displayName}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Search customer username"
+                      noResultsText="No customers found."
+                    />
                     <input
                       type="password"
                       inputMode="numeric"
@@ -2816,36 +2869,21 @@ export default function App() {
               onClick={(event) => event.stopPropagation()}
             >
               <h3 className="text-lg font-semibold">Pay with customer credit</h3>
-              <input
-                type="search"
-                value={paymentMemberQuery}
-                onChange={(event) => setPaymentMemberQuery(event.target.value)}
+              <CustomerAutocomplete
+                className="mt-3"
+                customers={publicCustomers}
+                selectedCustomerId={selectedPaymentMemberId}
+                onSelectCustomer={(member) => {
+                  const nextMemberId = member?.id ?? "";
+                  setSelectedPaymentMemberId(nextMemberId);
+                  setPayWithCreditModalError(null);
+                  if (!member || activeMember?.id !== member.id) {
+                    setActiveMember(null);
+                  }
+                }}
                 placeholder="Search customer"
-                className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
+                noResultsText="No customers found."
               />
-
-              <div className="mt-2 max-h-36 overflow-auto space-y-1">
-                {filteredPaymentCustomers.map((member) => (
-                  <button
-                    key={member.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedPaymentMemberId(member.id);
-                      setPayWithCreditModalError(null);
-                      if (activeMember?.id !== member.id) {
-                        setActiveMember(null);
-                      }
-                    }}
-                    className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
-                      selectedPaymentMemberId === member.id
-                        ? "border-sky-500 bg-sky-50/60 dark:bg-sky-900/20"
-                        : "border-slate-300 hover:border-slate-500 dark:border-slate-600"
-                    }`}
-                  >
-                    {member.displayName}
-                  </button>
-                ))}
-              </div>
 
               {payWithCreditModalError && (
                 <div className="mt-3 rounded-xl bg-rose-100 px-3 py-2 text-sm text-rose-700 dark:bg-rose-500/20 dark:text-rose-200">
