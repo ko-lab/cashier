@@ -475,20 +475,39 @@ function buildStockEventsCsv(
   events: AdminGetStockOutput["events"],
   productNameById: Map<string, string>
 ): string {
-  const header = ["id", "createdAt", "productId", "productName", "type", "quantity", "note"];
-  const lines = events.map((event) =>
-    [
+  const header = ["id", "createdAt", "productId", "productName", "type", "quantity", "delta", "note"];
+  const runningQuantityByProductId = new Map<string, number>();
+
+  const lines = events.map((event) => {
+    const currentQuantity = runningQuantityByProductId.get(event.productId) ?? 0;
+    const delta =
+      event.type === "manual_set"
+        ? event.quantity - currentQuantity
+        : event.type === "sale_delta"
+          ? event.quantity
+          : 0;
+
+    const nextQuantity =
+      event.type === "manual_set"
+        ? event.quantity
+        : event.type === "sale_delta"
+          ? currentQuantity + event.quantity
+          : currentQuantity;
+    runningQuantityByProductId.set(event.productId, nextQuantity);
+
+    return [
       event.id,
       event.createdAt,
       event.productId,
       productNameById.get(event.productId) ?? "",
       event.type,
       event.quantity,
+      delta,
       event.note ?? ""
     ]
       .map(csvEscape)
-      .join(",")
-  );
+      .join(",");
+  });
 
   return [header.join(","), ...lines].join("\n");
 }
