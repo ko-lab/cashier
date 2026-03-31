@@ -1,6 +1,6 @@
 # Spacier POS
 
-Minimal fridge POS with a React + Vite frontend and an oRPC backend. Transactions are stored in a local SQLite file (no external database required).
+Minimal fridge POS with a React + Vite frontend and a Bun + oRPC backend. Transactions are stored in a local SQLite file (no external database required).
 
 ## Local development
 
@@ -40,8 +40,8 @@ This repo includes production-oriented Dockerfiles with faster rebuild character
   - single container serving built frontend via `Bun.serve` (`apps/frontend/serve.ts`)
   - minimal moving parts (no extra web server in the container)
 - `infra/backend.Dockerfile`
-  - Node 24 runtime image (for `better-sqlite3` compatibility)
-  - installs backend deps directly in `apps/backend`
+  - single-stage runtime build (keeps pnpm workspace resolution simple)
+  - cached dependency install
   - `/healthz` endpoint for container health checks
 
 For local compose:
