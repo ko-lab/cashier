@@ -2,7 +2,7 @@
 set -eu
 
 echo "[pre-push] Running test suite..."
-bun run test
+pnpm test
 
 echo "[pre-push] Running workspace build..."
-bun run build
+pnpm build
