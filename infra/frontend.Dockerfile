@@ -1,16 +1,13 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:24-bookworm-slim
+FROM oven/bun:1.2 AS build
 WORKDIR /app
-RUN corepack enable
 
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY package.json ./
 COPY shared/package.json shared/tsconfig.json shared/
 COPY apps/frontend/package.json apps/frontend/tsconfig.json apps/frontend/
 
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-  pnpm config set store-dir /pnpm/store && \
-  pnpm install --frozen-lockfile --filter @spacier/frontend...
+RUN bun install
 
 COPY shared ./shared
 COPY apps/frontend ./apps/frontend
@@ -44,9 +41,16 @@ RUN RESOLVED_APP_VERSION="$VITE_APP_VERSION" && \
   fi && \
   if [ -z "$RESOLVED_APP_VERSION" ]; then RESOLVED_APP_VERSION="dev"; fi && \
   export VITE_APP_VERSION="$RESOLVED_APP_VERSION" && \
-  pnpm --filter @spacier/frontend build && \
+  bun run --cwd apps/frontend build && \
   printf '{"version":"%s"}\n' "$RESOLVED_APP_VERSION" > apps/frontend/dist/version.json
 
+FROM oven/bun:1.2 AS runtime
+WORKDIR /app
+
+COPY --from=build /app/apps/frontend/dist ./apps/frontend/dist
+COPY --from=build /app/apps/frontend/serve.ts ./apps/frontend/serve.ts
+
+ENV PORT=4173
 EXPOSE 4173
 
-CMD ["pnpm", "--filter", "@spacier/frontend", "start", "--host", "0.0.0.0", "--port", "4173"]
+CMD ["bun", "run", "--cwd", "apps/frontend", "start"]

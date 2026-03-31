@@ -3,10 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "start": "vite preview",
-    "test": "tsc && vitest run"
+    "dev": "bunx vite",
+    "build": "bunx vite build",
+    "start": "bun run serve.ts",
+    "preview": "bunx vite preview",
+    "test": "bunx tsc && bunx vitest run"
   },
   "dependencies": {
     "@orpc/client": "^1.13.2",

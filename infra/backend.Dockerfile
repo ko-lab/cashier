@@ -1,18 +1,15 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:24-bookworm-slim
+FROM oven/bun:1.2
 
 WORKDIR /app
 ENV NODE_ENV=production
-RUN corepack enable
 
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY package.json ./
 COPY shared/package.json shared/tsconfig.json shared/
 COPY apps/backend/package.json apps/backend/tsconfig.json apps/backend/
 
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-  pnpm config set store-dir /pnpm/store && \
-  pnpm install --frozen-lockfile --prod
+RUN bun install --production
 
 COPY shared ./shared
 COPY apps/backend ./apps/backend
@@ -23,4 +20,4 @@ ENV CATALOG_DIR=/app/apps/backend/catalog
 
 EXPOSE 4000
 
-CMD ["pnpm", "--filter", "@spacier/backend", "start"]
+CMD ["bun", "run", "--cwd", "apps/backend", "start"]
