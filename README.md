@@ -1,13 +1,13 @@
 # Spacier POS
 
-Minimal fridge POS with a React + Vite frontend and a Bun + oRPC backend. Transactions are stored in a local SQLite file (no external database required).
+Minimal fridge POS with a React + Vite frontend and a Node 24 + oRPC backend. Transactions are stored in a local SQLite file (no external database required).
 
 ## Local development
 
 1. Install dependencies
 
 ```bash
-bun install
+pnpm install
 ```
 
 2. Configure frontend environment
@@ -21,7 +21,7 @@ Update the values in `apps/frontend/.env.local` if needed.
 3. Start frontend + backend
 
 ```bash
-bun run dev
+pnpm dev:all
 ```
 
 To enable the simple admin panel export endpoint, set a backend password first:
@@ -37,7 +37,7 @@ Frontend runs on Vite, backend runs on oRPC. Runtime data is stored under `apps/
 This repo includes production-oriented Dockerfiles with faster rebuild characteristics:
 
 - `infra/frontend.Dockerfile`
-  - single container serving built frontend via `Bun.serve` (`apps/frontend/serve.ts`)
+  - single container serving built frontend via `vite preview`
   - minimal moving parts (no extra web server in the container)
 - `infra/backend.Dockerfile`
   - single-stage runtime build (keeps pnpm workspace resolution simple)
@@ -154,12 +154,12 @@ The job retries with polling and fails on timeout, so a green workflow means the
 ## Testing
 
 ```bash
-bun run test
+pnpm test:all
 ```
 
 Or run just one side:
 
 ```bash
-bun run test:fe
-bun run test:be
+pnpm test:fe
+pnpm test:be
 ```
