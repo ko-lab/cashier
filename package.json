@@ -1,18 +1,24 @@
 {
   "name": "spacier",
   "private": true,
-  "packageManager": "pnpm@9.12.0",
+  "packageManager": "bun@1.2.8",
+  "workspaces": [
+    "apps/*",
+    "shared"
+  ],
   "engines": {
-    "node": ">=24"
+    "bun": ">=1.2.0"
   },
   "scripts": {
-    "start": "pnpm -r start",
-    "dev": "pnpm -r dev --host",
-    "build": "pnpm -r build",
+    "start": "bun run --cwd apps/backend start",
+    "dev": "bun run dev:backend & bun run dev:frontend",
+    "dev:backend": "bun run --cwd apps/backend dev",
+    "dev:frontend": "bun run --cwd apps/frontend dev --host",
+    "build": "bun run --cwd apps/backend build && bun run --cwd apps/frontend build",
     "docker:up": "docker compose -f \"$PWD/infra/docker-compose.yml\" --env-file \"$PWD/infra/.env\" up --build",
-    "test": "pnpm -r test",
-    "test:be": "pnpm --filter @spacier/backend test",
-    "test:fe": "pnpm --filter @spacier/frontend test",
+    "test": "bun run --cwd apps/backend test && bun run --cwd apps/frontend test",
+    "test:be": "bun run --cwd apps/backend test",
+    "test:fe": "bun run --cwd apps/frontend test",
     "hooks:install": "git config core.hooksPath .githooks"
   }
 }
