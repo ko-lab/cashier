@@ -1,15 +1,20 @@
 # syntax=docker/dockerfile:1.7
 
-FROM oven/bun:1.2
+FROM node:24-bookworm-slim
 
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY package.json ./
-COPY shared/package.json shared/tsconfig.json shared/
-COPY apps/backend/package.json apps/backend/tsconfig.json apps/backend/
+# Build tools are required if better-sqlite3 needs to compile from source.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  python3 \
+  make \
+  g++ \
+  && rm -rf /var/lib/apt/lists/*
 
-RUN bun install --production
+# Install backend deps directly in backend package context (avoids workspace package-manager lockstep issues).
+COPY apps/backend/package.json ./apps/backend/package.json
+RUN cd apps/backend && npm install --omit=dev
 
 COPY shared ./shared
 COPY apps/backend ./apps/backend
@@ -20,4 +25,4 @@ ENV CATALOG_DIR=/app/apps/backend/catalog
 
 EXPOSE 4000
 
-CMD ["bun", "run", "--cwd", "apps/backend", "start"]
+CMD ["node", "apps/backend/src/server.ts"]
