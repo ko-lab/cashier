@@ -480,9 +480,12 @@ function buildStockEventsCsv(
   productNameById: Map<string, string>
 ): string {
   const header = ["id", "createdAt", "productId", "productName", "type", "quantity", "delta", "note"];
-  const runningQuantityByProductId = new Map<string, number>();
 
-  const lines = events.map((event) => {
+  const chronologicalEvents = [...events].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const runningQuantityByProductId = new Map<string, number>();
+  const deltaByEventId = new Map<string, number>();
+
+  for (const event of chronologicalEvents) {
     const currentQuantity = runningQuantityByProductId.get(event.productId) ?? 0;
     const delta =
       event.type === "manual_set"
@@ -497,21 +500,25 @@ function buildStockEventsCsv(
         : event.type === "sale_delta" || event.type === "refill_delta"
           ? currentQuantity + event.quantity
           : currentQuantity;
-    runningQuantityByProductId.set(event.productId, nextQuantity);
 
-    return [
+    deltaByEventId.set(event.id, delta);
+    runningQuantityByProductId.set(event.productId, nextQuantity);
+  }
+
+  const lines = events.map((event) =>
+    [
       event.id,
       event.createdAt,
       event.productId,
       productNameById.get(event.productId) ?? "",
       event.type,
       event.quantity,
-      delta,
+      deltaByEventId.get(event.id) ?? 0,
       event.note ?? ""
     ]
       .map(csvEscape)
-      .join(",");
-  });
+      .join(",")
+  );
 
   return [header.join(","), ...lines].join("\n");
 }
