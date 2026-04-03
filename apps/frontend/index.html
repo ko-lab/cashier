@@ -16,6 +16,19 @@
           };
         }
       })();
+      window.goFullscreen = function goFullscreen(){
+          const elem = document.documentElement;
+          if (elem.requestFullscreen) {
+              elem.requestFullscreen();
+          } else if (elem.webkitRequestFullscreen) { /* Safari */
+              elem.webkitRequestFullscreen();
+          } else if (elem.msRequestFullscreen) { /* IE11 */
+              elem.msRequestFullscreen();
+          }
+          document.getElementById('fullscreenbutton').remove()
+      }
+      
+
     </script>
   </head>
   <body class="bg-base-light text-slate-900 dark:bg-base-dark dark:text-slate-100">
@@ -65,8 +78,10 @@
         } else {
           setTimeout(flushLegacyQueue, 0);
         }
+
       })();
     </script>
+    <button id="fullscreenbutton" onclick="window.goFullscreen()">fullscreen</button>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
