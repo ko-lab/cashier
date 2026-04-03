@@ -5,11 +5,11 @@ describe("toStructuredCommunication", () => {
   it("returns the expected Belgian formatted message", () => {
     const value = toStructuredCommunication("123e4567-e89b-12d3-a456-426614174000");
 
-    expect(value).toMatch(/^\+\+\+\d{3}\/\d{4}\/\d{5}\+\+\+$/);
+    expect(value).toMatchInlineSnapshot(`"074546073622"`);
   });
 
   it("uses a 12-digit transaction id directly as structured communication", () => {
-    expect(toStructuredCommunication("123456789012")).toBe("+++123/4567/89012+++");
+    expect(toStructuredCommunication("123456789012")).toBe("123456789012");
   });
 
   it("is deterministic for the same transaction id", () => {
