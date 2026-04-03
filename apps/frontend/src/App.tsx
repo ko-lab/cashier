@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import QRCode from "qrcode-svg";
+import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { client } from "./api/client";
 import type {
   AdminGetStockOutput,
@@ -10,19 +9,11 @@ import type {
   Transaction,
   TransactionStatus
 } from "@shared/models";
-import {
-  buildCartSummary,
-  sortProducts,
-  toTransactionItems,
-  updateCartQuantity
-} from "./domain/cart";
-import {
-  filterProductsByQuery,
-  formatPriceMode,
-  getSelectedItems
-} from "./domain/productSection";
+import { buildCartSummary, sortProducts, toTransactionItems, updateCartQuantity } from "./domain/cart";
+import { filterProductsByQuery, formatPriceMode, getSelectedItems } from "./domain/productSection";
 import { getUnitPrice } from "./domain/pricing";
 import { toStructuredCommunication } from "./domain/structuredCommunication";
+import { createPaymentQR, createQRImageSrc } from "./qrcode.ts";
 
 type View = "cart" | "checkout" | "topup";
 type UiMode = "pos" | "admin";
@@ -37,7 +28,6 @@ type VersionPayload = {
   version?: string;
 };
 
-const QR_SIZE = 224;
 const VERSION_CHECK_INTERVAL_MS = 60_000;
 const APP_VERSION =
   (import.meta.env.VITE_APP_VERSION as string | undefined) ?? "dev";
@@ -45,14 +35,14 @@ const APP_VERSION =
 const currencyFormatter =
   typeof Intl !== "undefined" && typeof Intl.NumberFormat === "function"
     ? new Intl.NumberFormat("en-GB", {
-        style: "currency",
-        currency: "EUR"
-      })
+      style: "currency",
+      currency: "EUR"
+    })
     : {
-        format(value: number) {
-          return `EUR ${value.toFixed(2)}`;
-        }
-      };
+      format(value: number) {
+        return `EUR ${ value.toFixed(2) }`;
+      }
+    };
 
 
 type CustomerAutocompleteProps = {
@@ -66,14 +56,14 @@ type CustomerAutocompleteProps = {
 };
 
 function CustomerAutocomplete({
-  customers,
-  selectedCustomerId,
-  onSelectCustomer,
-  placeholder,
-  noResultsText = "No customers found.",
-  disabled = false,
-  className
-}: CustomerAutocompleteProps): JSX.Element {
+                                customers,
+                                selectedCustomerId,
+                                onSelectCustomer,
+                                placeholder,
+                                noResultsText = "No customers found.",
+                                disabled = false,
+                                className
+                              }: CustomerAutocompleteProps): JSX.Element {
   const selectedCustomer = useMemo(
     () => customers.find((member) => member.id === selectedCustomerId) ?? null,
     [customers, selectedCustomerId]
@@ -97,19 +87,19 @@ function CustomerAutocomplete({
   }, [customers, trimmedQuery]);
 
   return (
-    <div className={className ?? "relative"}>
+    <div className={ className ?? "relative" }>
       <input
         type="search"
-        value={query}
-        onChange={(event) => {
+        value={ query }
+        onChange={ (event) => {
           if (selectedCustomerId) {
             onSelectCustomer(null);
           }
           setQuery(event.target.value);
           setIsOpen(true);
-        }}
-        onFocus={() => setIsOpen(true)}
-        onBlur={() => {
+        } }
+        onFocus={ () => setIsOpen(true) }
+        onBlur={ () => {
           window.setTimeout(() => {
             setIsOpen(false);
             if (!selectedCustomerId) {
@@ -118,35 +108,36 @@ function CustomerAutocomplete({
             const stillSelected = customers.find((member) => member.id === selectedCustomerId);
             setQuery(stillSelected?.displayName ?? "");
           }, 120);
-        }}
-        disabled={disabled}
-        placeholder={placeholder}
+        } }
+        disabled={ disabled }
+        placeholder={ placeholder }
         className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900"
       />
 
-      {isOpen && trimmedQuery.length > 0 && (
-        <div className="absolute z-20 mt-1 max-h-52 w-full overflow-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-          {filteredCustomers.map((member) => (
+      { isOpen && trimmedQuery.length > 0 && (
+        <div
+          className="absolute z-20 mt-1 max-h-52 w-full overflow-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          { filteredCustomers.map((member) => (
             <button
-              key={member.id}
+              key={ member.id }
               type="button"
-              onClick={() => {
+              onClick={ () => {
                 onSelectCustomer(member);
                 setQuery(member.displayName);
                 setIsOpen(false);
-              }}
-              className={`w-full rounded-lg px-3 py-2 text-left text-sm transition hover:bg-sky-50 dark:hover:bg-sky-900/20 ${
+              } }
+              className={ `w-full rounded-lg px-3 py-2 text-left text-sm transition hover:bg-sky-50 dark:hover:bg-sky-900/20 ${
                 selectedCustomerId === member.id ? "bg-sky-50 dark:bg-sky-900/20" : ""
-              }`}
+              }` }
             >
-              {member.displayName}
+              { member.displayName }
             </button>
-          ))}
-          {filteredCustomers.length === 0 && (
-            <p className="px-3 py-2 text-sm text-slate-500">{noResultsText}</p>
-          )}
+          )) }
+          { filteredCustomers.length === 0 && (
+            <p className="px-3 py-2 text-sm text-slate-500">{ noResultsText }</p>
+          ) }
         </div>
-      )}
+      ) }
     </div>
   );
 }
@@ -388,7 +379,7 @@ function persistMemberCreditFeatureFlag(enabled: boolean): void {
     } else {
       url.searchParams.delete("featureMemberCredit");
     }
-    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    window.history.replaceState({}, "", `${ url.pathname }${ url.search }${ url.hash }`);
   } catch {
     // Ignore history failures
   }
@@ -397,7 +388,7 @@ function persistMemberCreditFeatureFlag(enabled: boolean): void {
 function csvEscape(value: string | number | boolean): string {
   const text = String(value);
   if (text.includes(",") || text.includes("\"") || text.includes("\n")) {
-    return `"${text.replace(/"/g, "\"\"")}"`;
+    return `"${ text.replace(/"/g, "\"\"") }"`;
   }
   return text;
 }
@@ -569,7 +560,7 @@ function readAdminUnlockUsername(): string {
     return "cashier_admin";
   }
 
-  return `${window.location.origin}_admin`;
+  return `${ window.location.origin }_admin`;
 }
 
 export default function App() {
@@ -723,7 +714,7 @@ export default function App() {
     }
 
     const query = params.toString();
-    const nextUrl = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
+    const nextUrl = `${ window.location.pathname }${ query ? `?${ query }` : "" }${ window.location.hash }`;
     window.history.replaceState(null, "", nextUrl);
   }, [adminTab, uiMode, view]);
 
@@ -745,7 +736,7 @@ export default function App() {
             error instanceof Error ? error.message : String(error);
           setStatus({
             tone: "error",
-            text: `Failed to load products: ${message}`
+            text: `Failed to load products: ${ message }`
           });
         }
       })
@@ -788,36 +779,10 @@ export default function App() {
       return;
     }
 
-    const payMessage = structuredCommunication;
     const amount = transaction.total.toFixed(2);
-    const payload = [
-      "BCD",
-      "002",
-      "1",
-      "SCT",
-      "",
-      `${paymentIbanName}`,
-      `${paymentIbanNumber}`,
-      `EUR${amount}`,
-      "",
-      "",
-      payMessage.substring(0, 100),
-      ""
-    ].join("\n");
-
-    const qr = new QRCode({
-      content: payload,
-      padding: 4,
-      width: QR_SIZE,
-      height: QR_SIZE,
-      color: "#000000",
-      background: "#ffffff",
-      ecl: "H"
-    });
-
-    const qrSvg = qr.svg();
+    const qr = createPaymentQR(paymentIbanName, paymentIbanNumber, amount, structuredCommunication);
     setQrImageSrc(
-      `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrSvg)}`
+      createQRImageSrc(qr)
     );
   }, [paymentIbanName, paymentIbanNumber, structuredCommunication, transaction]);
 
@@ -925,7 +890,7 @@ export default function App() {
         setMemberPricingAuthMode("pin");
       }
       setMemberPinInput("");
-      setStatus({ tone: "info", text: `Customer loaded: ${response.member.displayName}` });
+      setStatus({ tone: "info", text: `Customer loaded: ${ response.member.displayName }` });
     } catch {
       if (showPayWithCreditModal) {
         setPayWithCreditModalError("Invalid customer PIN.");
@@ -1013,7 +978,7 @@ export default function App() {
     if (activeMember.balance < transaction.total) {
       const shortfall = transaction.total - activeMember.balance;
       setPayWithCreditModalError(
-        `Not enough credit. Missing ${currencyFormatter.format(shortfall)}.`
+        `Not enough credit. Missing ${ currencyFormatter.format(shortfall) }.`
       );
       return;
     }
@@ -1144,7 +1109,7 @@ export default function App() {
       if (adminItemQuery.trim()) {
         const query = adminItemQuery.trim().toLowerCase();
         const hasMatch = transaction.items.some((item) =>
-          `${item.name} ${item.productId}`.toLowerCase().includes(query)
+          `${ item.name } ${ item.productId }`.toLowerCase().includes(query)
         );
         if (!hasMatch) {
           return false;
@@ -1157,14 +1122,14 @@ export default function App() {
       }
 
       if (adminFromDate) {
-        const fromDate = new Date(`${adminFromDate}T00:00:00.000Z`);
+        const fromDate = new Date(`${ adminFromDate }T00:00:00.000Z`);
         if (date < fromDate) {
           return false;
         }
       }
 
       if (adminToDate) {
-        const toDate = new Date(`${adminToDate}T23:59:59.999Z`);
+        const toDate = new Date(`${ adminToDate }T23:59:59.999Z`);
         if (date > toDate) {
           return false;
         }
@@ -1225,7 +1190,7 @@ export default function App() {
 
     return stockSnapshot.items.filter((item) => {
       if (productQuery) {
-        const haystack = `${item.productName} ${item.productId}`.toLowerCase();
+        const haystack = `${ item.productName } ${ item.productId }`.toLowerCase();
         if (!haystack.includes(productQuery)) {
           return false;
         }
@@ -1260,7 +1225,7 @@ export default function App() {
 
     const checkVersion = async () => {
       try {
-        const response = await fetch(`/version.json?t=${Date.now()}`, {
+        const response = await fetch(`/version.json?t=${ Date.now() }`, {
           cache: "no-store"
         });
         if (!response.ok) {
@@ -1673,7 +1638,7 @@ export default function App() {
     const link = document.createElement("a");
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     link.href = url;
-    link.download = `transactions-${timestamp}.csv`;
+    link.download = `transactions-${ timestamp }.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1694,7 +1659,7 @@ export default function App() {
     const link = document.createElement("a");
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     link.href = url;
-    link.download = `stock-events-${timestamp}.csv`;
+    link.download = `stock-events-${ timestamp }.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1708,7 +1673,7 @@ export default function App() {
     const link = document.createElement("a");
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     link.href = url;
-    link.download = `stock-counts-${timestamp}.csv`;
+    link.download = `stock-counts-${ timestamp }.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1747,53 +1712,55 @@ export default function App() {
   return (
     <div className="min-h-screen px-3 py-6 sm:px-6">
       <div className="mx-auto flex max-w-4xl flex-col gap-4">
-        <header className="sticky top-0 z-30 rounded-2xl border border-black/10 bg-white/80 p-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/80">
+        <header
+          className="sticky top-0 z-30 rounded-2xl border border-black/10 bg-white/80 p-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/80">
           <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
             <h1 className="text-base font-semibold">Cashier</h1>
             <button
               type="button"
-              onClick={showBackToCart ? handleBackToCart : toggleAdminMode}
+              onClick={ showBackToCart ? handleBackToCart : toggleAdminMode }
               className="hidden sm:inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
             >
-              {showBackToCart ? "Back to Cart" : "Admin panel"}
+              { showBackToCart ? "Back to Cart" : "Admin panel" }
             </button>
             <button
               type="button"
-              onClick={toggleTheme}
+              onClick={ toggleTheme }
               className="hidden sm:inline-flex rounded-full border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
               aria-label="Toggle theme"
-              title={isDark ? "Switch to light theme" : "Switch to dark theme"}
+              title={ isDark ? "Switch to light theme" : "Switch to dark theme" }
             >
-              {isDark ? "☀️" : "🌙"}
+              { isDark ? "☀️" : "🌙" }
             </button>
 
-            {uiMode === "pos" && view === "cart" && (
+            { uiMode === "pos" && view === "cart" && (
               <div className="flex items-center gap-3 sm:ml-auto">
                 <button
                   type="button"
-                  onClick={openCheckoutConfirm}
-                  disabled={!hasCheckoutItems || isBusy}
+                  onClick={ openCheckoutConfirm }
+                  disabled={ !hasCheckoutItems || isBusy }
                   className="rounded-full bg-accent-light px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
                 >
-                  <span className="sm:hidden">Pay ({currencyFormatter.format(cartExternalDuePreview)})</span>
-                  <span className="hidden sm:inline">Checkout ({currencyFormatter.format(cartExternalDuePreview)})</span>
+                  <span className="sm:hidden">Pay ({ currencyFormatter.format(cartExternalDuePreview) })</span>
+                  <span
+                    className="hidden sm:inline">Checkout ({ currencyFormatter.format(cartExternalDuePreview) })</span>
                 </button>
               </div>
-            )}
+            ) }
 
-            {showBackToCart && (
+            { showBackToCart && (
               <button
                 type="button"
-                onClick={handleBackToCart}
+                onClick={ handleBackToCart }
                 className="ml-auto inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 sm:hidden dark:border-slate-600 dark:hover:border-slate-300"
               >
                 Back to Cart
               </button>
-            )}
+            ) }
 
             <button
               type="button"
-              onClick={() => setShowMobileMenu(true)}
+              onClick={ () => setShowMobileMenu(true) }
               className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 text-lg transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
               aria-label="Open menu"
             >
@@ -1802,20 +1769,20 @@ export default function App() {
           </div>
         </header>
 
-        {showMobileMenu && (
+        { showMobileMenu && (
           <div
             className="fixed inset-0 z-50 bg-black/50"
-            onClick={() => setShowMobileMenu(false)}
+            onClick={ () => setShowMobileMenu(false) }
           >
             <aside
               className="ml-auto flex h-full w-72 flex-col gap-3 border-l border-black/10 bg-white p-4 dark:border-white/10 dark:bg-slate-900"
-              onClick={(event) => event.stopPropagation()}
+              onClick={ (event) => event.stopPropagation() }
             >
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-sm font-semibold">Menu</p>
                 <button
                   type="button"
-                  onClick={() => setShowMobileMenu(false)}
+                  onClick={ () => setShowMobileMenu(false) }
                   className="rounded-full border border-slate-300 px-3 py-1 text-xs transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
                 >
                   Close
@@ -1824,80 +1791,83 @@ export default function App() {
 
               <button
                 type="button"
-                onClick={toggleAdminMode}
+                onClick={ toggleAdminMode }
                 className="rounded-xl border border-slate-300 px-4 py-3 text-left text-sm font-semibold transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
               >
                 Admin Panel
               </button>
 
-              {uiMode === "pos" && memberCreditEnabled && (
+              { uiMode === "pos" && memberCreditEnabled && (
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={ () => {
                     setView("topup");
                     setTransaction(null);
                     setShowMobileMenu(false);
-                  }}
+                  } }
                   className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-3 text-left text-sm font-semibold text-sky-700 transition hover:border-sky-500 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
                 >
                   Top up credit
                 </button>
-              )}
+              ) }
 
               <button
                 type="button"
-                onClick={() => {
+                onClick={ () => {
                   toggleTheme();
                   setShowMobileMenu(false);
-                }}
+                } }
                 className="rounded-xl border border-slate-300 px-4 py-3 text-left text-sm font-semibold transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
               >
-                {isDark ? "Switch to light theme ☀️" : "Switch to dark theme 🌙"}
+                { isDark ? "Switch to light theme ☀️" : "Switch to dark theme 🌙" }
               </button>
 
               <button
                 type="button"
-                onClick={() => setMemberCreditEnabled((value) => !value)}
+                onClick={ () => setMemberCreditEnabled((value) => !value) }
                 className="rounded-xl border border-slate-300 px-4 py-3 text-left text-sm font-semibold transition hover:border-slate-500 dark:border-slate-600 dark:hover:border-slate-300"
               >
-                Member credit feature: {memberCreditEnabled ? "On" : "Off"}
+                Member credit feature: { memberCreditEnabled ? "On" : "Off" }
               </button>
             </aside>
           </div>
-        )}
+        ) }
 
-        {uiMode === "pos" && status && (
+        { uiMode === "pos" && status && (
           <div
-            className={`rounded-lg px-4 py-2 text-sm ${
+            className={ `rounded-lg px-4 py-2 text-sm ${
               status.tone === "error"
                 ? "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200"
                 : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
-            }`}
+            }` }
           >
-            {status.text}
+            { status.text }
           </div>
-        )}
-        {uiMode === "admin" && adminError && (
-          <div className="rounded-lg bg-rose-100 px-4 py-2 text-sm text-rose-700 dark:bg-rose-500/20 dark:text-rose-200">
-            {adminError}
+        ) }
+        { uiMode === "admin" && adminError && (
+          <div
+            className="rounded-lg bg-rose-100 px-4 py-2 text-sm text-rose-700 dark:bg-rose-500/20 dark:text-rose-200">
+            { adminError }
           </div>
-        )}
-        {updateReady && (
-          <div className="rounded-lg bg-amber-100 px-4 py-2 text-sm text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">
+        ) }
+        { updateReady && (
+          <div
+            className="rounded-lg bg-amber-100 px-4 py-2 text-sm text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">
             Update available. Page will refresh automatically when no items are selected.
           </div>
-        )}
+        ) }
 
-        {uiMode === "admin" ? (
-          <section className="rounded-2xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
-            {!adminTransactions ? (
+        { uiMode === "admin" ? (
+          <section
+            className="rounded-2xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
+            { !adminTransactions ? (
               <form
                 className="mx-auto flex w-full max-w-md flex-col gap-4"
                 autoComplete="on"
-                onSubmit={(event) => {
+                onSubmit={ (event) => {
                   event.preventDefault();
                   void loadAdminTransactions();
-                }}
+                } }
               >
                 <h2 className="text-lg font-semibold">Unlock admin panel</h2>
                 <p className="text-sm text-slate-500 dark:text-slate-300">
@@ -1907,28 +1877,28 @@ export default function App() {
                 <input
                   type="text"
                   name="admin_unlock_user"
-                  value={adminUnlockUsername}
+                  value={ adminUnlockUsername }
                   readOnly
                   autoComplete="username"
-                  tabIndex={-1}
+                  tabIndex={ -1 }
                   aria-hidden="true"
                   className="hidden"
                 />
                 <input
                   type="password"
                   name="admin_unlock_password"
-                  value={adminPassword}
-                  onChange={(event) => setAdminPassword(event.target.value)}
+                  value={ adminPassword }
+                  onChange={ (event) => setAdminPassword(event.target.value) }
                   placeholder="Admin password"
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
                   autoComplete="current-password"
                 />
                 <button
                   type="submit"
-                  disabled={adminLoading || adminPassword.length === 0}
+                  disabled={ adminLoading || adminPassword.length === 0 }
                   className="rounded-xl bg-accent-light px-4 py-3 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
                 >
-                  {adminLoading ? "Unlocking..." : "Login"}
+                  { adminLoading ? "Unlocking..." : "Login" }
                 </button>
               </form>
             ) : (
@@ -1936,264 +1906,264 @@ export default function App() {
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setAdminTab("transactions")}
-                    className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                    onClick={ () => setAdminTab("transactions") }
+                    className={ `rounded-xl px-4 py-2 text-sm font-semibold transition ${
                       adminTab === "transactions"
                         ? "bg-accent-light text-white dark:bg-accent-dark dark:text-slate-900"
                         : "border border-slate-300 hover:border-slate-500 dark:border-slate-600"
-                    }`}
+                    }` }
                   >
                     Transactions
                   </button>
                   <button
                     type="button"
-                    onClick={() => setAdminTab("stock")}
-                    className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                    onClick={ () => setAdminTab("stock") }
+                    className={ `rounded-xl px-4 py-2 text-sm font-semibold transition ${
                       adminTab === "stock"
                         ? "bg-accent-light text-white dark:bg-accent-dark dark:text-slate-900"
                         : "border border-slate-300 hover:border-slate-500 dark:border-slate-600"
-                    }`}
+                    }` }
                   >
                     Stock
                   </button>
-                  {memberCreditEnabled && (
+                  { memberCreditEnabled && (
                     <button
                       type="button"
-                      onClick={() => setAdminTab("members")}
-                      className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                      onClick={ () => setAdminTab("members") }
+                      className={ `rounded-xl px-4 py-2 text-sm font-semibold transition ${
                         adminTab === "members"
                           ? "bg-accent-light text-white dark:bg-accent-dark dark:text-slate-900"
                           : "border border-slate-300 hover:border-slate-500 dark:border-slate-600"
-                      }`}
+                      }` }
                     >
                       Customers
                     </button>
-                  )}
+                  ) }
                 </div>
-                {adminTab === "transactions" && (
-                <>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">
-                      Transactions
-                      {hasActiveFilters && (
-                        <span className="ml-1 normal-case tracking-normal text-slate-400">
+                { adminTab === "transactions" && (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                        <p className="text-xs uppercase tracking-wide text-slate-500">
+                          Transactions
+                          { hasActiveFilters && (
+                            <span className="ml-1 normal-case tracking-normal text-slate-400">
                           (Filtered)
                         </span>
-                      )}
-                    </p>
-                    <p className="mt-2 text-xl font-semibold">{adminTotals.count}</p>
-                  </div>
-                  <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">
-                      Completed
-                      {hasActiveFilters && (
-                        <span className="ml-1 normal-case tracking-normal text-slate-400">
+                          ) }
+                        </p>
+                        <p className="mt-2 text-xl font-semibold">{ adminTotals.count }</p>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                        <p className="text-xs uppercase tracking-wide text-slate-500">
+                          Completed
+                          { hasActiveFilters && (
+                            <span className="ml-1 normal-case tracking-normal text-slate-400">
                           (Filtered)
                         </span>
-                      )}
-                    </p>
-                    <p className="mt-2 text-xl font-semibold">{adminTotals.completed}</p>
-                  </div>
-                  <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">
-                      Canceled
-                      {hasActiveFilters && (
-                        <span className="ml-1 normal-case tracking-normal text-slate-400">
+                          ) }
+                        </p>
+                        <p className="mt-2 text-xl font-semibold">{ adminTotals.completed }</p>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                        <p className="text-xs uppercase tracking-wide text-slate-500">
+                          Canceled
+                          { hasActiveFilters && (
+                            <span className="ml-1 normal-case tracking-normal text-slate-400">
                           (Filtered)
                         </span>
-                      )}
-                    </p>
-                    <p className="mt-2 text-xl font-semibold">{adminTotals.canceled}</p>
-                  </div>
-                  <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">
-                      Amount
-                      {hasActiveFilters && (
-                        <span className="ml-1 normal-case tracking-normal text-slate-400">
+                          ) }
+                        </p>
+                        <p className="mt-2 text-xl font-semibold">{ adminTotals.canceled }</p>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                        <p className="text-xs uppercase tracking-wide text-slate-500">
+                          Amount
+                          { hasActiveFilters && (
+                            <span className="ml-1 normal-case tracking-normal text-slate-400">
                           (Filtered)
                         </span>
-                      )}
-                    </p>
-                    <p className="mt-2 text-xl font-semibold">
-                      {currencyFormatter.format(adminTotals.amount)}
-                    </p>
-                  </div>
-                </div>
+                          ) }
+                        </p>
+                        <p className="mt-2 text-xl font-semibold">
+                          { currencyFormatter.format(adminTotals.amount) }
+                        </p>
+                      </div>
+                    </div>
 
-                <div className="flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={lockAdminPanel}
-                    className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:border-slate-500 dark:border-slate-600"
-                  >
-                    Refresh
-                  </button>
-                  <button
-                    type="button"
-                    onClick={downloadAdminCsv}
-                    disabled={adminFilteredTransactions.length === 0}
-                    className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600"
-                  >
-                    Download CSV (filtered)
-                  </button>
-                </div>
+                    <div className="flex justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={ lockAdminPanel }
+                        className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:border-slate-500 dark:border-slate-600"
+                      >
+                        Refresh
+                      </button>
+                      <button
+                        type="button"
+                        onClick={ downloadAdminCsv }
+                        disabled={ adminFilteredTransactions.length === 0 }
+                        className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600"
+                      >
+                        Download CSV (filtered)
+                      </button>
+                    </div>
 
-                <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-7">
-                  <label className="flex flex-col gap-2 text-sm">
+                    <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-7">
+                      <label className="flex flex-col gap-2 text-sm">
                     <span className="text-xs uppercase tracking-wide text-slate-500">
                       Status
                     </span>
-                    <select
-                      value={adminStatusFilter}
-                      onChange={(event) =>
-                        setAdminStatusFilter(
-                          event.target.value as "all" | TransactionStatus
-                        )
-                      }
-                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
-                    >
-                      <option value="all">All</option>
-                      <option value="pending">Pending</option>
-                      <option value="completed">Completed</option>
-                      <option value="canceled">Canceled</option>
-                      <option value="abandoned">Abandoned</option>
-                    </select>
-                  </label>
-                  <label className="flex flex-col gap-2 text-sm">
+                        <select
+                          value={ adminStatusFilter }
+                          onChange={ (event) =>
+                            setAdminStatusFilter(
+                              event.target.value as "all" | TransactionStatus
+                            )
+                          }
+                          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                        >
+                          <option value="all">All</option>
+                          <option value="pending">Pending</option>
+                          <option value="completed">Completed</option>
+                          <option value="canceled">Canceled</option>
+                          <option value="abandoned">Abandoned</option>
+                        </select>
+                      </label>
+                      <label className="flex flex-col gap-2 text-sm">
                     <span className="text-xs uppercase tracking-wide text-slate-500">
                       Product
                     </span>
-                    <select
-                      value={adminProductFilter}
-                      onChange={(event) => setAdminProductFilter(event.target.value)}
-                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
-                    >
-                      <option value="all">All</option>
-                      {adminProductOptions.map((product) => (
-                        <option key={product.id} value={product.id}>
-                          {product.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="flex flex-col gap-2 text-sm">
+                        <select
+                          value={ adminProductFilter }
+                          onChange={ (event) => setAdminProductFilter(event.target.value) }
+                          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                        >
+                          <option value="all">All</option>
+                          { adminProductOptions.map((product) => (
+                            <option key={ product.id } value={ product.id }>
+                              { product.name }
+                            </option>
+                          )) }
+                        </select>
+                      </label>
+                      <label className="flex flex-col gap-2 text-sm">
                     <span className="text-xs uppercase tracking-wide text-slate-500">
                       Item text
                     </span>
-                    <input
-                      type="search"
-                      value={adminItemQuery}
-                      onChange={(event) => setAdminItemQuery(event.target.value)}
-                      placeholder="Name or id"
-                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-2 text-sm">
+                        <input
+                          type="search"
+                          value={ adminItemQuery }
+                          onChange={ (event) => setAdminItemQuery(event.target.value) }
+                          placeholder="Name or id"
+                          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-2 text-sm">
                     <span className="text-xs uppercase tracking-wide text-slate-500">
                       From
                     </span>
-                    <input
-                      type="date"
-                      value={adminFromDate}
-                      onChange={(event) => setAdminFromDate(event.target.value)}
-                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-2 text-sm">
-                    <span className="text-xs uppercase tracking-wide text-slate-500">To</span>
-                    <input
-                      type="date"
-                      value={adminToDate}
-                      onChange={(event) => setAdminToDate(event.target.value)}
-                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
-                    />
-                  </label>
-                  <div className="flex items-end">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const today = new Date();
-                        const to = today.toISOString().slice(0, 10);
-                        const from = new Date(Date.now() - 24 * 60 * 60 * 1000);
-                        setAdminFromDate(from.toISOString().slice(0, 10));
-                        setAdminToDate(to);
-                      }}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600"
-                    >
-                      Last 24h
-                    </button>
-                  </div>
-                  <div className="flex items-end">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAdminStatusFilter("all");
-                        setAdminProductFilter("all");
-                        setAdminItemQuery("");
-                        setAdminFromDate("");
-                        setAdminToDate("");
-                      }}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600"
-                    >
-                      Reset filters
-                    </button>
-                  </div>
-                </div>
+                        <input
+                          type="date"
+                          value={ adminFromDate }
+                          onChange={ (event) => setAdminFromDate(event.target.value) }
+                          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-2 text-sm">
+                        <span className="text-xs uppercase tracking-wide text-slate-500">To</span>
+                        <input
+                          type="date"
+                          value={ adminToDate }
+                          onChange={ (event) => setAdminToDate(event.target.value) }
+                          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                        />
+                      </label>
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          onClick={ () => {
+                            const today = new Date();
+                            const to = today.toISOString().slice(0, 10);
+                            const from = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                            setAdminFromDate(from.toISOString().slice(0, 10));
+                            setAdminToDate(to);
+                          } }
+                          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600"
+                        >
+                          Last 24h
+                        </button>
+                      </div>
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          onClick={ () => {
+                            setAdminStatusFilter("all");
+                            setAdminProductFilter("all");
+                            setAdminItemQuery("");
+                            setAdminFromDate("");
+                            setAdminToDate("");
+                          } }
+                          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600"
+                        >
+                          Reset filters
+                        </button>
+                      </div>
+                    </div>
 
-                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
-                  <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
-                    <thead className="bg-slate-50 dark:bg-slate-800/40">
-                      <tr>
-                        <th className="px-3 py-2 text-left font-semibold">ID</th>
-                        <th className="px-3 py-2 text-left font-semibold">Date</th>
-                        <th className="px-3 py-2 text-left font-semibold">Type</th>
-                        <th className="px-3 py-2 text-left font-semibold">Status</th>
-                        <th className="px-3 py-2 text-right font-semibold">Total</th>
-                        <th className="px-3 py-2 text-left font-semibold">Items</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                      {adminFilteredTransactions.map((entry) => (
-                        <tr key={entry.id}>
-                          <td
-                            className="max-w-28 truncate px-3 py-2 font-mono text-xs"
-                            title={entry.id}
-                          >
-                            {entry.id}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2">
-                            {formatAdminDate(entry.createdAt)}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2">
-                            {entry.type === "credit_topup" ? "credit_topup" : "sale"}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2">{entry.status}</td>
-                          <td className="whitespace-nowrap px-3 py-2 text-right">
-                            {currencyFormatter.format(entry.total)}
-                          </td>
-                          <td className="px-3 py-2 text-left font-mono text-xs">
-                            {buildCartBreakdownJson(entry)}
-                          </td>
-                        </tr>
-                      ))}
-                      {adminFilteredTransactions.length === 0 && (
+                    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+                      <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
+                        <thead className="bg-slate-50 dark:bg-slate-800/40">
                         <tr>
-                          <td
-                            colSpan={6}
-                            className="px-3 py-6 text-center text-slate-500 dark:text-slate-300"
-                          >
-                            No transactions match current filters.
-                          </td>
+                          <th className="px-3 py-2 text-left font-semibold">ID</th>
+                          <th className="px-3 py-2 text-left font-semibold">Date</th>
+                          <th className="px-3 py-2 text-left font-semibold">Type</th>
+                          <th className="px-3 py-2 text-left font-semibold">Status</th>
+                          <th className="px-3 py-2 text-right font-semibold">Total</th>
+                          <th className="px-3 py-2 text-left font-semibold">Items</th>
                         </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-                </>
-                )}
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                        { adminFilteredTransactions.map((entry) => (
+                          <tr key={ entry.id }>
+                            <td
+                              className="max-w-28 truncate px-3 py-2 font-mono text-xs"
+                              title={ entry.id }
+                            >
+                              { entry.id }
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2">
+                              { formatAdminDate(entry.createdAt) }
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2">
+                              { entry.type === "credit_topup" ? "credit_topup" : "sale" }
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2">{ entry.status }</td>
+                            <td className="whitespace-nowrap px-3 py-2 text-right">
+                              { currencyFormatter.format(entry.total) }
+                            </td>
+                            <td className="px-3 py-2 text-left font-mono text-xs">
+                              { buildCartBreakdownJson(entry) }
+                            </td>
+                          </tr>
+                        )) }
+                        { adminFilteredTransactions.length === 0 && (
+                          <tr>
+                            <td
+                              colSpan={ 6 }
+                              className="px-3 py-6 text-center text-slate-500 dark:text-slate-300"
+                            >
+                              No transactions match current filters.
+                            </td>
+                          </tr>
+                        ) }
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                ) }
 
-                {memberCreditEnabled && adminTab === "members" && (
+                { memberCreditEnabled && adminTab === "members" && (
                   <div className="grid gap-4 lg:grid-cols-2">
                     <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                       <h3 className="text-sm font-semibold">Create customer</h3>
@@ -2201,14 +2171,14 @@ export default function App() {
                         <input
                           type="text"
                           autoComplete="off"
-                          value={adminMemberName}
-                          onChange={(event) => setAdminMemberName(event.target.value)}
+                          value={ adminMemberName }
+                          onChange={ (event) => setAdminMemberName(event.target.value) }
                           placeholder="Display name"
                           className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
                         />
                         <select
-                          value={adminCustomerType}
-                          onChange={(event) =>
+                          value={ adminCustomerType }
+                          onChange={ (event) =>
                             setAdminCustomerType(event.target.value as "member" | "non_member")
                           }
                           className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
@@ -2221,16 +2191,16 @@ export default function App() {
                           inputMode="numeric"
                           pattern="[0-9]*"
                           autoComplete="one-time-code"
-                          value={adminMemberPin}
-                          onChange={(event) => setAdminMemberPin(event.target.value.replace(/\D+/g, ""))}
+                          value={ adminMemberPin }
+                          onChange={ (event) => setAdminMemberPin(event.target.value.replace(/\D+/g, "")) }
                           placeholder="PIN (4+ digits)"
                           className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
                         />
                         <button
                           type="button"
-                          onClick={() => void createAdminMember()}
+                          onClick={ () => void createAdminMember() }
                           className="rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50"
-                          disabled={adminLoading}
+                          disabled={ adminLoading }
                         >
                           Add customer
                         </button>
@@ -2241,74 +2211,75 @@ export default function App() {
                       <h3 className="text-sm font-semibold">Customers</h3>
                       <CustomerAutocomplete
                         className="mt-3"
-                        customers={adminCustomers}
-                        selectedCustomerId={selectedMemberId}
-                        onSelectCustomer={(member) => {
+                        customers={ adminCustomers }
+                        selectedCustomerId={ selectedMemberId }
+                        onSelectCustomer={ (member) => {
                           const nextMemberId = member?.id ?? "";
                           setSelectedMemberId(nextMemberId);
                           if (nextMemberId) {
                             void loadAdminCustomers(adminSessionPassword, nextMemberId);
                           }
-                        }}
+                        } }
                         placeholder="Search customer"
                         noResultsText="No customers found."
                       />
-                      {selectedAdminMember && (
-                        <div className="mt-3 rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700">
+                      { selectedAdminMember && (
+                        <div
+                          className="mt-3 rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700">
                           <div className="flex items-center justify-between">
-                            <span className="font-medium">{selectedAdminMember.displayName}</span>
-                            <span>{currencyFormatter.format(selectedAdminMember.balance)}</span>
+                            <span className="font-medium">{ selectedAdminMember.displayName }</span>
+                            <span>{ currencyFormatter.format(selectedAdminMember.balance) }</span>
                           </div>
                           <div className="text-xs text-slate-500">
-                            {selectedAdminMember.customerType === "member" ? "Member" : "Non-member"} · {selectedAdminMember.active ? "Active" : "Disabled"}
+                            { selectedAdminMember.customerType === "member" ? "Member" : "Non-member" } · { selectedAdminMember.active ? "Active" : "Disabled" }
                           </div>
                         </div>
-                      )}
-                      {adminCustomers.length === 0 && (
+                      ) }
+                      { adminCustomers.length === 0 && (
                         <p className="mt-3 text-sm text-slate-500">No customers yet.</p>
-                      )}
+                      ) }
                     </div>
 
                     <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700 lg:col-span-2">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <h3 className="text-sm font-semibold">
-                          {selectedAdminMember ? `${selectedAdminMember.displayName} • Credit tools` : "Select a customer"}
+                          { selectedAdminMember ? `${ selectedAdminMember.displayName } • Credit tools` : "Select a customer" }
                         </h3>
-                        {selectedAdminMember && (
+                        { selectedAdminMember && (
                           <button
                             type="button"
-                            onClick={() => void toggleSelectedMemberActive()}
+                            onClick={ () => void toggleSelectedMemberActive() }
                             className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold transition hover:border-slate-500 dark:border-slate-600"
                           >
-                            {selectedAdminMember.active ? "Disable" : "Enable"}
+                            { selectedAdminMember.active ? "Disable" : "Enable" }
                           </button>
-                        )}
+                        ) }
                       </div>
 
-                      {selectedAdminMember && (
+                      { selectedAdminMember && (
                         <>
                           <div className="mt-3 grid gap-2 sm:grid-cols-3">
                             <input
                               type="number"
-                              min={0.01}
+                              min={ 0.01 }
                               step="0.01"
-                              value={memberTopupAmount}
-                              onChange={(event) => setMemberTopupAmount(event.target.value)}
+                              value={ memberTopupAmount }
+                              onChange={ (event) => setMemberTopupAmount(event.target.value) }
                               placeholder="Top-up amount"
                               className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
                             />
                             <input
                               type="text"
-                              value={memberTopupNote}
-                              onChange={(event) => setMemberTopupNote(event.target.value)}
+                              value={ memberTopupNote }
+                              onChange={ (event) => setMemberTopupNote(event.target.value) }
                               placeholder="Note (optional)"
                               className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
                             />
                             <button
                               type="button"
-                              onClick={() => void topupSelectedMember()}
+                              onClick={ () => void topupSelectedMember() }
                               className="rounded-xl bg-emerald-500 px-3 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50"
-                              disabled={adminLoading}
+                              disabled={ adminLoading }
                             >
                               Top up credit
                             </button>
@@ -2317,25 +2288,25 @@ export default function App() {
                           <div className="mt-4 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
                             <p className="text-xs uppercase tracking-wide text-slate-500">Selected customer ledger</p>
                             <ul className="mt-2 space-y-1 text-sm">
-                              {creditLedger.map((entry) => (
-                                <li key={entry.id} className="flex items-center justify-between gap-2">
+                              { creditLedger.map((entry) => (
+                                <li key={ entry.id } className="flex items-center justify-between gap-2">
                                   <span className="truncate text-slate-600 dark:text-slate-300">
-                                    {formatAdminDate(entry.createdAt)} • {entry.reason}
-                                    {entry.note ? ` (${entry.note})` : ""}
+                                    { formatAdminDate(entry.createdAt) } • { entry.reason }
+                                    { entry.note ? ` (${ entry.note })` : "" }
                                   </span>
-                                  <span className={entry.delta >= 0 ? "text-emerald-500" : "text-rose-500"}>
-                                    {entry.delta >= 0 ? "+" : ""}
-                                    {currencyFormatter.format(entry.delta)}
+                                  <span className={ entry.delta >= 0 ? "text-emerald-500" : "text-rose-500" }>
+                                    { entry.delta >= 0 ? "+" : "" }
+                                    { currencyFormatter.format(entry.delta) }
                                   </span>
                                 </li>
-                              ))}
-                              {creditLedger.length === 0 && (
+                              )) }
+                              { creditLedger.length === 0 && (
                                 <li className="text-slate-500">No credit events yet.</li>
-                              )}
+                              ) }
                             </ul>
                           </div>
                         </>
-                      )}
+                      ) }
                     </div>
 
                     <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700 lg:col-span-2">
@@ -2343,51 +2314,52 @@ export default function App() {
                       <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
                         <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
                           <thead className="bg-slate-50 dark:bg-slate-800/40">
-                            <tr>
-                              <th className="px-3 py-2 text-left font-semibold">Date</th>
-                              <th className="px-3 py-2 text-left font-semibold">Member</th>
-                              <th className="px-3 py-2 text-left font-semibold">Reason</th>
-                              <th className="px-3 py-2 text-left font-semibold">Transaction</th>
-                              <th className="px-3 py-2 text-left font-semibold">Item breakdown</th>
-                              <th className="px-3 py-2 text-right font-semibold">Delta</th>
-                            </tr>
+                          <tr>
+                            <th className="px-3 py-2 text-left font-semibold">Date</th>
+                            <th className="px-3 py-2 text-left font-semibold">Member</th>
+                            <th className="px-3 py-2 text-left font-semibold">Reason</th>
+                            <th className="px-3 py-2 text-left font-semibold">Transaction</th>
+                            <th className="px-3 py-2 text-left font-semibold">Item breakdown</th>
+                            <th className="px-3 py-2 text-right font-semibold">Delta</th>
+                          </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                            {adminCreditEvents.map((entry) => {
-                              const memberName =
-                                adminCustomers.find((member) => member.id === entry.memberId)?.displayName ??
-                                entry.memberId;
-                              return (
-                                <tr key={entry.id}>
-                                  <td className="whitespace-nowrap px-3 py-2">{formatAdminDate(entry.createdAt)}</td>
-                                  <td className="whitespace-nowrap px-3 py-2">{memberName}</td>
-                                  <td className="whitespace-nowrap px-3 py-2">{entry.reason}</td>
-                                  <td className="px-3 py-2 font-mono text-xs">{entry.transactionId ?? "-"}</td>
-                                  <td className="px-3 py-2 font-mono text-xs">
-                                    {entry.itemBreakdown ? JSON.stringify(entry.itemBreakdown) : "-"}
-                                  </td>
-                                  <td className={`whitespace-nowrap px-3 py-2 text-right ${entry.delta >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                                    {entry.delta >= 0 ? "+" : ""}
-                                    {currencyFormatter.format(entry.delta)}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                            {adminCreditEvents.length === 0 && (
-                              <tr>
-                                <td colSpan={6} className="px-3 py-6 text-center text-slate-500 dark:text-slate-300">
-                                  No customer credit events yet.
+                          { adminCreditEvents.map((entry) => {
+                            const memberName =
+                              adminCustomers.find((member) => member.id === entry.memberId)?.displayName ??
+                              entry.memberId;
+                            return (
+                              <tr key={ entry.id }>
+                                <td className="whitespace-nowrap px-3 py-2">{ formatAdminDate(entry.createdAt) }</td>
+                                <td className="whitespace-nowrap px-3 py-2">{ memberName }</td>
+                                <td className="whitespace-nowrap px-3 py-2">{ entry.reason }</td>
+                                <td className="px-3 py-2 font-mono text-xs">{ entry.transactionId ?? "-" }</td>
+                                <td className="px-3 py-2 font-mono text-xs">
+                                  { entry.itemBreakdown ? JSON.stringify(entry.itemBreakdown) : "-" }
+                                </td>
+                                <td
+                                  className={ `whitespace-nowrap px-3 py-2 text-right ${ entry.delta >= 0 ? "text-emerald-600" : "text-rose-600" }` }>
+                                  { entry.delta >= 0 ? "+" : "" }
+                                  { currencyFormatter.format(entry.delta) }
                                 </td>
                               </tr>
-                            )}
+                            );
+                          }) }
+                          { adminCreditEvents.length === 0 && (
+                            <tr>
+                              <td colSpan={ 6 } className="px-3 py-6 text-center text-slate-500 dark:text-slate-300">
+                                No customer credit events yet.
+                              </td>
+                            </tr>
+                          ) }
                           </tbody>
                         </table>
                       </div>
                     </div>
                   </div>
-                )}
+                ) }
 
-                {adminTab === "stock" && stockSnapshot && (
+                { adminTab === "stock" && stockSnapshot && (
                   <div className="flex flex-col gap-4">
                     <div className="grid gap-3 md:grid-cols-4">
                       <label className="flex flex-col gap-2 text-sm">
@@ -2396,8 +2368,8 @@ export default function App() {
                         </span>
                         <input
                           type="search"
-                          value={stockProductQuery}
-                          onChange={(event) => setStockProductQuery(event.target.value)}
+                          value={ stockProductQuery }
+                          onChange={ (event) => setStockProductQuery(event.target.value) }
                           placeholder="Name or id"
                           className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
                         />
@@ -2410,14 +2382,14 @@ export default function App() {
                           type="text"
                           inputMode="numeric"
                           pattern="-?[0-9]*"
-                          value={stockCurrentValueFilter}
-                          onChange={(event) => {
+                          value={ stockCurrentValueFilter }
+                          onChange={ (event) => {
                             const next = event.target.value;
                             if (!/^-?\d*$/.test(next)) {
                               return;
                             }
                             setStockCurrentValueFilter(next);
-                          }}
+                          } }
                           placeholder="Exact quantity"
                           className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
                         />
@@ -2425,8 +2397,8 @@ export default function App() {
                       <div className="flex items-end">
                         <button
                           type="button"
-                          onClick={downloadFilteredStockEventsCsv}
-                          disabled={filteredStockEvents.length === 0}
+                          onClick={ downloadFilteredStockEventsCsv }
+                          disabled={ filteredStockEvents.length === 0 }
                           className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600"
                         >
                           Export stock events CSV
@@ -2435,8 +2407,8 @@ export default function App() {
                       <div className="flex items-end">
                         <button
                           type="button"
-                          onClick={downloadFilteredStockCountsCsv}
-                          disabled={filteredStockItems.length === 0}
+                          onClick={ downloadFilteredStockCountsCsv }
+                          disabled={ filteredStockItems.length === 0 }
                           className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600"
                         >
                           Export current stock CSV
@@ -2447,196 +2419,198 @@ export default function App() {
                     <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
                       <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
                         <thead className="bg-slate-50 dark:bg-slate-800/40">
-                          <tr>
-                            <th className="px-3 py-2 text-left font-semibold">Product</th>
-                            <th className="px-3 py-2 text-right font-semibold">Current</th>
-                            <th className="px-3 py-2 text-right font-semibold">Set stock</th>
-                            <th className="px-3 py-2 text-right font-semibold">Refill (+)</th>
-                            <th className="px-3 py-2 text-left font-semibold">Note</th>
-                            <th className="px-3 py-2 text-right font-semibold">Action</th>
-                          </tr>
+                        <tr>
+                          <th className="px-3 py-2 text-left font-semibold">Product</th>
+                          <th className="px-3 py-2 text-right font-semibold">Current</th>
+                          <th className="px-3 py-2 text-right font-semibold">Set stock</th>
+                          <th className="px-3 py-2 text-right font-semibold">Refill (+)</th>
+                          <th className="px-3 py-2 text-left font-semibold">Note</th>
+                          <th className="px-3 py-2 text-right font-semibold">Action</th>
+                        </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                          {filteredStockItems.map((item) => {
-                            const draftValue = stockDraftByProductId[item.productId] ?? "";
-                            const trimmedDraft = draftValue.trim();
-                            const isEmptyDraft = trimmedDraft.length === 0;
-                            const isValidInteger = isEmptyDraft || /^-?\d+$/.test(trimmedDraft);
-                            const parsedDraft = /^-?\d+$/.test(trimmedDraft)
-                              ? Number(trimmedDraft)
-                              : NaN;
-                            const hasChanged = !isEmptyDraft && parsedDraft !== item.quantity;
+                        { filteredStockItems.map((item) => {
+                          const draftValue = stockDraftByProductId[item.productId] ?? "";
+                          const trimmedDraft = draftValue.trim();
+                          const isEmptyDraft = trimmedDraft.length === 0;
+                          const isValidInteger = isEmptyDraft || /^-?\d+$/.test(trimmedDraft);
+                          const parsedDraft = /^-?\d+$/.test(trimmedDraft)
+                            ? Number(trimmedDraft)
+                            : NaN;
+                          const hasChanged = !isEmptyDraft && parsedDraft !== item.quantity;
 
-                            const refillValue = stockRefillByProductId[item.productId] ?? "";
-                            const trimmedRefill = refillValue.trim();
-                            const isRefillValid = /^\d+$/.test(trimmedRefill) && Number(trimmedRefill) > 0;
+                          const refillValue = stockRefillByProductId[item.productId] ?? "";
+                          const trimmedRefill = refillValue.trim();
+                          const isRefillValid = /^\d+$/.test(trimmedRefill) && Number(trimmedRefill) > 0;
 
-                            const noteValue = stockNoteByProductId[item.productId] ?? "";
-                            const trimmedNote = noteValue.trim();
-                            const hasNoteOnly = hasChanged === false && trimmedNote.length > 0;
-                            const canSubmitSet = hasChanged || hasNoteOnly;
+                          const noteValue = stockNoteByProductId[item.productId] ?? "";
+                          const trimmedNote = noteValue.trim();
+                          const hasNoteOnly = hasChanged === false && trimmedNote.length > 0;
+                          const canSubmitSet = hasChanged || hasNoteOnly;
 
-                            return (
-                              <tr key={item.productId}>
-                                <td className="px-3 py-2">{item.productName}</td>
-                                <td className="px-3 py-2 text-right font-semibold">{item.quantity}</td>
-                                <td className="px-3 py-2 text-right">
-                                  <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    pattern="-?[0-9]*"
-                                    data-stock-input="true"
-                                    placeholder={String(item.quantity)}
-                                    value={draftValue}
-                                    onKeyDown={(event) => {
-                                      if (event.key === "ArrowDown") {
-                                        moveStockInputFocus(event, 1);
-                                      }
-                                      if (event.key === "ArrowUp") {
-                                        moveStockInputFocus(event, -1);
-                                      }
-                                    }}
-                                    onChange={(event) => {
-                                      const nextValue = event.target.value;
-                                      if (!/^-?\d*$/.test(nextValue)) {
-                                        return;
-                                      }
-                                      setStockDraftByProductId((current) => ({
-                                        ...current,
-                                        [item.productId]: nextValue
-                                      }));
-                                    }}
-                                    className={`w-24 rounded-lg border px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-900 ${
-                                      hasChanged
-                                        ? "border-accent-light text-slate-900 dark:border-accent-dark dark:text-slate-100"
-                                        : "border-slate-300 text-slate-900 dark:text-slate-100"
-                                    }`}
-                                  />
-                                </td>
-                                <td className="px-3 py-2 text-right">
-                                  <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    pattern="[0-9]*"
-                                    placeholder="0"
-                                    value={refillValue}
-                                    onChange={(event) => {
-                                      const nextValue = event.target.value;
-                                      if (!/^\d*$/.test(nextValue)) {
-                                        return;
-                                      }
-                                      setStockRefillByProductId((current) => ({
-                                        ...current,
-                                        [item.productId]: nextValue
-                                      }));
-                                    }}
-                                    className={`w-24 rounded-lg border px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-900 ${
-                                      isRefillValid
-                                        ? "border-emerald-500 text-slate-900 dark:text-slate-100"
-                                        : "border-slate-300 text-slate-900 dark:text-slate-100"
-                                    }`}
-                                  />
-                                </td>
-                                <td className="px-3 py-2">
-                                  <input
-                                    type="text"
-                                    value={stockNoteByProductId[item.productId] ?? ""}
-                                    placeholder="Comment"
-                                    onChange={(event) => {
-                                      const nextValue = event.target.value;
-                                      if (/[;,]/.test(nextValue)) {
-                                        return;
-                                      }
-                                      setStockNoteByProductId((current) => ({
-                                        ...current,
-                                        [item.productId]: nextValue
-                                      }));
-                                    }}
-                                    className="w-full rounded-lg border border-slate-300 px-2 py-1 dark:border-slate-600 dark:bg-slate-900"
-                                  />
-                                </td>
-                                <td className="px-3 py-2 text-right">
-                                  <div className="flex justify-end gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => void markStockCountedOk(item.productId)}
-                                      disabled={isBusy}
-                                      className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600"
-                                    >
-                                      Counted OK
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => void updateStock(item.productId)}
-                                      disabled={!canSubmitSet || !isValidInteger || isBusy}
-                                      className="rounded-lg bg-accent-light px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-accent-dark dark:text-slate-900"
-                                    >
-                                      {hasNoteOnly ? "Add comment" : "Set stock"}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => void addStockRefill(item.productId)}
-                                      disabled={!isRefillValid || isBusy}
-                                      className="rounded-lg bg-emerald-500 px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
-                                    >
-                                      Add refill
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                          {filteredStockItems.length === 0 && (
-                            <tr>
-                              <td
-                                colSpan={6}
-                                className="px-3 py-6 text-center text-slate-500 dark:text-slate-300"
-                              >
-                                No stock items match current filters.
+                          return (
+                            <tr key={ item.productId }>
+                              <td className="px-3 py-2">{ item.productName }</td>
+                              <td className="px-3 py-2 text-right font-semibold">{ item.quantity }</td>
+                              <td className="px-3 py-2 text-right">
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  pattern="-?[0-9]*"
+                                  data-stock-input="true"
+                                  placeholder={ String(item.quantity) }
+                                  value={ draftValue }
+                                  onKeyDown={ (event) => {
+                                    if (event.key === "ArrowDown") {
+                                      moveStockInputFocus(event, 1);
+                                    }
+                                    if (event.key === "ArrowUp") {
+                                      moveStockInputFocus(event, -1);
+                                    }
+                                  } }
+                                  onChange={ (event) => {
+                                    const nextValue = event.target.value;
+                                    if (!/^-?\d*$/.test(nextValue)) {
+                                      return;
+                                    }
+                                    setStockDraftByProductId((current) => ({
+                                      ...current,
+                                      [item.productId]: nextValue
+                                    }));
+                                  } }
+                                  className={ `w-24 rounded-lg border px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-900 ${
+                                    hasChanged
+                                      ? "border-accent-light text-slate-900 dark:border-accent-dark dark:text-slate-100"
+                                      : "border-slate-300 text-slate-900 dark:text-slate-100"
+                                  }` }
+                                />
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  pattern="[0-9]*"
+                                  placeholder="0"
+                                  value={ refillValue }
+                                  onChange={ (event) => {
+                                    const nextValue = event.target.value;
+                                    if (!/^\d*$/.test(nextValue)) {
+                                      return;
+                                    }
+                                    setStockRefillByProductId((current) => ({
+                                      ...current,
+                                      [item.productId]: nextValue
+                                    }));
+                                  } }
+                                  className={ `w-24 rounded-lg border px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-900 ${
+                                    isRefillValid
+                                      ? "border-emerald-500 text-slate-900 dark:text-slate-100"
+                                      : "border-slate-300 text-slate-900 dark:text-slate-100"
+                                  }` }
+                                />
+                              </td>
+                              <td className="px-3 py-2">
+                                <input
+                                  type="text"
+                                  value={ stockNoteByProductId[item.productId] ?? "" }
+                                  placeholder="Comment"
+                                  onChange={ (event) => {
+                                    const nextValue = event.target.value;
+                                    if (/[;,]/.test(nextValue)) {
+                                      return;
+                                    }
+                                    setStockNoteByProductId((current) => ({
+                                      ...current,
+                                      [item.productId]: nextValue
+                                    }));
+                                  } }
+                                  className="w-full rounded-lg border border-slate-300 px-2 py-1 dark:border-slate-600 dark:bg-slate-900"
+                                />
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                <div className="flex justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={ () => void markStockCountedOk(item.productId) }
+                                    disabled={ isBusy }
+                                    className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600"
+                                  >
+                                    Counted OK
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={ () => void updateStock(item.productId) }
+                                    disabled={ !canSubmitSet || !isValidInteger || isBusy }
+                                    className="rounded-lg bg-accent-light px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-accent-dark dark:text-slate-900"
+                                  >
+                                    { hasNoteOnly ? "Add comment" : "Set stock" }
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={ () => void addStockRefill(item.productId) }
+                                    disabled={ !isRefillValid || isBusy }
+                                    className="rounded-lg bg-emerald-500 px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
+                                  >
+                                    Add refill
+                                  </button>
+                                </div>
                               </td>
                             </tr>
-                          )}
+                          );
+                        }) }
+                        { filteredStockItems.length === 0 && (
+                          <tr>
+                            <td
+                              colSpan={ 6 }
+                              className="px-3 py-6 text-center text-slate-500 dark:text-slate-300"
+                            >
+                              No stock items match current filters.
+                            </td>
+                          </tr>
+                        ) }
                         </tbody>
                       </table>
                     </div>
                     <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                       <h3 className="text-sm font-semibold">Recent stock events</h3>
                       <ul className="mt-2 space-y-1 text-xs text-slate-600 dark:text-slate-300">
-                        {filteredStockEvents.slice(0, 12).map((event) => (
-                          <li key={event.id}>
-                            {new Date(event.createdAt).toLocaleString()} — {event.productId} — {event.type} {event.quantity}
-                            {event.note ? ` (${event.note})` : ""}
+                        { filteredStockEvents.slice(0, 12).map((event) => (
+                          <li key={ event.id }>
+                            { new Date(event.createdAt).toLocaleString() } — { event.productId } — { event.type } { event.quantity }
+                            { event.note ? ` (${ event.note })` : "" }
                           </li>
-                        ))}
-                        {filteredStockEvents.length === 0 && <li>No stock events for current filter.</li>}
+                        )) }
+                        { filteredStockEvents.length === 0 && <li>No stock events for current filter.</li> }
                       </ul>
                     </div>
                   </div>
-                )}
+                ) }
               </div>
-            )}
+            ) }
           </section>
         ) : view === "cart" ? (
           <section>
-            <div className="rounded-2xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
+            <div
+              className="rounded-2xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <h2 className="text-lg font-semibold">Products</h2>
-                <div className="flex items-center gap-3 rounded-full border border-slate-200 px-3 py-1 text-xs uppercase tracking-wide text-slate-600 dark:border-slate-700 dark:text-slate-200">
-                  <span>{defaultIsMemberPrice ? "Member price" : "Non-member price"}</span>
+                <div
+                  className="flex items-center gap-3 rounded-full border border-slate-200 px-3 py-1 text-xs uppercase tracking-wide text-slate-600 dark:border-slate-700 dark:text-slate-200">
+                  <span>{ defaultIsMemberPrice ? "Member price" : "Non-member price" }</span>
                   <button
                     type="button"
-                    onClick={() => setDefaultIsMemberPrice((value) => !value)}
-                    className={`relative h-6 w-12 rounded-full transition ${
+                    onClick={ () => setDefaultIsMemberPrice((value) => !value) }
+                    className={ `relative h-6 w-12 rounded-full transition ${
                       defaultIsMemberPrice
                         ? "bg-accent-light dark:bg-accent-dark"
                         : "bg-slate-300 dark:bg-slate-700"
-                    }`}
-                    aria-pressed={defaultIsMemberPrice}
+                    }` }
+                    aria-pressed={ defaultIsMemberPrice }
                   >
                     <span
-                      className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${
+                      className={ `absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${
                         defaultIsMemberPrice ? "left-7" : "left-1"
-                      }`}
+                      }` }
                     />
                   </button>
                 </div>
@@ -2644,22 +2618,22 @@ export default function App() {
               <div className="mt-4">
                 <input
                   type="search"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
+                  value={ searchQuery }
+                  onChange={ (event) => setSearchQuery(event.target.value) }
                   placeholder="Search products"
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
                 />
               </div>
 
               <div className="mt-4 flex flex-col gap-4">
-                {filteredProducts.length === 0 && (
+                { filteredProducts.length === 0 && (
                   <p className="text-sm text-slate-500">
-                    {products.length === 0
+                    { products.length === 0
                       ? "No products configured."
-                      : "No products match search."}
+                      : "No products match search." }
                   </p>
-                )}
-                {filteredProducts.map((product) => {
+                ) }
+                { filteredProducts.map((product) => {
                   const unitPrice = getUnitPrice(
                     product,
                     priceCategories,
@@ -2669,35 +2643,35 @@ export default function App() {
 
                   return (
                     <div
-                      key={product.id}
+                      key={ product.id }
                       className="flex items-center justify-between gap-3 border-b border-black/5 pb-3 last:border-b-0 dark:border-white/10"
                     >
                       <div className="min-w-0 flex-1 pr-2">
                         <p className="font-medium break-words">
-                          {product.name}{" "}
+                          { product.name }{ " " }
                           <span className="text-xs uppercase text-slate-500">
-                            {formatPriceMode(defaultIsMemberPrice)}
+                            { formatPriceMode(defaultIsMemberPrice) }
                           </span>
                         </p>
                         <p className="text-sm text-slate-500 dark:text-slate-300">
-                          {currencyFormatter.format(unitPrice)} - stock{" "}
-                          {product.inventoryCount}
+                          { currencyFormatter.format(unitPrice) } - stock{ " " }
+                          { product.inventoryCount }
                         </p>
                       </div>
                       <div className="shrink-0 flex items-center gap-1.5 self-center">
                         <button
                           type="button"
-                          onClick={() =>
+                          onClick={ () =>
                             handleQuantityChange(product.id, -1, defaultIsMemberPrice)
                           }
                           className="h-10 w-10 rounded-xl border border-slate-300 text-xl leading-none transition hover:border-slate-500 dark:border-slate-600"
                         >
                           -
                         </button>
-                        <span className="w-5 text-center text-sm font-semibold">{quantity}</span>
+                        <span className="w-5 text-center text-sm font-semibold">{ quantity }</span>
                         <button
                           type="button"
-                          onClick={() =>
+                          onClick={ () =>
                             handleQuantityChange(product.id, 1, defaultIsMemberPrice)
                           }
                           className="h-10 w-10 rounded-xl border border-slate-300 text-xl leading-none transition hover:border-slate-500 dark:border-slate-600"
@@ -2707,30 +2681,32 @@ export default function App() {
                       </div>
                     </div>
                   );
-                })}
+                }) }
               </div>
             </div>
           </section>
         ) : (
           <section className="flex flex-col gap-6">
-            <div className="rounded-2xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
+            <div
+              className="rounded-2xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
               <h2 className="text-lg font-semibold">
-                {isTopupView ? "Top up customer credit" : "Pay at the fridge"}
+                { isTopupView ? "Top up customer credit" : "Pay at the fridge" }
               </h2>
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-300">
-                {isTopupView
+                { isTopupView
                   ? "Scan the QR code to add credit. When done, press \"I paid\"."
-                  : "Scan the QR code and pay the total. When done, press \"I paid\"."}
+                  : "Scan the QR code and pay the total. When done, press \"I paid\"." }
               </p>
 
-              {isTopupView && activeMember && (
+              { isTopupView && activeMember && (
                 <div className="mt-3 text-sm text-slate-600 dark:text-slate-300">
-                  Customer: <span className="font-semibold">{activeMember.displayName}</span>
+                  Customer: <span className="font-semibold">{ activeMember.displayName }</span>
                 </div>
-              )}
+              ) }
 
-              {isTopupView && !transaction && (
-                <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+              { isTopupView && !transaction && (
+                <div
+                  className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
                   <p className="text-sm font-semibold">Setup top-up</p>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
                     Customer list is public. Enter PIN to unlock details and top-up amount.
@@ -2738,44 +2714,44 @@ export default function App() {
 
                   <CustomerAutocomplete
                     className="mt-3"
-                    customers={publicCustomers}
-                    selectedCustomerId={selectedTopupMemberId}
-                    onSelectCustomer={(member) => {
+                    customers={ publicCustomers }
+                    selectedCustomerId={ selectedTopupMemberId }
+                    onSelectCustomer={ (member) => {
                       const nextMemberId = member?.id ?? "";
                       setSelectedTopupMemberId(nextMemberId);
                       if (!member || activeMember?.id !== member.id) {
                         setActiveMember(null);
                       }
-                    }}
+                    } }
                     placeholder="Search customer"
                     noResultsText="No customers found."
                   />
 
                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                    {selectedTopupMember && (
+                    { selectedTopupMember && (
                       <span className="text-sm text-slate-600 dark:text-slate-300">
-                        Selected customer: {selectedTopupMember.displayName}
+                        Selected customer: { selectedTopupMember.displayName }
                       </span>
-                    )}
+                    ) }
                   </div>
 
                   <div className="mt-3 grid gap-2 sm:grid-cols-4">
-                    {[5, 10, 20].map((value) => (
+                    { [5, 10, 20].map((value) => (
                       <button
-                        key={value}
+                        key={ value }
                         type="button"
-                        onClick={() => setTopupAmount(value.toFixed(2))}
+                        onClick={ () => setTopupAmount(value.toFixed(2)) }
                         className="rounded-xl border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600"
                       >
-                        € {value}
+                        € { value }
                       </button>
-                    ))}
+                    )) }
                     <input
                       type="number"
-                      min={0.01}
+                      min={ 0.01 }
                       step="0.01"
-                      value={topupAmount}
-                      onChange={(event) => setTopupAmount(event.target.value)}
+                      value={ topupAmount }
+                      onChange={ (event) => setTopupAmount(event.target.value) }
                       className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 dark:border-slate-600 dark:bg-slate-900"
                     />
                   </div>
@@ -2783,237 +2759,245 @@ export default function App() {
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => void startTopup()}
-                      disabled={!selectedTopupMember || isBusy}
+                      onClick={ () => void startTopup() }
+                      disabled={ !selectedTopupMember || isBusy }
                       className="rounded-xl bg-accent-light px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
                     >
                       Start top-up payment
                     </button>
                     <button
                       type="button"
-                      onClick={() => setView("cart")}
+                      onClick={ () => setView("cart") }
                       className="rounded-xl border border-slate-300 px-4 py-2 text-sm transition hover:border-slate-500 dark:border-slate-600"
                     >
                       Back to cart
                     </button>
                   </div>
                 </div>
-              )}
+              ) }
 
-              {transaction && (
+              { transaction && (
                 <>
-              <div className="mt-6 rounded-2xl border border-dashed border-slate-400/60 p-6 text-center dark:border-slate-500">
-                {qrImageSrc ? (
-                  <img
-                    className="mx-auto block h-56 w-56 rounded bg-white"
-                    src={qrImageSrc}
-                    alt="Payment QR"
-                  />
-                ) : (
-                  <div className="mx-auto h-56 w-56 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
-                )}
-              </div>
-              {memberCreditEnabled && hasMemberPricedItemsInCheckout && (
-                <div className="mt-6 rounded-xl border border-amber-300 bg-amber-50 px-4 py-4 dark:border-amber-700 dark:bg-amber-900/20">
-                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-                    Member-priced items require customer username + PIN
-                  </p>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                    <CustomerAutocomplete
-                      customers={publicCustomers}
-                      selectedCustomerId={memberPricingCustomerId}
-                      onSelectCustomer={(member) => {
-                        setMemberPricingCustomerId(member?.id ?? "");
-                        setMemberPricingAuthMode("none");
-                        setActiveMember(null);
-                      }}
-                      placeholder="Search customer username"
-                      noResultsText="No customers found."
-                    />
-                    <input
-                      type="password"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      autoComplete="one-time-code"
-                      value={memberPinInput}
-                      onChange={(event) => setMemberPinInput(event.target.value.replace(/\D+/g, ""))}
-                      placeholder="Customer PIN"
-                      disabled={!memberPricingCustomerId}
-                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => void authenticateMemberPin()}
-                      disabled={!memberPricingCustomerId}
-                      className="rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm font-semibold text-amber-700 transition hover:border-amber-500 disabled:opacity-50 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200"
-                    >
-                      Verify with PIN
-                    </button>
+                  <div
+                    className="mt-6 rounded-2xl border border-dashed border-slate-400/60 p-6 text-center dark:border-slate-500">
+                    { qrImageSrc ? (
+                      <img
+                        className="mx-auto block h-56 w-56 rounded bg-white"
+                        src={ qrImageSrc }
+                        alt="Payment QR"
+                      />
+                    ) : (
+                      <div className="mx-auto h-56 w-56 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700"/>
+                    ) }
                   </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={acceptMemberPricingWithUsernameOnly}
-                      disabled={!memberPricingCustomerId}
-                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm transition hover:border-slate-500 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900"
-                    >
-                      Continue with username only (for now)
-                    </button>
-                    <span className="text-xs text-slate-600 dark:text-slate-300">
-                      Status: {memberPricingAuthMode === "pin"
-                        ? "verified by PIN"
-                        : memberPricingAuthMode === "username_only"
-                          ? "username-only accepted"
-                          : "not verified"}
+                  { memberCreditEnabled && hasMemberPricedItemsInCheckout && (
+                    <div
+                      className="mt-6 rounded-xl border border-amber-300 bg-amber-50 px-4 py-4 dark:border-amber-700 dark:bg-amber-900/20">
+                      <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                        Member-priced items require customer username + PIN
+                      </p>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                        <CustomerAutocomplete
+                          customers={ publicCustomers }
+                          selectedCustomerId={ memberPricingCustomerId }
+                          onSelectCustomer={ (member) => {
+                            setMemberPricingCustomerId(member?.id ?? "");
+                            setMemberPricingAuthMode("none");
+                            setActiveMember(null);
+                          } }
+                          placeholder="Search customer username"
+                          noResultsText="No customers found."
+                        />
+                        <input
+                          type="password"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          autoComplete="one-time-code"
+                          value={ memberPinInput }
+                          onChange={ (event) => setMemberPinInput(event.target.value.replace(/\D+/g, "")) }
+                          placeholder="Customer PIN"
+                          disabled={ !memberPricingCustomerId }
+                          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900"
+                        />
+                        <button
+                          type="button"
+                          onClick={ () => void authenticateMemberPin() }
+                          disabled={ !memberPricingCustomerId }
+                          className="rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm font-semibold text-amber-700 transition hover:border-amber-500 disabled:opacity-50 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200"
+                        >
+                          Verify with PIN
+                        </button>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={ acceptMemberPricingWithUsernameOnly }
+                          disabled={ !memberPricingCustomerId }
+                          className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm transition hover:border-slate-500 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900"
+                        >
+                          Continue with username only (for now)
+                        </button>
+                        <span className="text-xs text-slate-600 dark:text-slate-300">
+                      Status: { memberPricingAuthMode === "pin"
+                          ? "verified by PIN"
+                          : memberPricingAuthMode === "username_only"
+                            ? "username-only accepted"
+                            : "not verified" }
                     </span>
-                  </div>
-                </div>
-              )}
+                      </div>
+                    </div>
+                  ) }
 
-              <div className="mt-6 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    playCashierCloseSound(isDark);
-                    void finalize("completed");
-                  }}
-                  disabled={isBusy || paymentBlockedByMemberAuth}
-                  className="rounded-xl bg-emerald-500 px-6 py-3 text-base font-bold text-white transition hover:brightness-95 disabled:opacity-50"
-                >
-                  I paid
-                </button>
-                <button
-                  type="button"
-                  onClick={() => finalize("canceled")}
-                  disabled={isBusy}
-                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-500 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200"
-                >
-                  Cancel
-                </button>
-                {memberCreditEnabled && (
-                  <button
-                    type="button"
-                    onClick={() => setShowPayWithCreditModal(true)}
-                    disabled={isBusy || paymentBlockedByMemberAuth}
-                    className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-700 transition hover:border-sky-500 disabled:opacity-50 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
-                  >
-                    Pay with customer credit
-                  </button>
-                )}
-              </div>
-              {paymentBlockedByMemberAuth && (
-                <p className="mt-3 text-sm text-rose-600 dark:text-rose-300">
-                  Payment is locked until member-priced items are verified with customer username + PIN (or username-only fallback).
-                </p>
-              )}
-
-              <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-left dark:border-slate-700 dark:bg-slate-900/40">
-                <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Manual transfer details
-                </p>
-                <div className="mt-3">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                    {isTopupView ? "Top-up amount" : "Amount due (external)"}
-                  </p>
-                  <p className="text-xl font-semibold">
-                    {currencyFormatter.format(checkoutExternalAmount)}
-                  </p>
-                </div>
-                {!isTopupView && checkoutCreditUsed > 0 && (
-                  <div className="mt-3 text-sm text-slate-600 dark:text-slate-300">
-                    Credit used: <span className="font-semibold">{currencyFormatter.format(checkoutCreditUsed)}</span>
-                    {transaction?.memberName ? ` (${transaction.memberName})` : ""}
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={ () => {
+                        playCashierCloseSound(isDark);
+                        void finalize("completed");
+                      } }
+                      disabled={ isBusy || paymentBlockedByMemberAuth }
+                      className="rounded-xl bg-emerald-500 px-6 py-3 text-base font-bold text-white transition hover:brightness-95 disabled:opacity-50"
+                    >
+                      I paid
+                    </button>
+                    <button
+                      type="button"
+                      onClick={ () => finalize("canceled") }
+                      disabled={ isBusy }
+                      className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-500 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200"
+                    >
+                      Cancel
+                    </button>
+                    { memberCreditEnabled && (
+                      <button
+                        type="button"
+                        onClick={ () => setShowPayWithCreditModal(true) }
+                        disabled={ isBusy || paymentBlockedByMemberAuth }
+                        className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-700 transition hover:border-sky-500 disabled:opacity-50 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
+                      >
+                        Pay with customer credit
+                      </button>
+                    ) }
                   </div>
-                )}
-                {structuredCommunication && (
-                  <div className="mt-3">
+                  { paymentBlockedByMemberAuth && (
+                    <p className="mt-3 text-sm text-rose-600 dark:text-rose-300">
+                      Payment is locked until member-priced items are verified with customer username + PIN (or
+                      username-only fallback).
+                    </p>
+                  ) }
+
+                  <div
+                    className="mt-6 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-left dark:border-slate-700 dark:bg-slate-900/40">
                     <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                      Gestructureerde mededeling
+                      Manual transfer details
                     </p>
-                    <p className="mt-1 font-mono text-sm font-semibold text-slate-800 dark:text-slate-100">
-                      {structuredCommunication}
-                    </p>
+                    <div className="mt-3">
+                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                        { isTopupView ? "Top-up amount" : "Amount due (external)" }
+                      </p>
+                      <p className="text-xl font-semibold">
+                        { currencyFormatter.format(checkoutExternalAmount) }
+                      </p>
+                    </div>
+                    { !isTopupView && checkoutCreditUsed > 0 && (
+                      <div className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+                        Credit used: <span
+                        className="font-semibold">{ currencyFormatter.format(checkoutCreditUsed) }</span>
+                        { transaction?.memberName ? ` (${ transaction.memberName })` : "" }
+                      </div>
+                    ) }
+                    { structuredCommunication && (
+                      <div className="mt-3">
+                        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          Gestructureerde mededeling
+                        </p>
+                        <p className="mt-1 font-mono text-sm font-semibold text-slate-800 dark:text-slate-100">
+                          { structuredCommunication }
+                        </p>
+                      </div>
+                    ) }
+                    <div className="mt-3">
+                      <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        Bank account
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        { paymentIbanName }
+                      </p>
+                      <p className="font-mono text-sm text-slate-700 dark:text-slate-200">
+                        { paymentIbanNumber }
+                      </p>
+                    </div>
                   </div>
-                )}
-                <div className="mt-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Bank account
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-100">
-                    {paymentIbanName}
-                  </p>
-                  <p className="font-mono text-sm text-slate-700 dark:text-slate-200">
-                    {paymentIbanNumber}
-                  </p>
-                </div>
-              </div>
                 </>
-              )}
+              ) }
             </div>
-            <aside className="rounded-2xl border border-black/10 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
+            <aside
+              className="rounded-2xl border border-black/10 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
               <h2 className="text-lg font-semibold">This transaction</h2>
               <div className="mt-4 flex flex-col gap-3 text-sm text-slate-600 dark:text-slate-300">
-                {transaction?.items.map((item) => (
+                { transaction?.items.map((item) => (
                   <div
-                    key={`${item.productId}-${item.isMemberPrice}`}
+                    key={ `${ item.productId }-${ item.isMemberPrice }` }
                     className="flex items-center justify-between"
                   >
                     <span>
-                      {item.name} {formatPriceMode(item.isMemberPrice)} x{" "}
-                      {item.quantity}
+                      { item.name } { formatPriceMode(item.isMemberPrice) } x{ " " }
+                      { item.quantity }
                     </span>
-                    <span>{currencyFormatter.format(item.lineTotal)}</span>
+                    <span>{ currencyFormatter.format(item.lineTotal) }</span>
                   </div>
-                ))}
+                )) }
               </div>
-              <div className="mt-4 border-t border-black/10 pt-4 text-sm text-slate-500 dark:border-white/10 dark:text-slate-400">
-                {transaction?.items.some((item) => item.isMemberPrice) &&
+              <div
+                className="mt-4 border-t border-black/10 pt-4 text-sm text-slate-500 dark:border-white/10 dark:text-slate-400">
+                { transaction?.items.some((item) => item.isMemberPrice) &&
                 transaction?.items.some((item) => !item.isMemberPrice)
                   ? "Mixed pricing applied"
                   : transaction?.items.some((item) => item.isMemberPrice)
                     ? "Member pricing applied"
-                    : "Regular pricing applied"}
+                    : "Regular pricing applied" }
                 <div className="mt-3 space-y-1">
-                  <div>Total: {transaction ? currencyFormatter.format(transaction.total) : "-"}</div>
-                  <div>Credit: {currencyFormatter.format(checkoutCreditUsed)}</div>
-                  <div>External: {currencyFormatter.format(checkoutExternalAmount)}</div>
+                  <div>Total: { transaction ? currencyFormatter.format(transaction.total) : "-" }</div>
+                  <div>Credit: { currencyFormatter.format(checkoutCreditUsed) }</div>
+                  <div>External: { currencyFormatter.format(checkoutExternalAmount) }</div>
                 </div>
               </div>
             </aside>
           </section>
-        )}
+        ) }
 
-        {memberCreditEnabled && transaction && showPayWithCreditModal && (
+        { memberCreditEnabled && transaction && showPayWithCreditModal && (
           <div
             className="fixed inset-0 z-40 flex items-start justify-center bg-black/50 p-4 pt-6"
-            onClick={() => setShowPayWithCreditModal(false)}
+            onClick={ () => setShowPayWithCreditModal(false) }
           >
             <div
               className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900"
-              onClick={(event) => event.stopPropagation()}
+              onClick={ (event) => event.stopPropagation() }
             >
               <h3 className="text-lg font-semibold">Pay with customer credit</h3>
               <CustomerAutocomplete
                 className="mt-3"
-                customers={publicCustomers}
-                selectedCustomerId={selectedPaymentMemberId}
-                onSelectCustomer={(member) => {
+                customers={ publicCustomers }
+                selectedCustomerId={ selectedPaymentMemberId }
+                onSelectCustomer={ (member) => {
                   const nextMemberId = member?.id ?? "";
                   setSelectedPaymentMemberId(nextMemberId);
                   setPayWithCreditModalError(null);
                   if (!member || activeMember?.id !== member.id) {
                     setActiveMember(null);
                   }
-                }}
+                } }
                 placeholder="Search customer"
                 noResultsText="No customers found."
               />
 
-              {payWithCreditModalError && (
-                <div className="mt-3 rounded-xl bg-rose-100 px-3 py-2 text-sm text-rose-700 dark:bg-rose-500/20 dark:text-rose-200">
-                  {payWithCreditModalError}
+              { payWithCreditModalError && (
+                <div
+                  className="mt-3 rounded-xl bg-rose-100 px-3 py-2 text-sm text-rose-700 dark:bg-rose-500/20 dark:text-rose-200">
+                  { payWithCreditModalError }
                 </div>
-              )}
+              ) }
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <input
@@ -3021,65 +3005,65 @@ export default function App() {
                   inputMode="numeric"
                   pattern="[0-9]*"
                   autoComplete="one-time-code"
-                  value={memberPinInput}
-                  onChange={(event) => setMemberPinInput(event.target.value.replace(/\D+/g, ""))}
+                  value={ memberPinInput }
+                  onChange={ (event) => setMemberPinInput(event.target.value.replace(/\D+/g, "")) }
                   placeholder="Customer PIN"
-                  disabled={!selectedPaymentMember}
+                  disabled={ !selectedPaymentMember }
                   className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-500 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900"
                 />
                 <button
                   type="button"
-                  onClick={() => void authenticateMemberPin()}
-                  disabled={!selectedPaymentMember}
+                  onClick={ () => void authenticateMemberPin() }
+                  disabled={ !selectedPaymentMember }
                   className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:border-sky-500 disabled:opacity-50 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
                 >
                   Unlock
                 </button>
               </div>
 
-              {activeMember && selectedPaymentMember && activeMember.id === selectedPaymentMember.id && (
+              { activeMember && selectedPaymentMember && activeMember.id === selectedPaymentMember.id && (
                 <div className="mt-3 rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-700">
-                  <div className="font-medium">{activeMember.displayName}</div>
+                  <div className="font-medium">{ activeMember.displayName }</div>
                   <div className="text-slate-500 dark:text-slate-300">
-                    Balance: {currencyFormatter.format(activeMember.balance)}
+                    Balance: { currencyFormatter.format(activeMember.balance) }
                   </div>
                   <button
                     type="button"
-                    onClick={() => void payTransactionWithMemberCredit()}
+                    onClick={ () => void payTransactionWithMemberCredit() }
                     className="mt-3 w-full rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95"
                   >
                     Pay
                   </button>
-                  {activeMember.balance < transaction.total && (
+                  { activeMember.balance < transaction.total && (
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={ () => {
                         const shortfall = Math.max(0, transaction.total - activeMember.balance);
                         setTopupAmount(Math.max(5, Math.ceil(shortfall)).toFixed(2));
                         setSelectedTopupMemberId(activeMember.id);
                         setShowPayWithCreditModal(false);
                         setTransaction(null);
                         setView("topup");
-                      }}
+                      } }
                       className="mt-2 w-full rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:border-sky-500 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
                     >
                       Not enough credit — Top up first
                     </button>
-                  )}
+                  ) }
                 </div>
-              )}
+              ) }
             </div>
           </div>
-        )}
+        ) }
 
-        {uiMode === "pos" && view === "cart" && showCheckoutConfirm && (
+        { uiMode === "pos" && view === "cart" && showCheckoutConfirm && (
           <div
             className="fixed inset-0 z-40 flex items-start justify-center bg-black/50 p-4 pt-6"
-            onClick={() => setShowCheckoutConfirm(false)}
+            onClick={ () => setShowCheckoutConfirm(false) }
           >
             <div
               className="w-full max-w-2xl rounded-2xl border border-black/10 bg-white p-6 shadow-xl dark:border-white/10 dark:bg-slate-900"
-              onClick={(event) => event.stopPropagation()}
+              onClick={ (event) => event.stopPropagation() }
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -3090,42 +3074,43 @@ export default function App() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={ () => {
                     playCashierOpenSound(isDark);
                     void startCheckout();
-                  }}
-                  disabled={!hasCheckoutItems || isBusy}
+                  } }
+                  disabled={ !hasCheckoutItems || isBusy }
                   className="rounded-xl bg-accent-light px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
                 >
-                  Confirm ({currencyFormatter.format(cartExternalDuePreview)})
+                  Confirm ({ currencyFormatter.format(cartExternalDuePreview) })
                 </button>
               </div>
 
-              <div className="mt-4 max-h-[50vh] overflow-y-auto rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-                {cartItemsForCheckout.length === 0 ? (
+              <div
+                className="mt-4 max-h-[50vh] overflow-y-auto rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                { cartItemsForCheckout.length === 0 ? (
                   <p className="text-sm text-slate-500">Your cart is empty.</p>
                 ) : (
                   <div className="flex flex-col gap-3">
-                    {cartItemsForCheckout.map((item) => (
+                    { cartItemsForCheckout.map((item) => (
                       <div
-                        key={`${item.productId}-${item.isMemberPrice}`}
+                        key={ `${ item.productId }-${ item.isMemberPrice }` }
                         className="flex items-center justify-between gap-3 border-b border-black/5 pb-3 last:border-b-0 dark:border-white/10"
                       >
                         <div className="min-w-0 flex-1 pr-2">
                           <p className="font-medium break-words">
-                            {item.name}{" "}
+                            { item.name }{ " " }
                             <span className="text-xs uppercase text-slate-500">
-                              {formatPriceMode(item.isMemberPrice)}
+                              { formatPriceMode(item.isMemberPrice) }
                             </span>
                           </p>
                           <p className="text-sm text-slate-500 dark:text-slate-300">
-                            {currencyFormatter.format(item.unitPrice)}
+                            { currencyFormatter.format(item.unitPrice) }
                           </p>
                         </div>
                         <div className="shrink-0 flex items-center gap-1.5 self-center">
                           <button
                             type="button"
-                            onClick={() =>
+                            onClick={ () =>
                               handleQuantityChange(item.productId, -1, item.isMemberPrice)
                             }
                             className="h-10 w-10 rounded-xl border border-slate-300 text-xl leading-none transition hover:border-slate-500 dark:border-slate-600"
@@ -3133,11 +3118,11 @@ export default function App() {
                             -
                           </button>
                           <span className="w-5 text-center text-sm font-semibold">
-                            {item.quantity}
+                            { item.quantity }
                           </span>
                           <button
                             type="button"
-                            onClick={() =>
+                            onClick={ () =>
                               handleQuantityChange(item.productId, 1, item.isMemberPrice)
                             }
                             className="h-10 w-10 rounded-xl border border-slate-300 text-xl leading-none transition hover:border-slate-500 dark:border-slate-600"
@@ -3146,41 +3131,41 @@ export default function App() {
                           </button>
                         </div>
                       </div>
-                    ))}
+                    )) }
                   </div>
-                )}
+                ) }
               </div>
 
               <div className="mt-4 space-y-2 text-sm">
                 <div className="flex items-center justify-between">
                   <p className="text-slate-600 dark:text-slate-300">Total</p>
-                  <p className="font-semibold">{totalLabel}</p>
+                  <p className="font-semibold">{ totalLabel }</p>
                 </div>
                 <div className="flex items-center justify-between">
                   <p className="text-slate-600 dark:text-slate-300">Credit</p>
-                  <p className="font-semibold">{currencyFormatter.format(cartCreditPreview)}</p>
+                  <p className="font-semibold">{ currencyFormatter.format(cartCreditPreview) }</p>
                 </div>
                 <div className="flex items-center justify-between">
                   <p className="text-slate-600 dark:text-slate-300">External due</p>
-                  <p className="text-xl font-semibold">{currencyFormatter.format(cartExternalDuePreview)}</p>
+                  <p className="text-xl font-semibold">{ currencyFormatter.format(cartExternalDuePreview) }</p>
                 </div>
               </div>
 
               <div className="mt-6 flex flex-wrap justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={ () => {
                     setCart([]);
                     setShowCheckoutConfirm(false);
-                  }}
-                  disabled={isBusy || cartItemsForCheckout.length === 0}
+                  } }
+                  disabled={ isBusy || cartItemsForCheckout.length === 0 }
                   className="rounded-xl border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:border-rose-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-600 dark:text-rose-300"
                 >
                   Clear cart
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowCheckoutConfirm(false)}
+                  onClick={ () => setShowCheckoutConfirm(false) }
                   className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-500 dark:border-slate-600 dark:text-slate-200"
                 >
                   Back
@@ -3188,9 +3173,9 @@ export default function App() {
               </div>
             </div>
           </div>
-        )}
+        ) }
         <footer className="pb-2 text-center text-xs text-slate-500 dark:text-slate-400">
-          Frontend commit: <span className="font-mono">{APP_VERSION}</span>
+          Frontend commit: <span className="font-mono">{ APP_VERSION }</span>
         </footer>
       </div>
     </div>
