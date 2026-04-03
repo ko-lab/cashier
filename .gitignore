@@ -14,3 +14,7 @@ apps/backend/data/transactions.*
 
 .env
 .worktrees
+
+#data
+*.sqlite*
+stock-events.json
