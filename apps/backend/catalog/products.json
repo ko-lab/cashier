@@ -42,6 +42,12 @@
       "priceMember": 3,
       "priceNonMember": 4.0
     },
+    "bier-75cl": {
+      "id": "bier-75cl",
+      "name": "Bier 75cl",
+      "priceMember": 4.0,
+      "priceNonMember": 5.0
+    },
     "premium-drink": {
       "id": "premium-drink",
       "name": "Premium drink",
@@ -66,13 +72,13 @@
       "id": "gen-pils",
       "name": "Generic Pils",
       "priceCategoryId": "pils",
-      "active": true
+      "active": false
     },
     "gen-speciaal-bier": {
       "id": "gen-speciaal-bier",
       "name": "Generic Speciaal Bier",
       "priceCategoryId": "bier",
-      "active": true
+      "active": false
     },
     "mate-winter": {
       "id": "mate-winter",
@@ -197,7 +203,7 @@
     "desperados-0": {
       "id": "desperados-0",
       "name": "Desperados 0.0",
-      "priceCategoryId": "promo",
+      "priceCategoryId": "bier",
       "active": true
     },
     "liefmans-otr": {
@@ -209,7 +215,7 @@
     "liefmans-otr-peach": {
       "id": "liefmans-otr-peach",
       "name": "Liefmans Peach 0.0",
-      "priceCategoryId": "bier",
+      "priceCategoryId": "promo",
       "active": true
     },
     "karmeliet-0.0": {
@@ -221,7 +227,7 @@
     "abbaye-oubliee-imperiale": {
       "id": "abbaye-oubliee-imperiale",
       "name": "Abbaye Oubliée Imperiale",
-      "priceCategoryId": "bier",
+      "priceCategoryId": "bier-75cl",
       "active": true
     },
     "bloody-berry": {
@@ -251,7 +257,7 @@
     "grimbergen-prestige": {
       "id": "grimbergen-prestige",
       "name": "Grimbergen prestige",
-      "priceCategoryId": "bier",
+      "priceCategoryId": "promo",
       "active": true
     },
     "hapkin": {
@@ -264,6 +270,12 @@
       "id": "hapkin-bipa",
       "name": "Hapkin BIPA",
       "priceCategoryId": "bier",
+      "active": true
+    },
+    "leffe-winter": {
+      "id": "leffe-winter",
+      "name": "Leffe Winter",
+      "priceCategoryId": "promo",
       "active": true
     },
     "omer-lefort": {
@@ -288,7 +300,7 @@
       "id": "tripel-karmeliet-blik",
       "name": "Tripel Karmeliet blik",
       "priceCategoryId": "bier",
-      "active": true
+      "active": false
     },
     "cider": {
       "id": "cider",
@@ -306,7 +318,7 @@
       "id": "gen-snack",
       "name": "Generic snack",
       "priceCategoryId": "snack",
-      "active": true
+      "active": false
     },
     "ole": {
       "id": "ole",
