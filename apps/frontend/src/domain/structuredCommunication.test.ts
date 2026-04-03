@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { toStructuredCommunication } from "./structuredCommunication";
 
 describe("toStructuredCommunication", () => {
-  it("returns the expected Belgian formatted message", () => {
+  it("returns a 12-digit numeric communication", () => {
     const value = toStructuredCommunication("123e4567-e89b-12d3-a456-426614174000");
 
     expect(value).toMatchInlineSnapshot(`"074546073622"`);

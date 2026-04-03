@@ -1771,11 +1771,11 @@ export default function App() {
 
         { showMobileMenu && (
           <div
-            className="fixed inset-0 z-50 bg-black/50"
+            className="legacy-overlay fixed inset-0 z-50 bg-black/50"
             onClick={ () => setShowMobileMenu(false) }
           >
             <aside
-              className="ml-auto flex h-full w-72 flex-col gap-3 border-l border-black/10 bg-white p-4 dark:border-white/10 dark:bg-slate-900"
+              className="legacy-dialog-surface ml-auto flex h-full w-72 flex-col gap-3 border-l border-black/10 bg-white p-4 dark:border-white/10 dark:bg-slate-900"
               onClick={ (event) => event.stopPropagation() }
             >
               <div className="mb-2 flex items-center justify-between">
@@ -2968,11 +2968,11 @@ export default function App() {
 
         { memberCreditEnabled && transaction && showPayWithCreditModal && (
           <div
-            className="fixed inset-0 z-40 flex items-start justify-center bg-black/50 p-4 pt-6"
+            className="legacy-overlay fixed inset-0 z-40 flex items-start justify-center bg-black/50 p-4 pt-6"
             onClick={ () => setShowPayWithCreditModal(false) }
           >
             <div
-              className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900"
+              className="legacy-dialog-surface max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900"
               onClick={ (event) => event.stopPropagation() }
             >
               <h3 className="text-lg font-semibold">Pay with customer credit</h3>
@@ -3058,11 +3058,11 @@ export default function App() {
 
         { uiMode === "pos" && view === "cart" && showCheckoutConfirm && (
           <div
-            className="fixed inset-0 z-40 flex items-start justify-center bg-black/50 p-4 pt-6"
+            className="legacy-overlay fixed inset-0 z-40 flex items-start justify-center bg-black/50 p-4 pt-6"
             onClick={ () => setShowCheckoutConfirm(false) }
           >
             <div
-              className="w-full max-w-2xl rounded-2xl border border-black/10 bg-white p-6 shadow-xl dark:border-white/10 dark:bg-slate-900"
+              className="legacy-dialog-surface w-full max-w-2xl rounded-2xl border border-black/10 bg-white p-6 shadow-xl dark:border-white/10 dark:bg-slate-900"
               onClick={ (event) => event.stopPropagation() }
             >
               <div className="flex items-start justify-between gap-3">

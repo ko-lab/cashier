@@ -22,6 +22,12 @@ img[alt="Payment QR"] {
 }
 
 /* Safari 10 fallback: Tailwind's modern rgb/opacity syntax is not fully supported. */
+.legacy-overlay { background-color: rgba(0, 0, 0, 0.5); }
+.legacy-dialog-surface {
+  background-color: #ffffff;
+  opacity: 1;
+}
+
 .bg-base-light { background-color: #f7f4ef; }
 .bg-accent-light { background-color: #e07a5f; }
 .bg-white\/70 { background-color: rgba(255, 255, 255, 0.7); }
