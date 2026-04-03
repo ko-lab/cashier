@@ -1109,6 +1109,7 @@ export default function App() {
   const checkoutExternalAmount = transaction?.externalAmount ?? transaction?.total ?? 0;
   const payableTotal = (view === "checkout" || view === "topup") && transaction ? transaction.total : summary.total;
   const hasMemberPricedItemsInCheckout =
+    memberCreditEnabled &&
     view === "checkout" &&
     !!transaction &&
     transaction.type === "sale" &&
