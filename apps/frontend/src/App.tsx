@@ -2813,7 +2813,7 @@ export default function App() {
                   <div className="mx-auto h-56 w-56 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
                 )}
               </div>
-              {hasMemberPricedItemsInCheckout && (
+              {memberCreditEnabled && hasMemberPricedItemsInCheckout && (
                 <div className="mt-6 rounded-xl border border-amber-300 bg-amber-50 px-4 py-4 dark:border-amber-700 dark:bg-amber-900/20">
                   <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
                     Member-priced items require customer username + PIN
