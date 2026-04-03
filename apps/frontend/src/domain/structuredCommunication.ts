@@ -2,7 +2,7 @@ export function toStructuredCommunication(transactionId: string): string {
   const directMatch = transactionId.match(/^\d{12}$/);
   if (directMatch) {
     const full = directMatch[0];
-    return `+++${full.slice(0, 3)}/${full.slice(3, 7)}/${full.slice(7)}+++`;
+    return full;
   }
 
   const base = hashToTenDigits(transactionId);
@@ -12,7 +12,7 @@ export function toStructuredCommunication(transactionId: string): string {
     .toString()
     .padStart(2, "0")}`;
 
-  return `+++${full.slice(0, 3)}/${full.slice(3, 7)}/${full.slice(7)}+++`;
+  return full;
 }
 
 function hashToTenDigits(input: string): number {

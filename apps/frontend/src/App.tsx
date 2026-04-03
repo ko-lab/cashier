@@ -2912,7 +2912,7 @@ export default function App() {
                           Gestructureerde mededeling
                         </p>
                         <p className="mt-1 font-mono text-sm font-semibold text-slate-800 dark:text-slate-100">
-                          { structuredCommunication }
+                          { `+++${structuredCommunication.slice(0, 3)}/${structuredCommunication.slice(3, 7)}/${structuredCommunication.slice(7)}+++` }+++
                         </p>
                       </div>
                     ) }

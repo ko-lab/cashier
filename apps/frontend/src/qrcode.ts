@@ -2,20 +2,25 @@ import QRCode from "qrcode-svg";
 
 const QR_SIZE = 224;
 
-export function createPaymentQR(paymentIbanName: string, paymentIbanNumber: string, amount: string, structuredCommunication: string) {
+export function createPaymentQR(
+  paymentIbanName: string,
+  paymentIbanNumber: string,
+  amount: string,
+  structuredCommunication: string
+) {
   const payload = [
     "BCD",
-    "002",
+    "001",                        // Changed to version 001
     "1",
     "SCT",
     "",
     `${ paymentIbanName }`,
     `${ paymentIbanNumber }`,
     `EUR${ amount }`,
-    "",
-    "",
+    "",                           // Purpose code (usually empty)
     structuredCommunication.substring(0, 100),
-    ""
+    "",                           // Remittance info (structured or empty)
+    ""                            // Extra empty line at the end (recommended)
   ].join("\n");
 
   const qr = new QRCode({
@@ -27,6 +32,7 @@ export function createPaymentQR(paymentIbanName: string, paymentIbanNumber: stri
     background: "#ffffff",
     ecl: "H"
   });
+
   return qr;
 }
 
