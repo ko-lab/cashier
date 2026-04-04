@@ -1028,6 +1028,8 @@ export default function App() {
         if (!isTopup) {
           setCart([]);
         }
+        setDefaultIsMemberPrice(false);
+        setSearchQuery("");
         setActiveMember(null);
         setCreditToUse("0.00");
       }
