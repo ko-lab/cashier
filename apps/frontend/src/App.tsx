@@ -239,7 +239,7 @@ function playCashierOpenSound(isDarkMode = false): void {
   }
 }
 
-function playCashierCloseSound(isDarkMode = false): void {
+function playCashierPaidSound(isDarkMode = false): void {
   enableMediaPlaybackAudioMode();
   const context = getCashierAudioContext();
   if (!context) {
@@ -276,12 +276,12 @@ function playCashierCloseSound(isDarkMode = false): void {
       oscillator.stop(startAt + duration + 0.02);
     };
 
-    // Retro "register closing" descending tones. Dark mode: deeper + softer.
-    const gainBoost = isDarkMode ? 0.85 : 1;
-    playTone(isDarkMode ? 740 : 880, now, 0.16, 0.16 * gainBoost, isDarkMode ? "triangle" : "square");
-    playTone(isDarkMode ? 523 : 622, now + 0.12, 0.2, 0.17 * gainBoost, isDarkMode ? "triangle" : "square");
-    playTone(isDarkMode ? 370 : 440, now + 0.28, 0.24, 0.18 * gainBoost, isDarkMode ? "triangle" : "square");
-    playTone(isDarkMode ? 262 : 311, now + 0.48, 0.3, 0.2 * gainBoost, isDarkMode ? "triangle" : "sawtooth");
+    // Distinct "payment completed" jingle: short, bright, and upbeat.
+    const gainBoost = isDarkMode ? 0.82 : 1;
+    playTone(isDarkMode ? 392 : 523, now, 0.1, 0.14 * gainBoost, isDarkMode ? "triangle" : "square");
+    playTone(isDarkMode ? 494 : 659, now + 0.09, 0.11, 0.15 * gainBoost, isDarkMode ? "triangle" : "square");
+    playTone(isDarkMode ? 587 : 784, now + 0.18, 0.12, 0.16 * gainBoost, isDarkMode ? "triangle" : "square");
+    playTone(isDarkMode ? 784 : 1047, now + 0.28, 0.28, 0.18 * gainBoost, isDarkMode ? "sine" : "triangle");
   } catch {
     // Ignore audio errors and continue checkout flow.
   }
@@ -2804,7 +2804,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={ () => {
-                        playCashierOpenSound(isDark);
+                        playCashierPaidSound(isDark);
                         void finalize("completed");
                       } }
                       disabled={ isBusy || paymentBlockedByMemberAuth }
