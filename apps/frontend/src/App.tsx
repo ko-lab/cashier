@@ -1700,6 +1700,10 @@ export default function App() {
   };
 
   const showBackToCart = uiMode === "admin" || view !== "cart";
+  const hideTopBarOnPaymentScreen =
+    uiMode === "pos" &&
+    !!transaction &&
+    (view === "checkout" || view === "topup");
   const handleBackToCart = () => {
     if (uiMode === "admin") {
       toggleAdminMode();
@@ -1714,6 +1718,7 @@ export default function App() {
   return (
     <div className="min-h-screen px-3 py-6 sm:px-6">
       <div className="mx-auto flex max-w-4xl flex-col gap-4">
+        { !hideTopBarOnPaymentScreen && (
         <header
           className="sticky top-0 z-30 rounded-2xl border border-black/10 bg-white/80 p-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/80">
           <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
@@ -1779,8 +1784,9 @@ export default function App() {
             </button>
           </div>
         </header>
+        ) }
 
-        { showMobileMenu && (
+        { !hideTopBarOnPaymentScreen && showMobileMenu && (
           <div
             className="legacy-overlay fixed inset-0 z-50 bg-black/50"
             onClick={ () => setShowMobileMenu(false) }
