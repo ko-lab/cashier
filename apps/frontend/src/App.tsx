@@ -2793,28 +2793,6 @@ export default function App() {
 
               { transaction && (
                 <>
-                  <div className="sticky top-16 z-20 -mx-2 mb-4 flex flex-wrap gap-3 rounded-xl border border-slate-200 bg-white/95 px-2 py-2 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
-                    <button
-                      type="button"
-                      onClick={ () => {
-                        playCashierCloseSound(isDark);
-                        void finalize("completed");
-                      } }
-                      disabled={ isBusy || paymentBlockedByMemberAuth }
-                      className="rounded-xl bg-emerald-500 px-6 py-3 text-base font-bold text-white transition hover:brightness-95 disabled:opacity-50"
-                    >
-                      I paid
-                    </button>
-                    <button
-                      type="button"
-                      onClick={ () => finalize("canceled") }
-                      disabled={ isBusy }
-                      className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-500 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-
                   <div
                     className="mt-6 rounded-2xl border border-dashed border-slate-400/60 p-6 text-center dark:border-slate-500">
                     { qrImageSrc ? (
@@ -2885,8 +2863,27 @@ export default function App() {
                     </div>
                   ) }
 
-                  { memberCreditEnabled && (
-                    <div className="mt-6 flex flex-wrap gap-3">
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={ () => {
+                        playCashierCloseSound(isDark);
+                        void finalize("completed");
+                      } }
+                      disabled={ isBusy || paymentBlockedByMemberAuth }
+                      className="rounded-xl bg-emerald-500 px-6 py-3 text-base font-bold text-white transition hover:brightness-95 disabled:opacity-50"
+                    >
+                      I paid
+                    </button>
+                    <button
+                      type="button"
+                      onClick={ () => finalize("canceled") }
+                      disabled={ isBusy }
+                      className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-500 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200"
+                    >
+                      Cancel
+                    </button>
+                    { memberCreditEnabled && (
                       <button
                         type="button"
                         onClick={ () => setShowPayWithCreditModal(true) }
@@ -2895,8 +2892,8 @@ export default function App() {
                       >
                         Pay with customer credit
                       </button>
-                    </div>
-                  ) }
+                    ) }
+                  </div>
                   { paymentBlockedByMemberAuth && (
                     <p className="mt-3 text-sm text-rose-600 dark:text-rose-300">
                       Payment is locked until member-priced items are verified with customer username + PIN (or
