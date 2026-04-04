@@ -2869,7 +2869,7 @@ export default function App() {
                     </div>
                   ) }
 
-                  <div className="mt-6 flex flex-wrap gap-3">
+                  <div className="sticky top-0 z-20 -mx-2 mb-4 mt-2 flex flex-wrap gap-3 rounded-xl border border-slate-200 bg-white/95 px-2 py-2 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
                     <button
                       type="button"
                       onClick={ () => {
