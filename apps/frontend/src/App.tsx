@@ -1753,6 +1753,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={ () => {
+                    playCashierOpenSound(isDark);
                     void startCheckout();
                   } }
                   disabled={ !hasCheckoutItems || isBusy }
@@ -2803,7 +2804,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={ () => {
-                        playCashierCloseSound(isDark);
+                        playCashierOpenSound(isDark);
                         void finalize("completed");
                       } }
                       disabled={ isBusy || paymentBlockedByMemberAuth }
