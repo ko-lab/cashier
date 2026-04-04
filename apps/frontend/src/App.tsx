@@ -1028,6 +1028,8 @@ export default function App() {
         if (!isTopup) {
           setCart([]);
         }
+        setDefaultIsMemberPrice(false);
+        setSearchQuery("");
         setActiveMember(null);
         setCreditToUse("0.00");
       }
@@ -1698,6 +1700,10 @@ export default function App() {
   };
 
   const showBackToCart = uiMode === "admin" || view !== "cart";
+  const hideTopBarOnPaymentScreen =
+    uiMode === "pos" &&
+    !!transaction &&
+    (view === "checkout" || view === "topup");
   const handleBackToCart = () => {
     if (uiMode === "admin") {
       toggleAdminMode();
@@ -1712,6 +1718,7 @@ export default function App() {
   return (
     <div className="min-h-screen px-3 py-6 sm:px-6">
       <div className="mx-auto flex max-w-4xl flex-col gap-4">
+        { !hideTopBarOnPaymentScreen && (
         <header
           className="sticky top-0 z-30 rounded-2xl border border-black/10 bg-white/80 p-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/80">
           <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
@@ -1739,11 +1746,20 @@ export default function App() {
                   type="button"
                   onClick={ openCheckoutConfirm }
                   disabled={ !hasCheckoutItems || isBusy }
+                  className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:hover:border-slate-300"
+                >
+                  Cart
+                </button>
+                <button
+                  type="button"
+                  onClick={ () => {
+                    void startCheckout();
+                  } }
+                  disabled={ !hasCheckoutItems || isBusy }
                   className="rounded-full bg-accent-light px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-accent-dark dark:text-slate-900"
                 >
                   <span className="sm:hidden">Pay ({ currencyFormatter.format(cartExternalDuePreview) })</span>
-                  <span
-                    className="hidden sm:inline">Checkout ({ currencyFormatter.format(cartExternalDuePreview) })</span>
+                  <span className="hidden sm:inline">Pay ({ currencyFormatter.format(cartExternalDuePreview) })</span>
                 </button>
               </div>
             ) }
@@ -1768,8 +1784,9 @@ export default function App() {
             </button>
           </div>
         </header>
+        ) }
 
-        { showMobileMenu && (
+        { !hideTopBarOnPaymentScreen && showMobileMenu && (
           <div
             className="legacy-overlay fixed inset-0 z-50 bg-black/50"
             onClick={ () => setShowMobileMenu(false) }
@@ -2689,14 +2706,18 @@ export default function App() {
           <section className="flex flex-col gap-6">
             <div
               className="rounded-2xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
-              <h2 className="text-lg font-semibold">
-                { isTopupView ? "Top up customer credit" : "Pay at the fridge" }
-              </h2>
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-300">
-                { isTopupView
-                  ? "Scan the QR code to add credit. When done, press \"I paid\"."
-                  : "Scan the QR code and pay the total. When done, press \"I paid\"." }
-              </p>
+              { !transaction && (
+                <>
+                  <h2 className="text-lg font-semibold">
+                    { isTopupView ? "Top up customer credit" : "Pay at the fridge" }
+                  </h2>
+                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-300">
+                    { isTopupView
+                      ? "Scan the QR code to add credit. When done, press \"I paid\"."
+                      : "Scan the QR code and pay the total. When done, press \"I paid\"." }
+                  </p>
+                </>
+              ) }
 
               { isTopupView && activeMember && (
                 <div className="mt-3 text-sm text-slate-600 dark:text-slate-300">
@@ -2778,6 +2799,38 @@ export default function App() {
 
               { transaction && (
                 <>
+                  <div className="sticky top-0 z-20 -mx-2 mb-4 mt-2 flex flex-wrap gap-3 rounded-xl border border-slate-200 bg-white/95 px-2 py-2 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
+                    <button
+                      type="button"
+                      onClick={ () => {
+                        playCashierCloseSound(isDark);
+                        void finalize("completed");
+                      } }
+                      disabled={ isBusy || paymentBlockedByMemberAuth }
+                      className="rounded-xl bg-emerald-500 px-6 py-3 text-base font-bold text-white transition hover:brightness-95 disabled:opacity-50"
+                    >
+                      I paid
+                    </button>
+                    <button
+                      type="button"
+                      onClick={ () => finalize("canceled") }
+                      disabled={ isBusy }
+                      className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-500 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200"
+                    >
+                      Cancel
+                    </button>
+                    { memberCreditEnabled && (
+                      <button
+                        type="button"
+                        onClick={ () => setShowPayWithCreditModal(true) }
+                        disabled={ isBusy || paymentBlockedByMemberAuth }
+                        className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-700 transition hover:border-sky-500 disabled:opacity-50 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
+                      >
+                        Pay with customer credit
+                      </button>
+                    ) }
+                  </div>
+
                   <div
                     className="mt-6 rounded-2xl border border-dashed border-slate-400/60 p-6 text-center dark:border-slate-500">
                     { qrImageSrc ? (
@@ -2848,37 +2901,6 @@ export default function App() {
                     </div>
                   ) }
 
-                  <div className="mt-6 flex flex-wrap gap-3">
-                    <button
-                      type="button"
-                      onClick={ () => {
-                        playCashierCloseSound(isDark);
-                        void finalize("completed");
-                      } }
-                      disabled={ isBusy || paymentBlockedByMemberAuth }
-                      className="rounded-xl bg-emerald-500 px-6 py-3 text-base font-bold text-white transition hover:brightness-95 disabled:opacity-50"
-                    >
-                      I paid
-                    </button>
-                    <button
-                      type="button"
-                      onClick={ () => finalize("canceled") }
-                      disabled={ isBusy }
-                      className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-500 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200"
-                    >
-                      Cancel
-                    </button>
-                    { memberCreditEnabled && (
-                      <button
-                        type="button"
-                        onClick={ () => setShowPayWithCreditModal(true) }
-                        disabled={ isBusy || paymentBlockedByMemberAuth }
-                        className="rounded-xl border border-sky-300 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-700 transition hover:border-sky-500 disabled:opacity-50 dark:border-sky-700 dark:bg-sky-900/30 dark:text-sky-200"
-                      >
-                        Pay with customer credit
-                      </button>
-                    ) }
-                  </div>
                   { paymentBlockedByMemberAuth && (
                     <p className="mt-3 text-sm text-rose-600 dark:text-rose-300">
                       Payment is locked until member-priced items are verified with customer username + PIN (or
