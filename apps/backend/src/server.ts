@@ -1,3 +1,5 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { createServer } from "node:http";
 import { fileURLToPath } from "node:url";
 import { implement } from "@orpc/server";
@@ -110,10 +112,39 @@ const router = {
 };
 
 const rpcHandler = new RPCHandler(router);
+const runCommand = promisify(execFile);
 const rpcPrefix = "/rpc";
 const clientLogPath = "/client-log";
 const healthPath = "/healthz";
+const deployWebhookPath = process.env.DEPLOY_WEBHOOK_PATH ?? "/deploy-webhook";
+const deployWebhookSecret = process.env.DEPLOY_WEBHOOK_SECRET;
 const port = Number(process.env.PORT ?? 4000);
+
+const readBearerToken = (authorizationHeader: string | undefined): string | null => {
+  if (!authorizationHeader) {
+    return null;
+  }
+
+  const [scheme, value] = authorizationHeader.split(" ");
+
+  if (scheme?.toLowerCase() !== "bearer" || !value) {
+    return null;
+  }
+
+  return value;
+};
+
+const runDeployAndExit = async () => {
+  console.log(`[deploy-webhook] ${new Date().toISOString()} pulling latest changes`);
+
+  await runCommand("git", ["pull"], {
+    cwd: process.cwd(),
+    env: process.env
+  });
+
+  console.log(`[deploy-webhook] ${new Date().toISOString()} pull complete, exiting process`);
+  process.exit(0);
+};
 
 const server = createServer(async (req, res) => {
   try {
@@ -131,6 +162,35 @@ const server = createServer(async (req, res) => {
     res.statusCode = 200;
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify({ ok: true, ts: new Date().toISOString() }));
+    return;
+  }
+
+  if (req.url === deployWebhookPath && req.method === "POST") {
+    if (deployWebhookSecret) {
+      const webhookHeader = req.headers["x-webhook-secret"];
+      const headerToken =
+        (Array.isArray(webhookHeader) ? webhookHeader[0] : webhookHeader) ??
+        readBearerToken(
+          Array.isArray(req.headers.authorization)
+            ? req.headers.authorization[0]
+            : req.headers.authorization
+        );
+
+      if (headerToken !== deployWebhookSecret) {
+        res.statusCode = 401;
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ ok: false, error: "Unauthorized" }));
+        return;
+      }
+    }
+
+    res.statusCode = 202;
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ ok: true, action: "pull-and-restart" }));
+
+    runDeployAndExit().catch((error) => {
+      console.error(`[deploy-webhook] ${new Date().toISOString()} failed`, error);
+    });
     return;
   }
 
