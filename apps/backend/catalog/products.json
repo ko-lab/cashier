@@ -15,8 +15,8 @@
     "soft-medium": {
       "id": "soft-medium",
       "name": "Soft drink medium",
-      "priceMember": 2.0,
-      "priceNonMember": 3.0
+      "priceMember": 2,
+      "priceNonMember": 3
     },
     "juice": {
       "id": "juice",
@@ -40,19 +40,19 @@
       "id": "bier",
       "name": "Bier",
       "priceMember": 3,
-      "priceNonMember": 4.0
+      "priceNonMember": 4
     },
     "bier-75cl": {
       "id": "bier-75cl",
       "name": "Bier 75cl",
-      "priceMember": 4.0,
-      "priceNonMember": 5.0
+      "priceMember": 4,
+      "priceNonMember": 5
     },
     "premium-drink": {
       "id": "premium-drink",
       "name": "Premium drink",
       "priceMember": 3,
-      "priceNonMember": 4.0
+      "priceNonMember": 4
     },
     "promo": {
       "id": "promo",
@@ -71,278 +71,232 @@
     "gen-pils": {
       "id": "gen-pils",
       "name": "Generic Pils",
-      "priceCategoryId": "pils",
-      "active": false
+      "priceCategoryId": "pils"
     },
     "gen-speciaal-bier": {
       "id": "gen-speciaal-bier",
       "name": "Generic Speciaal Bier",
-      "priceCategoryId": "bier",
-      "active": false
+      "priceCategoryId": "bier"
     },
     "mate-winter": {
       "id": "mate-winter",
       "name": "Club-Mate Winter",
-      "priceCategoryId": "premium-drink",
-      "active": true
+      "priceCategoryId": "premium-drink"
     },
     "mate-zero": {
       "id": "mate-zero",
       "name": "Club-Mate Zero",
-      "priceCategoryId": "premium-drink",
-      "active": true
+      "priceCategoryId": "premium-drink"
     },
     "mate-original": {
       "id": "mate-original",
       "name": "Club-Mate Original",
-      "priceCategoryId": "premium-drink",
-      "active": true
+      "priceCategoryId": "premium-drink"
     },
     "spezi": {
       "id": "spezi",
       "name": "Paulaner Spezi",
-      "priceCategoryId": "premium-drink",
-      "active": true
+      "priceCategoryId": "premium-drink"
     },
     "miomio-mate": {
       "id": "miomio-mate",
       "name": "MioMio mate",
-      "priceCategoryId": "premium-drink",
-      "active": true
+      "priceCategoryId": "premium-drink"
     },
     "miomio-ginger": {
       "id": "miomio-ginger",
       "name": "MioMio ginger",
-      "priceCategoryId": "premium-drink",
-      "active": true
+      "priceCategoryId": "premium-drink"
     },
     "miomio-banana": {
       "id": "miomio-banana",
       "name": "MioMio banana",
-      "priceCategoryId": "premium-drink",
-      "active": true
+      "priceCategoryId": "premium-drink"
     },
     "icetea": {
       "id": "icetea",
       "name": "IceTea",
-      "priceCategoryId": "soft-medium",
-      "active": true
+      "priceCategoryId": "soft-medium"
     },
     "icetea-zero": {
       "id": "icetea-zero",
       "name": "IceTea zero",
-      "priceCategoryId": "soft-medium",
-      "active": true
+      "priceCategoryId": "soft-medium"
     },
     "cola": {
       "id": "cola",
       "name": "Coca-Cola ",
-      "priceCategoryId": "soft-medium",
-      "active": true
+      "priceCategoryId": "soft-medium"
     },
     "cola-zero": {
       "id": "cola-zero",
       "name": "Coca-Cola zero",
-      "priceCategoryId": "soft-medium",
-      "active": true
+      "priceCategoryId": "soft-medium"
     },
     "fanta": {
       "id": "fanta",
       "name": "Fanta",
-      "priceCategoryId": "soft-medium",
-      "active": true
+      "priceCategoryId": "soft-medium"
     },
     "water": {
       "id": "water",
       "name": "Water",
-      "priceCategoryId": "water",
-      "active": true
+      "priceCategoryId": "water"
     },
     "bruiswater": {
       "id": "bruiswater",
       "name": "Bruiswater",
-      "priceCategoryId": "water",
-      "active": true
+      "priceCategoryId": "water"
     },
     "7up": {
       "id": "7up",
       "name": "7UP",
-      "priceCategoryId": "soft-medium",
-      "active": true
+      "priceCategoryId": "soft-medium"
     },
     "pepsi": {
       "id": "pepsi",
       "name": "Pepsi",
-      "priceCategoryId": "soft-medium",
-      "active": true
+      "priceCategoryId": "soft-medium"
     },
     "palm-dubbel": {
       "id": "palm-dubbel",
       "name": "PALM Dobbel",
-      "priceCategoryId": "pils",
-      "active": true
+      "priceCategoryId": "pils"
     },
     "primus": {
       "id": "primus",
       "name": "Primus",
-      "priceCategoryId": "pils",
-      "active": true
+      "priceCategoryId": "pils"
     },
     "aflligem-blond": {
       "id": "aflligem-blond",
       "name": "Affligem Blond 0.0",
-      "priceCategoryId": "bier",
-      "active": true
+      "priceCategoryId": "bier"
     },
     "cornet-oaked-Na": {
       "id": "cornet-oaked-Na",
       "name": "Cornet oaked NA",
-      "priceCategoryId": "bier",
-      "active": true
+      "priceCategoryId": "bier"
     },
     "desperados-0": {
       "id": "desperados-0",
       "name": "Desperados 0.0",
-      "priceCategoryId": "bier",
-      "active": true
+      "priceCategoryId": "bier"
     },
     "liefmans-otr": {
       "id": "liefmans-otr",
       "name": "Liefmans On The Rocks 0.0",
-      "priceCategoryId": "bier",
-      "active": true
+      "priceCategoryId": "bier"
     },
     "liefmans-otr-peach": {
       "id": "liefmans-otr-peach",
       "name": "Liefmans Peach 0.0",
-      "priceCategoryId": "promo",
-      "active": true
+      "priceCategoryId": "promo"
     },
     "karmeliet-0.0": {
       "id": "karmeliet-0.0",
       "name": "Tripel karmeliet 0.4",
-      "priceCategoryId": "bier",
-      "active": true
+      "priceCategoryId": "bier"
     },
     "abbaye-oubliee-imperiale": {
       "id": "abbaye-oubliee-imperiale",
       "name": "Abbaye Oubliée Imperiale",
-      "priceCategoryId": "bier-75cl",
-      "active": true
+      "priceCategoryId": "bier-75cl"
     },
     "bloody-berry": {
       "id": "bloody-berry",
       "name": "Bloody berry",
-      "priceCategoryId": "bier",
-      "active": true
+      "priceCategoryId": "bier"
     },
     "crime-of-passion": {
       "id": "crime-of-passion",
       "name": "Crime of passion",
-      "priceCategoryId": "bier",
-      "active": true
+      "priceCategoryId": "bier"
     },
     "grimbergen-blond": {
       "id": "grimbergen-blond",
       "name": "Grimbergen blond",
-      "priceCategoryId": "bier",
-      "active": true
+      "priceCategoryId": "bier"
     },
     "grimbergen-dubbel": {
       "id": "grimbergen-dubbel",
       "name": "Grimbergen dubbel",
-      "priceCategoryId": "bier",
-      "active": true
+      "priceCategoryId": "bier"
     },
     "grimbergen-prestige": {
       "id": "grimbergen-prestige",
       "name": "Grimbergen prestige",
-      "priceCategoryId": "promo",
-      "active": true
+      "priceCategoryId": "promo"
     },
     "hapkin": {
       "id": "hapkin",
       "name": "Hapkin",
-      "priceCategoryId": "bier",
-      "active": true
+      "priceCategoryId": "bier"
     },
     "hapkin-bipa": {
       "id": "hapkin-bipa",
       "name": "Hapkin BIPA",
-      "priceCategoryId": "bier",
-      "active": true
+      "priceCategoryId": "bier"
     },
     "leffe-winter": {
       "id": "leffe-winter",
       "name": "Leffe Winter",
-      "priceCategoryId": "promo",
-      "active": true
+      "priceCategoryId": "promo"
     },
     "omer-lefort": {
       "id": "omer-lefort",
       "name": "Tripel LeFort",
-      "priceCategoryId": "bier",
-      "active": true
+      "priceCategoryId": "bier"
     },
     "tongerlo-lux": {
       "id": "tongerlo-lux",
       "name": "Tongerlo Lux",
-      "priceCategoryId": "bier",
-      "active": true
+      "priceCategoryId": "bier"
     },
     "tripel-karmeliet": {
       "id": "tripel-karmeliet",
       "name": "Tripel Karmeliet",
-      "priceCategoryId": "bier",
-      "active": true
+      "priceCategoryId": "bier"
     },
     "tripel-karmeliet-blik": {
       "id": "tripel-karmeliet-blik",
       "name": "Tripel Karmeliet blik",
-      "priceCategoryId": "bier",
-      "active": false
+      "priceCategoryId": "bier"
     },
     "cider": {
       "id": "cider",
       "name": "Ko-lab cider",
-      "priceCategoryId": "bier",
-      "active": true
+      "priceCategoryId": "bier"
     },
     "chips": {
       "id": "chips",
       "name": "Chips",
-      "priceCategoryId": "snack",
-      "active": true
+      "priceCategoryId": "snack"
     },
     "gen-snack": {
       "id": "gen-snack",
       "name": "Generic snack",
-      "priceCategoryId": "snack",
-      "active": false
+      "priceCategoryId": "snack"
     },
     "ole": {
       "id": "ole",
       "name": "Ole",
-      "priceCategoryId": "snack",
-      "active": true
+      "priceCategoryId": "snack"
     },
     "cornetto": {
       "id": "cornetto",
       "name": "Ijshoorntje",
-      "priceCategoryId": "snack",
-      "active": true
+      "priceCategoryId": "snack"
     },
     "koffie": {
       "id": "koffie",
       "name": "Cappuccino",
-      "priceCategoryId": "hot",
-      "active": true
+      "priceCategoryId": "hot"
     },
     "thee": {
       "id": "thee",
       "name": "Thee",
-      "priceCategoryId": "hot",
-      "active": true
+      "priceCategoryId": "hot"
     }
   }
 }

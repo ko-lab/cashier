@@ -136,12 +136,10 @@ export function createAdminService({
       }
 
       const action =
-        input.action ??
-        (typeof input.active === "boolean"
+        typeof input.active === "boolean"
           ? "set_active"
-          : typeof input.quantity === "number"
-            ? "set"
-            : "comment");
+          : input.action ??
+            (typeof input.quantity === "number" ? "set" : "comment");
 
       if (action === "counted_ok") {
         const countedQuantity =

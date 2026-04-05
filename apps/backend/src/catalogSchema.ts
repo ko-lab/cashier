@@ -5,7 +5,6 @@ export const ProductFileSchema = z
     id: z.string().min(1),
     name: z.string().min(1),
     priceCategoryId: z.string().min(1),
-    active: z.boolean().optional(),
     inventoryCount: z.number().int().nonnegative().optional()
   })
   .strict();
