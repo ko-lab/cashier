@@ -1,5 +1,21 @@
-import type { CreditLedgerEntry, Member, Transaction } from "@shared/models";
+import type {
+  AdminGetStockOutput,
+  CreditLedgerEntry,
+  Member,
+  Transaction,
+  TransactionStatus
+} from "@shared/models";
 import type { KeyboardEvent } from "react";
+
+type CustomerAutocompleteComponent = (props: {
+  customers: Member[];
+  selectedCustomerId: string;
+  onSelectCustomer: (member: Member | null) => void;
+  placeholder: string;
+  noResultsText?: string;
+  disabled?: boolean;
+  className?: string;
+}) => JSX.Element;
 
 type AdminPanelProps = {
   adminTransactions: Transaction[] | null;
@@ -16,8 +32,8 @@ type AdminPanelProps = {
   lockAdminPanel: () => void;
   downloadAdminCsv: () => void;
   adminFilteredTransactions: Transaction[];
-  adminStatusFilter: string;
-  onAdminStatusFilterChange: (value: string) => void;
+  adminStatusFilter: "all" | TransactionStatus;
+  onAdminStatusFilterChange: (value: "all" | TransactionStatus) => void;
   adminProductFilter: string;
   setAdminProductFilter: (value: string) => void;
   adminProductOptions: { id: string; name: string }[];
@@ -30,15 +46,15 @@ type AdminPanelProps = {
   formatAdminDate: (value: string) => string;
   buildCartBreakdownJson: (transaction: Transaction) => string;
 
-  stockSnapshot: any;
+  stockSnapshot: AdminGetStockOutput | null;
   stockProductQuery: string;
   setStockProductQuery: (value: string) => void;
   stockCurrentValueFilter: string;
   setStockCurrentValueFilter: (value: string) => void;
   downloadFilteredStockEventsCsv: () => void;
-  filteredStockEvents: any[];
+  filteredStockEvents: AdminGetStockOutput["events"];
   downloadFilteredStockCountsCsv: () => void;
-  filteredStockItems: any[];
+  filteredStockItems: AdminGetStockOutput["items"];
   stockDraftByProductId: Record<string, string>;
   setStockDraftByProductId: (updater: (current: Record<string, string>) => Record<string, string>) => void;
   stockRefillByProductId: Record<string, string>;
@@ -73,7 +89,7 @@ type AdminPanelProps = {
   creditLedger: CreditLedgerEntry[];
   adminCreditEvents: CreditLedgerEntry[];
   currencyFormatter: { format(value: number): string };
-  CustomerAutocomplete: any;
+  CustomerAutocomplete: CustomerAutocompleteComponent;
 };
 
 export function AdminPanel(props: AdminPanelProps): JSX.Element {
@@ -263,7 +279,7 @@ export function AdminPanel(props: AdminPanelProps): JSX.Element {
                 <div className="flex items-end"><button type="button" onClick={downloadFilteredStockEventsCsv} disabled={filteredStockEvents.length === 0} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600">Export stock events CSV</button></div>
                 <div className="flex items-end"><button type="button" onClick={downloadFilteredStockCountsCsv} disabled={filteredStockItems.length === 0} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600">Export current stock CSV</button></div>
               </div>
-              <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700"><table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700"><thead className="bg-slate-50 dark:bg-slate-800/40"><tr><th className="px-3 py-2 text-left font-semibold">Product</th><th className="px-3 py-2 text-right font-semibold">Current</th><th className="px-3 py-2 text-right font-semibold">Set stock</th><th className="px-3 py-2 text-right font-semibold">Refill (+)</th><th className="px-3 py-2 text-left font-semibold">Note</th><th className="px-3 py-2 text-right font-semibold">Action</th></tr></thead><tbody className="divide-y divide-slate-200 dark:divide-slate-700">{filteredStockItems.map((item: any) => (<tr key={item.productId}><td className="px-3 py-2">{item.productName}</td><td className="px-3 py-2 text-right font-semibold">{item.quantity}</td><td className="px-3 py-2 text-right"><input type="text" inputMode="numeric" pattern="-?[0-9]*" data-stock-input="true" placeholder={String(item.quantity)} value={stockDraftByProductId[item.productId] ?? ""} onKeyDown={(event) => { if (event.key === "ArrowDown") moveStockInputFocus(event, 1); if (event.key === "ArrowUp") moveStockInputFocus(event, -1); }} onChange={(event) => { const nextValue = event.target.value; if (!/^-?\d*$/.test(nextValue)) return; setStockDraftByProductId((current) => ({ ...current, [item.productId]: nextValue })); }} className="w-24 rounded-lg border border-slate-300 px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-900" /></td><td className="px-3 py-2 text-right"><input type="text" inputMode="numeric" pattern="[0-9]*" placeholder="0" value={stockRefillByProductId[item.productId] ?? ""} onChange={(event) => { const nextValue = event.target.value; if (!/^\d*$/.test(nextValue)) return; setStockRefillByProductId((current) => ({ ...current, [item.productId]: nextValue })); }} className="w-24 rounded-lg border border-slate-300 px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-900" /></td><td className="px-3 py-2"><input type="text" value={stockNoteByProductId[item.productId] ?? ""} placeholder="Comment" onChange={(event) => { const nextValue = event.target.value; if (/[;,]/.test(nextValue)) return; setStockNoteByProductId((current) => ({ ...current, [item.productId]: nextValue })); }} className="w-full rounded-lg border border-slate-300 px-2 py-1 dark:border-slate-600 dark:bg-slate-900" /></td><td className="px-3 py-2 text-right"><div className="flex justify-end gap-2"><button type="button" onClick={() => void markStockCountedOk(item.productId)} disabled={isBusy} className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600">Counted OK</button><button type="button" onClick={() => void updateStock(item.productId)} disabled={isBusy} className="rounded-lg bg-accent-light px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-accent-dark dark:text-slate-900">Set stock</button><button type="button" onClick={() => void addStockRefill(item.productId)} disabled={isBusy} className="rounded-lg bg-emerald-500 px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40">Add refill</button></div></td></tr>))}</tbody></table></div>
+              <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700"><table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700"><thead className="bg-slate-50 dark:bg-slate-800/40"><tr><th className="px-3 py-2 text-left font-semibold">Product</th><th className="px-3 py-2 text-right font-semibold">Current</th><th className="px-3 py-2 text-right font-semibold">Set stock</th><th className="px-3 py-2 text-right font-semibold">Refill (+)</th><th className="px-3 py-2 text-left font-semibold">Note</th><th className="px-3 py-2 text-right font-semibold">Action</th></tr></thead><tbody className="divide-y divide-slate-200 dark:divide-slate-700">{filteredStockItems.map((item) => (<tr key={item.productId}><td className="px-3 py-2">{item.productName}</td><td className="px-3 py-2 text-right font-semibold">{item.quantity}</td><td className="px-3 py-2 text-right"><input type="text" inputMode="numeric" pattern="-?[0-9]*" data-stock-input="true" placeholder={String(item.quantity)} value={stockDraftByProductId[item.productId] ?? ""} onKeyDown={(event) => { if (event.key === "ArrowDown") moveStockInputFocus(event, 1); if (event.key === "ArrowUp") moveStockInputFocus(event, -1); }} onChange={(event) => { const nextValue = event.target.value; if (!/^-?\d*$/.test(nextValue)) return; setStockDraftByProductId((current) => ({ ...current, [item.productId]: nextValue })); }} className="w-24 rounded-lg border border-slate-300 px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-900" /></td><td className="px-3 py-2 text-right"><input type="text" inputMode="numeric" pattern="[0-9]*" placeholder="0" value={stockRefillByProductId[item.productId] ?? ""} onChange={(event) => { const nextValue = event.target.value; if (!/^\d*$/.test(nextValue)) return; setStockRefillByProductId((current) => ({ ...current, [item.productId]: nextValue })); }} className="w-24 rounded-lg border border-slate-300 px-2 py-1 text-right dark:border-slate-600 dark:bg-slate-900" /></td><td className="px-3 py-2"><input type="text" value={stockNoteByProductId[item.productId] ?? ""} placeholder="Comment" onChange={(event) => { const nextValue = event.target.value; if (/[;,]/.test(nextValue)) return; setStockNoteByProductId((current) => ({ ...current, [item.productId]: nextValue })); }} className="w-full rounded-lg border border-slate-300 px-2 py-1 dark:border-slate-600 dark:bg-slate-900" /></td><td className="px-3 py-2 text-right"><div className="flex justify-end gap-2"><button type="button" onClick={() => void markStockCountedOk(item.productId)} disabled={isBusy} className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600">Counted OK</button><button type="button" onClick={() => void updateStock(item.productId)} disabled={isBusy} className="rounded-lg bg-accent-light px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-accent-dark dark:text-slate-900">Set stock</button><button type="button" onClick={() => void addStockRefill(item.productId)} disabled={isBusy} className="rounded-lg bg-emerald-500 px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40">Add refill</button></div></td></tr>))}</tbody></table></div>
             </div>
           )}
         </div>
