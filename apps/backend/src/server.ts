@@ -46,22 +46,52 @@ const router = {
     list: api.member.list.handler(async () => adminService.listActiveMembersPublic())
   },
   transaction: {
-    start: api.transaction.start.handler(async ({ input }) =>
-      transactionService.startTransaction(input.items, {
-        memberId: input.memberId,
-        creditToUse: input.creditToUse
-      })
-    ),
-    startTopup: api.transaction.startTopup.handler(async ({ input }) =>
-      transactionService.startTopupTransaction(input.memberId, input.amount)
-    ),
-    finalize: api.transaction.finalize.handler(async ({ input }) =>
-      transactionService.finalizeTransaction(input.id, input.status, {
-        reason: input.reason,
-        memberId: input.memberId,
-        creditUsed: input.creditUsed
-      })
-    )
+    start: api.transaction.start.handler(async ({ input }) => {
+      try {
+        return await transactionService.startTransaction(input.items, {
+          memberId: input.memberId,
+          creditToUse: input.creditToUse
+        });
+      } catch (error) {
+        console.error("[transaction.start] failed", {
+          ts: new Date().toISOString(),
+          memberId: input.memberId,
+          itemCount: input.items.length,
+          error
+        });
+        throw error;
+      }
+    }),
+    startTopup: api.transaction.startTopup.handler(async ({ input }) => {
+      try {
+        return await transactionService.startTopupTransaction(input.memberId, input.amount);
+      } catch (error) {
+        console.error("[transaction.startTopup] failed", {
+          ts: new Date().toISOString(),
+          memberId: input.memberId,
+          amount: input.amount,
+          error
+        });
+        throw error;
+      }
+    }),
+    finalize: api.transaction.finalize.handler(async ({ input }) => {
+      try {
+        return await transactionService.finalizeTransaction(input.id, input.status, {
+          reason: input.reason,
+          memberId: input.memberId,
+          creditUsed: input.creditUsed
+        });
+      } catch (error) {
+        console.error("[transaction.finalize] failed", {
+          ts: new Date().toISOString(),
+          id: input.id,
+          status: input.status,
+          error
+        });
+        throw error;
+      }
+    })
   },
   admin: {
     exportTransactions: api.admin.exportTransactions.handler(async ({ input }) =>

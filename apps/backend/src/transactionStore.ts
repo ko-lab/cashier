@@ -49,11 +49,23 @@ export function createTransactionStore(dataDir: string): TransactionStore {
     CREATE TABLE IF NOT EXISTS transaction_origins (
       transaction_id TEXT PRIMARY KEY,
       client_cookie TEXT,
-      ip_address TEXT NOT NULL,
+      ip_address TEXT,
       created_at TEXT NOT NULL,
       FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
     );
   `);
+
+  const hasLegacyRequestOriginsTable = db
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'transaction_request_origins'")
+    .get() as { name: string } | undefined;
+
+  if (hasLegacyRequestOriginsTable) {
+    db.exec(`
+      INSERT OR IGNORE INTO transaction_origins (transaction_id, ip_address, created_at)
+      SELECT transaction_id, ip_address, created_at
+      FROM transaction_request_origins
+    `);
+  }
 
   const tableInfo = db
     .prepare("PRAGMA table_info(transactions)")
