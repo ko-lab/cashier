@@ -26,6 +26,7 @@ Guidelines for AI/code agents working in this repository.
 ## Backend/API
 - Reuse schemas from `shared/models.ts` and contracts from `shared/contract.ts`.
 - Preserve backward-compatible aliases unless migration is explicitly requested.
+- Product visibility (`active`) is managed through stock state/events (not static catalog product fields).
 
 ## Customer credit feature
 - Source of truth for credit mutations is the ledger.

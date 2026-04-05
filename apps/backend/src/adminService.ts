@@ -19,8 +19,9 @@ export type AdminService = {
     input: {
       productId: string;
       quantity?: number;
+      active?: boolean;
       note?: string;
-      action?: "set" | "refill" | "comment" | "counted_ok";
+      action?: "set" | "refill" | "comment" | "counted_ok" | "set_active";
     }
   ) => Promise<AdminGetStockOutput>;
   authenticateMemberByPin: (pin: string) => Promise<Member>;
@@ -90,6 +91,7 @@ export function createAdminService({
           productId: product.id,
           productName: product.name,
           quantity: product.inventoryCount,
+          active: product.active,
           updatedAt: latest?.createdAt
         };
       })
@@ -133,7 +135,13 @@ export function createAdminService({
         });
       }
 
-      const action = input.action ?? (typeof input.quantity === "number" ? "set" : "comment");
+      const action =
+        input.action ??
+        (typeof input.active === "boolean"
+          ? "set_active"
+          : typeof input.quantity === "number"
+            ? "set"
+            : "comment");
 
       if (action === "counted_ok") {
         const countedQuantity =
@@ -165,6 +173,14 @@ export function createAdminService({
           productId: input.productId,
           type: "refill_delta",
           quantity: input.quantity,
+          note: trimmedNote
+        });
+      } else if (action === "set_active" && typeof input.active === "boolean") {
+        await stockEventStore.appendEvent({
+          productId: input.productId,
+          type: "active_set",
+          quantity: 0,
+          active: input.active,
           note: trimmedNote
         });
       } else if (action === "comment" && trimmedNote) {

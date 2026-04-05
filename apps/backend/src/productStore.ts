@@ -23,19 +23,20 @@ export function createProductStore(
         priceCategories: {}
       });
 
-      const stockByProductId = await stockEventStore.getCurrentQuantities();
+      const stockStateByProductId = await stockEventStore.getCurrentStates();
       const products: ProductCatalog["products"] = {};
 
       for (const [id, product] of Object.entries(catalog.products ?? {})) {
-        const override = stockByProductId.get(id)?.quantity;
-        const fallback =
+        const stockState = stockStateByProductId.get(id);
+        const fallbackQuantity =
           Number.isFinite(product.inventoryCount) && Number(product.inventoryCount) >= 0
             ? Math.trunc(Number(product.inventoryCount))
             : 0;
 
         products[id] = {
           ...product,
-          inventoryCount: override ?? fallback
+          inventoryCount: stockState?.quantity ?? fallbackQuantity,
+          active: stockState?.active ?? product.active ?? true
         };
       }
 

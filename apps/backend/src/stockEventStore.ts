@@ -7,26 +7,34 @@ type CreateStockEventInput = {
   productId: string;
   type: StockEvent["type"];
   quantity: number;
+  active?: boolean;
   note?: string;
   transactionId?: string;
   memberCreditEventId?: string;
 };
 
+type StockState = {
+  quantity: number;
+  active: boolean;
+  updatedAt?: string;
+};
+
 export type StockEventStore = {
   listEvents: () => Promise<StockEvent[]>;
   appendEvent: (input: CreateStockEventInput) => Promise<StockEvent>;
+  getCurrentStates: () => Promise<Map<string, StockState>>;
   getCurrentQuantities: () => Promise<Map<string, { quantity: number; updatedAt?: string }>>;
 };
 
-function applyEvent(current: number, event: StockEvent): number {
+function applyEvent(current: StockState, event: StockEvent): StockState {
   if (event.type === "manual_set") {
-    return event.quantity;
+    return { ...current, quantity: event.quantity };
   }
   if (event.type === "refill_delta" || event.type === "sale_delta") {
-    return current + event.quantity;
+    return { ...current, quantity: current.quantity + event.quantity };
   }
-  if (event.type === "comment" || event.type === "counted_ok") {
-    return current;
+  if (event.type === "active_set") {
+    return { ...current, active: event.active ?? current.active };
   }
   return current;
 }
@@ -46,6 +54,7 @@ export function createStockEventStore(dataDir: string): StockEventStore {
         productId: input.productId,
         type: input.type,
         quantity: Math.trunc(input.quantity),
+        active: input.active,
         createdAt: new Date().toISOString(),
         note: input.note,
         transactionId: input.transactionId,
@@ -55,16 +64,33 @@ export function createStockEventStore(dataDir: string): StockEventStore {
       await writeJson(eventsPath, events);
       return event;
     },
-    async getCurrentQuantities() {
+    async getCurrentStates() {
       const events = await this.listEvents();
-      const quantities = new Map<string, { quantity: number; updatedAt?: string }>();
+      const states = new Map<string, StockState>();
 
       for (const event of events) {
-        const current = quantities.get(event.productId)?.quantity ?? 0;
+        const current =
+          states.get(event.productId) ?? {
+            quantity: 0,
+            active: true
+          };
         const next = applyEvent(current, event);
-        quantities.set(event.productId, {
-          quantity: next,
+        states.set(event.productId, {
+          ...next,
           updatedAt: event.createdAt
+        });
+      }
+
+      return states;
+    },
+    async getCurrentQuantities() {
+      const states = await this.getCurrentStates();
+      const quantities = new Map<string, { quantity: number; updatedAt?: string }>();
+
+      for (const [productId, state] of states.entries()) {
+        quantities.set(productId, {
+          quantity: state.quantity,
+          updatedAt: state.updatedAt
         });
       }
 

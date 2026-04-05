@@ -475,7 +475,7 @@ function buildStockEventsCsv(
   events: AdminGetStockOutput["events"],
   productNameById: Map<string, string>
 ): string {
-  const header = ["id", "createdAt", "productId", "productName", "type", "quantity", "delta", "note"];
+  const header = ["id", "createdAt", "productId", "productName", "type", "active", "quantity", "delta", "note"];
 
   const chronologicalEvents = [...events].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const runningQuantityByProductId = new Map<string, number>();
@@ -508,6 +508,7 @@ function buildStockEventsCsv(
       event.productId,
       productNameById.get(event.productId) ?? "",
       event.type,
+      event.active ?? "",
       event.quantity,
       deltaByEventId.get(event.id) ?? 0,
       event.note ?? ""
@@ -520,9 +521,9 @@ function buildStockEventsCsv(
 }
 
 function buildStockCountsCsv(items: AdminGetStockOutput["items"]): string {
-  const header = ["productId", "productName", "currentQuantity", "updatedAt"];
+  const header = ["productId", "productName", "active", "currentQuantity", "updatedAt"];
   const lines = items.map((item) =>
-    [item.productId, item.productName, item.quantity, item.updatedAt ?? ""]
+    [item.productId, item.productName, item.active, item.quantity, item.updatedAt ?? ""]
       .map(csvEscape)
       .join(",")
   );
@@ -600,6 +601,7 @@ export default function App() {
   const [stockSnapshot, setStockSnapshot] = useState<AdminGetStockOutput | null>(null);
   const [stockDraftByProductId, setStockDraftByProductId] = useState<Record<string, string>>({});
   const [stockRefillByProductId, setStockRefillByProductId] = useState<Record<string, string>>({});
+  const [stockActiveByProductId, setStockActiveByProductId] = useState<Record<string, boolean>>({});
   const [stockNoteByProductId, setStockNoteByProductId] = useState<Record<string, string>>({});
   const [stockProductQuery, setStockProductQuery] = useState("");
   const [stockCurrentValueFilter, setStockCurrentValueFilter] = useState("");
@@ -762,7 +764,7 @@ export default function App() {
   );
 
   const filteredProducts = useMemo(
-    () => filterProductsByQuery(products, searchQuery),
+    () => filterProductsByQuery(products, searchQuery).filter((product) => product.active),
     [products, searchQuery]
   );
 
@@ -1310,6 +1312,9 @@ export default function App() {
     );
     setStockDraftByProductId(emptyByProductId);
     setStockRefillByProductId(emptyByProductId);
+    setStockActiveByProductId(
+      Object.fromEntries(response.items.map((item) => [item.productId, item.active]))
+    );
   };
 
   const loadAdminTransactions = async () => {
@@ -1516,6 +1521,9 @@ export default function App() {
       );
       setStockDraftByProductId(emptyByProductId);
       setStockRefillByProductId(emptyByProductId);
+      setStockActiveByProductId(
+        Object.fromEntries(response.items.map((item) => [item.productId, item.active]))
+      );
       setStockNoteByProductId((current) => ({ ...current, [productId]: "" }));
     } catch {
       setAdminError("Could not update stock.");
@@ -1565,9 +1573,47 @@ export default function App() {
       );
       setStockDraftByProductId(emptyByProductId);
       setStockRefillByProductId(emptyByProductId);
+      setStockActiveByProductId(
+        Object.fromEntries(response.items.map((item) => [item.productId, item.active]))
+      );
       setStockNoteByProductId((current) => ({ ...current, [productId]: "" }));
     } catch {
       setAdminError("Could not add stock refill.");
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  const toggleStockActive = async (productId: string) => {
+    if (!adminSessionPassword) {
+      setAdminError("Admin session expired. Please unlock again.");
+      return;
+    }
+
+    const currentActive =
+      stockActiveByProductId[productId] ??
+      stockSnapshot?.items.find((item) => item.productId === productId)?.active;
+
+    if (typeof currentActive !== "boolean") {
+      setAdminError("Could not resolve current active state for this product.");
+      return;
+    }
+
+    setAdminError(null);
+    setAdminLoading(true);
+    try {
+      const response = await client.admin.setStock({
+        password: adminSessionPassword,
+        productId,
+        active: !currentActive,
+        action: "set_active"
+      });
+      setStockSnapshot(response);
+      setStockActiveByProductId(
+        Object.fromEntries(response.items.map((item) => [item.productId, item.active]))
+      );
+    } catch {
+      setAdminError("Could not update product visibility.");
     } finally {
       setAdminLoading(false);
     }
@@ -1608,6 +1654,9 @@ export default function App() {
       );
       setStockDraftByProductId(emptyByProductId);
       setStockRefillByProductId(emptyByProductId);
+      setStockActiveByProductId(
+        Object.fromEntries(response.items.map((item) => [item.productId, item.active]))
+      );
       setStockNoteByProductId((current) => ({ ...current, [productId]: "" }));
     } catch {
       setAdminError("Could not mark product as counted and correct.");
@@ -1621,6 +1670,7 @@ export default function App() {
     setStockSnapshot(null);
     setStockDraftByProductId({});
     setStockRefillByProductId({});
+    setStockActiveByProductId({});
     setStockNoteByProductId({});
     setStockProductQuery("");
     setStockCurrentValueFilter("");
@@ -1925,6 +1975,8 @@ export default function App() {
               setStockDraftByProductId={setStockDraftByProductId}
               stockRefillByProductId={stockRefillByProductId}
               setStockRefillByProductId={setStockRefillByProductId}
+              stockActiveByProductId={stockActiveByProductId}
+              setStockActiveByProductId={setStockActiveByProductId}
               stockNoteByProductId={stockNoteByProductId}
               setStockNoteByProductId={setStockNoteByProductId}
               moveStockInputFocus={moveStockInputFocus}
@@ -1932,6 +1984,7 @@ export default function App() {
               markStockCountedOk={markStockCountedOk}
               updateStock={updateStock}
               addStockRefill={addStockRefill}
+              toggleStockActive={toggleStockActive}
               adminCustomers={adminCustomers}
               selectedMemberId={selectedMemberId}
               setSelectedMemberId={setSelectedMemberId}
