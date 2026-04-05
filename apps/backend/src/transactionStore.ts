@@ -80,25 +80,6 @@ export function createTransactionStore(dataDir: string): TransactionStore {
     db.exec("ALTER TABLE transactions ADD COLUMN external_amount REAL");
   }
 
-  const originTableInfo = db
-    .prepare("PRAGMA table_info(transaction_origins)")
-    .all() as { name: string }[];
-  const hasLegacyOriginIdColumn = originTableInfo.some((column) => column.name === "origin_id");
-
-  if (!originTableInfo.some((column) => column.name === "client_cookie")) {
-    db.exec("ALTER TABLE transaction_origins ADD COLUMN client_cookie TEXT");
-  }
-  if (hasLegacyOriginIdColumn) {
-    db.exec(`
-      UPDATE transaction_origins
-      SET client_cookie = COALESCE(client_cookie, origin_id)
-      WHERE origin_id IS NOT NULL
-    `);
-  }
-
-  const originCookieSelectExpr = hasLegacyOriginIdColumn
-    ? "COALESCE(o.client_cookie, o.origin_id)"
-    : "o.client_cookie";
 
   const insertTransaction = db.prepare(`
     INSERT INTO transactions (id, created_at, status, type, abandonment_reason, member_id, member_name, credit_used, external_amount, total, items_json)
@@ -115,7 +96,7 @@ export function createTransactionStore(dataDir: string): TransactionStore {
       t.member_name,
       t.credit_used,
       t.external_amount,
-      ${originCookieSelectExpr} AS client_cookie,
+      o.client_cookie AS client_cookie,
       o.ip_address AS origin_ip_address,
       t.total,
       t.items_json
@@ -137,7 +118,7 @@ export function createTransactionStore(dataDir: string): TransactionStore {
       t.member_name,
       t.credit_used,
       t.external_amount,
-      ${originCookieSelectExpr} AS client_cookie,
+      o.client_cookie AS client_cookie,
       o.ip_address AS origin_ip_address,
       t.total,
       t.items_json
