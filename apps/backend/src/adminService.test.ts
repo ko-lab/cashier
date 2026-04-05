@@ -12,7 +12,7 @@ function makeTransactionStore(transactions: Transaction[]): TransactionStore {
     getById: vi.fn(async () => null),
     updateStatus: vi.fn(async () => null),
     list: vi.fn(async () => transactions),
-    recordRequestOrigin: vi.fn(async () => undefined)
+    recordTransactionOrigin: vi.fn(async () => undefined)
   };
 }
 

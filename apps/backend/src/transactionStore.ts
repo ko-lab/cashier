@@ -18,7 +18,11 @@ export type TransactionStore = {
     }
   ) => Promise<Transaction | null>;
   list: () => Promise<Transaction[]>;
-  recordRequestOrigin: (transactionId: string, ipAddress: string) => Promise<void>;
+  recordTransactionOrigin: (input: {
+    transactionId: string;
+    ipAddress: string;
+    originId: string;
+  }) => Promise<void>;
 };
 
 export function createTransactionStore(dataDir: string): TransactionStore {
@@ -42,11 +46,11 @@ export function createTransactionStore(dataDir: string): TransactionStore {
       items_json TEXT NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS transaction_request_origins (
-      transaction_id TEXT NOT NULL,
+    CREATE TABLE IF NOT EXISTS transaction_origins (
+      transaction_id TEXT PRIMARY KEY,
+      origin_id TEXT NOT NULL,
       ip_address TEXT NOT NULL,
       created_at TEXT NOT NULL,
-      PRIMARY KEY (transaction_id, ip_address),
       FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
     );
   `);
@@ -89,9 +93,13 @@ export function createTransactionStore(dataDir: string): TransactionStore {
   const listAll = db.prepare(
     "SELECT id, created_at, status, type, abandonment_reason, member_id, member_name, credit_used, external_amount, total, items_json FROM transactions ORDER BY created_at DESC"
   );
-  const insertRequestOrigin = db.prepare(`
-    INSERT OR IGNORE INTO transaction_request_origins (transaction_id, ip_address, created_at)
-    VALUES (?, ?, ?)
+  const upsertTransactionOrigin = db.prepare(`
+    INSERT INTO transaction_origins (transaction_id, origin_id, ip_address, created_at)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(transaction_id) DO UPDATE SET
+      origin_id = excluded.origin_id,
+      ip_address = excluded.ip_address,
+      created_at = excluded.created_at
   `);
 
   const mapRow = (row: {
@@ -182,8 +190,13 @@ export function createTransactionStore(dataDir: string): TransactionStore {
       }[];
       return rows.map(mapRow);
     },
-    async recordRequestOrigin(transactionId, ipAddress) {
-      insertRequestOrigin.run(transactionId, ipAddress, new Date().toISOString());
+    async recordTransactionOrigin(input) {
+      upsertTransactionOrigin.run(
+        input.transactionId,
+        input.originId,
+        input.ipAddress,
+        new Date().toISOString()
+      );
     }
   };
 }

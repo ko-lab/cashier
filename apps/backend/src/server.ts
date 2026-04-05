@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { createServer, type IncomingMessage } from "node:http";
 import { fileURLToPath } from "node:url";
 import { implement } from "@orpc/server";
@@ -115,6 +116,7 @@ const rpcHandler = new RPCHandler(router);
 const rpcPrefix = "/rpc";
 const clientLogPath = "/client-log";
 const healthPath = "/healthz";
+const originCookieName = "cashier_origin_id";
 const port = Number(process.env.PORT ?? 4000);
 
 const firstHeaderValue = (value: string | string[] | undefined): string | undefined => {
@@ -123,6 +125,39 @@ const firstHeaderValue = (value: string | string[] | undefined): string | undefi
   }
   return Array.isArray(value) ? value[0] : value;
 };
+
+const parseCookies = (cookieHeader: string | undefined): Record<string, string> => {
+  if (!cookieHeader) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    cookieHeader
+      .split(";")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const [name, ...valueParts] = part.split("=");
+        return [name, decodeURIComponent(valueParts.join("="))];
+      })
+  );
+};
+
+const encodeUuidV6FromTimestampMs = (timestampMs: number): string => {
+  const timestampHex = timestampMs.toString(16).padStart(12, "0");
+  const randomHex = randomBytes(10).toString("hex");
+  const variantNibble = (8 + (randomBytes(1)[0] % 4)).toString(16);
+
+  const timeHigh = timestampHex.slice(0, 8);
+  const timeMid = timestampHex.slice(8, 12);
+  const versionAndTimeLow = `6${randomHex.slice(0, 3)}`;
+  const variantAndSeq = `${variantNibble}${randomHex.slice(3, 6)}`;
+  const node = randomHex.slice(6, 18);
+
+  return `${timeHigh}-${timeMid}-${versionAndTimeLow}-${variantAndSeq}-${node}`;
+};
+
+const generateOriginId = (): string => encodeUuidV6FromTimestampMs(Date.now());
 
 const getRequestIpAddress = (req: IncomingMessage): string => {
   const forwardedFor = firstHeaderValue(req.headers["x-forwarded-for"]);
@@ -204,9 +239,25 @@ const server = createServer(async (req, res) => {
     req.url = req.url.slice(rpcPrefix.length) || "/";
   }
 
+  const cookies = parseCookies(firstHeaderValue(req.headers.cookie));
+  let originId = cookies[originCookieName];
+
+  const isTransactionStartRequest =
+    req.method === "POST" &&
+    (req.url === "/transaction/start" || req.url === "/transaction/startTopup");
+
+  if (isTransactionStartRequest && !originId) {
+    originId = generateOriginId();
+    res.setHeader(
+      "Set-Cookie",
+      `${originCookieName}=${encodeURIComponent(originId)}; Path=/; Max-Age=${60 * 60 * 24 * 365 * 2}; SameSite=Lax`
+    );
+  }
+
   const requestIpAddress = getRequestIpAddress(req);
-  const result = await runWithRequestContext({ ipAddress: requestIpAddress }, () =>
-    rpcHandler.handle(req, res)
+  const result = await runWithRequestContext(
+    { ipAddress: requestIpAddress, originId },
+    () => rpcHandler.handle(req, res)
   );
 
   if (!result.matched) {
