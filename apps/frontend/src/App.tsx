@@ -450,6 +450,7 @@ function buildTransactionsCsv(transactions: Transaction[]): string {
     "createdAt",
     "type",
     "status",
+    "clientCookie",
     "total",
     "itemCount",
     "items"
@@ -461,6 +462,7 @@ function buildTransactionsCsv(transactions: Transaction[]): string {
       transaction.createdAt,
       transaction.type,
       transaction.status,
+      transaction.clientCookie ?? "",
       transaction.total.toFixed(2),
       transactionDisplayItems(transaction).length,
       itemsSummary

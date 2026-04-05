@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 
 type RequestContext = {
   ipAddress?: string;
-  originId?: string;
+  clientCookie?: string;
 };
 
 const storage = new AsyncLocalStorage<RequestContext>();

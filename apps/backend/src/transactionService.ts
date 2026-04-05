@@ -149,12 +149,12 @@ export function createTransactionService(
 
         try {
           await transactionStore.create(transaction);
-          const { ipAddress, originId } = getRequestContext();
-          if (ipAddress && originId) {
+          const { ipAddress, clientCookie } = getRequestContext();
+          if (ipAddress && clientCookie) {
             await transactionStore.recordTransactionOrigin({
               transactionId: transaction.id,
               ipAddress,
-              originId
+              clientCookie
             });
           }
           return transaction;
@@ -202,12 +202,12 @@ export function createTransactionService(
 
         try {
           await transactionStore.create(transaction);
-          const { ipAddress, originId } = getRequestContext();
-          if (ipAddress && originId) {
+          const { ipAddress, clientCookie } = getRequestContext();
+          if (ipAddress && clientCookie) {
             await transactionStore.recordTransactionOrigin({
               transactionId: transaction.id,
               ipAddress,
-              originId
+              clientCookie
             });
           }
           return transaction;
@@ -390,12 +390,12 @@ export function createTransactionService(
         throw new ORPCError("NOT_FOUND", { data: { message: "Transaction not found" } });
       }
 
-      const { ipAddress, originId } = getRequestContext();
-      if (ipAddress && originId) {
+      const { ipAddress, clientCookie } = getRequestContext();
+      if (ipAddress && clientCookie) {
         await transactionStore.recordTransactionOrigin({
           transactionId: transaction.id,
           ipAddress,
-          originId
+          clientCookie
         });
       }
 

@@ -296,23 +296,23 @@ const server = createServer(async (req, res) => {
   }
 
   const cookies = parseCookies(firstHeaderValue(req.headers.cookie));
-  let originId = cookies[originCookieName];
+  let clientCookie = cookies[originCookieName];
 
   const isTransactionStartRequest =
     req.method === "POST" &&
     (req.url === "/transaction/start" || req.url === "/transaction/startTopup");
 
-  if (isTransactionStartRequest && !originId) {
-    originId = generateOriginId();
+  if (isTransactionStartRequest && !clientCookie) {
+    clientCookie = generateOriginId();
     res.setHeader(
       "Set-Cookie",
-      `${originCookieName}=${encodeURIComponent(originId)}; Path=/; Max-Age=${60 * 60 * 24 * 365 * 2}; SameSite=Lax`
+      `${originCookieName}=${encodeURIComponent(clientCookie)}; Path=/; Max-Age=${60 * 60 * 24 * 365 * 2}; SameSite=Lax`
     );
   }
 
   const requestIpAddress = getRequestIpAddress(req);
   const result = await runWithRequestContext(
-    { ipAddress: requestIpAddress, originId },
+    { ipAddress: requestIpAddress, clientCookie },
     () => rpcHandler.handle(req, res)
   );
 

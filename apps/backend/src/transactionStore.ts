@@ -21,7 +21,7 @@ export type TransactionStore = {
   recordTransactionOrigin: (input: {
     transactionId: string;
     ipAddress: string;
-    originId: string;
+    clientCookie: string;
   }) => Promise<void>;
 };
 
@@ -48,7 +48,7 @@ export function createTransactionStore(dataDir: string): TransactionStore {
 
     CREATE TABLE IF NOT EXISTS transaction_origins (
       transaction_id TEXT PRIMARY KEY,
-      origin_id TEXT NOT NULL,
+      client_cookie TEXT,
       ip_address TEXT NOT NULL,
       created_at TEXT NOT NULL,
       FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
@@ -80,6 +80,26 @@ export function createTransactionStore(dataDir: string): TransactionStore {
     db.exec("ALTER TABLE transactions ADD COLUMN external_amount REAL");
   }
 
+  const originTableInfo = db
+    .prepare("PRAGMA table_info(transaction_origins)")
+    .all() as { name: string }[];
+  const hasLegacyOriginIdColumn = originTableInfo.some((column) => column.name === "origin_id");
+
+  if (!originTableInfo.some((column) => column.name === "client_cookie")) {
+    db.exec("ALTER TABLE transaction_origins ADD COLUMN client_cookie TEXT");
+  }
+  if (hasLegacyOriginIdColumn) {
+    db.exec(`
+      UPDATE transaction_origins
+      SET client_cookie = COALESCE(client_cookie, origin_id)
+      WHERE origin_id IS NOT NULL
+    `);
+  }
+
+  const originCookieSelectExpr = hasLegacyOriginIdColumn
+    ? "COALESCE(o.client_cookie, o.origin_id)"
+    : "o.client_cookie";
+
   const insertTransaction = db.prepare(`
     INSERT INTO transactions (id, created_at, status, type, abandonment_reason, member_id, member_name, credit_used, external_amount, total, items_json)
     VALUES (@id, @createdAt, @status, @type, @abandonmentReason, @memberId, @memberName, @creditUsed, @externalAmount, @total, @itemsJson)
@@ -95,7 +115,7 @@ export function createTransactionStore(dataDir: string): TransactionStore {
       t.member_name,
       t.credit_used,
       t.external_amount,
-      o.origin_id,
+      ${originCookieSelectExpr} AS client_cookie,
       o.ip_address AS origin_ip_address,
       t.total,
       t.items_json
@@ -117,7 +137,7 @@ export function createTransactionStore(dataDir: string): TransactionStore {
       t.member_name,
       t.credit_used,
       t.external_amount,
-      o.origin_id,
+      ${originCookieSelectExpr} AS client_cookie,
       o.ip_address AS origin_ip_address,
       t.total,
       t.items_json
@@ -126,10 +146,10 @@ export function createTransactionStore(dataDir: string): TransactionStore {
     ORDER BY t.created_at DESC`
   );
   const upsertTransactionOrigin = db.prepare(`
-    INSERT INTO transaction_origins (transaction_id, origin_id, ip_address, created_at)
+    INSERT INTO transaction_origins (transaction_id, client_cookie, ip_address, created_at)
     VALUES (?, ?, ?, ?)
     ON CONFLICT(transaction_id) DO UPDATE SET
-      origin_id = excluded.origin_id,
+      client_cookie = excluded.client_cookie,
       ip_address = excluded.ip_address,
       created_at = excluded.created_at
   `);
@@ -144,7 +164,7 @@ export function createTransactionStore(dataDir: string): TransactionStore {
     member_name?: string | null;
     credit_used?: number | null;
     external_amount?: number | null;
-    origin_id?: string | null;
+    client_cookie?: string | null;
     origin_ip_address?: string | null;
     total: number;
     items_json: string;
@@ -158,7 +178,7 @@ export function createTransactionStore(dataDir: string): TransactionStore {
     memberName: row.member_name ?? undefined,
     creditUsed: row.credit_used ?? undefined,
     externalAmount: row.external_amount ?? undefined,
-    originId: row.origin_id ?? undefined,
+    clientCookie: row.client_cookie ?? undefined,
     originIpAddress: row.origin_ip_address ?? undefined,
     total: row.total,
     items: JSON.parse(row.items_json) as Transaction["items"]
@@ -192,7 +212,7 @@ export function createTransactionStore(dataDir: string): TransactionStore {
             member_name?: string | null;
             credit_used?: number | null;
             external_amount?: number | null;
-            origin_id?: string | null;
+            client_cookie?: string | null;
             origin_ip_address?: string | null;
             total: number;
             items_json: string;
@@ -223,7 +243,7 @@ export function createTransactionStore(dataDir: string): TransactionStore {
         member_name?: string | null;
         credit_used?: number | null;
         external_amount?: number | null;
-        origin_id?: string | null;
+        client_cookie?: string | null;
         origin_ip_address?: string | null;
         total: number;
         items_json: string;
@@ -233,7 +253,7 @@ export function createTransactionStore(dataDir: string): TransactionStore {
     async recordTransactionOrigin(input) {
       upsertTransactionOrigin.run(
         input.transactionId,
-        input.originId,
+        input.clientCookie,
         input.ipAddress,
         new Date().toISOString()
       );
