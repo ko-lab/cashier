@@ -1,14 +1,10 @@
 services:
   backend:
-    image: node:24-bookworm-slim
-    working_dir: /workspace
-    entrypoint: ["/bin/bash", "-lc"]
-    command: >-
-      corepack enable &&
-      pnpm config set store-dir /pnpm/store &&
-      pnpm install --frozen-lockfile &&
-      pnpm --filter @spacier/backend start
+    build:
+      context: ..
+      dockerfile: infra/runtime.Dockerfile
     environment:
+      APP_ROLE: backend
       PORT: "4000"
       DATA_DIR: /workspace/apps/backend/data
       CATALOG_DIR: /workspace/apps/backend/catalog
@@ -24,19 +20,15 @@ services:
       - dokploy-network
 
   frontend:
-    image: node:24-bookworm-slim
-    working_dir: /workspace
-    entrypoint: ["/bin/bash", "-lc"]
-    command: >-
-      corepack enable &&
-      pnpm config set store-dir /pnpm/store &&
-      pnpm install --frozen-lockfile &&
-      export VITE_API_URL="${VITE_API_URL:-/rpc}" &&
-      export VITE_IBAN="${VITE_IBAN}" &&
-      export VITE_IBAN_NAME="${VITE_IBAN_NAME}" &&
-      export VITE_APP_VERSION="${VITE_APP_VERSION:-${COMMIT_SHA:-dev}}" &&
-      pnpm --filter @spacier/frontend build &&
-      pnpm --filter @spacier/frontend start --host 0.0.0.0 --port 4173
+    build:
+      context: ..
+      dockerfile: infra/runtime.Dockerfile
+    environment:
+      APP_ROLE: frontend
+      VITE_API_URL: ${VITE_API_URL:-/rpc}
+      VITE_IBAN: ${VITE_IBAN}
+      VITE_IBAN_NAME: ${VITE_IBAN_NAME}
+      VITE_APP_VERSION: ${VITE_APP_VERSION:-${COMMIT_SHA:-dev}}
     volumes:
       - ..:/workspace
       - pnpm-store:/pnpm/store
