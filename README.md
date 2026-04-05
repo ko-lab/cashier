@@ -32,17 +32,15 @@ export ADMIN_PANEL_PASSWORD="change-me"
 
 Frontend runs on Vite, backend runs on oRPC. Runtime data is stored under `apps/backend/data/` (including `transactions.sqlite`). Product catalog lives in `apps/backend/catalog/products.json` (kept in git, not in the mounted runtime data dir).
 
-## Docker / Dokploy (optimized)
+## Docker / Dokploy (runtime-mounted repo)
 
-This repo includes production-oriented Dockerfiles with faster rebuild characteristics:
+This repo now uses a **single runtime image** for both backend and frontend:
 
-- `infra/frontend.Dockerfile`
-  - single container serving built frontend via `vite preview`
-  - minimal moving parts (no extra web server in the container)
-- `infra/backend.Dockerfile`
-  - single-stage runtime build (keeps pnpm workspace resolution simple)
-  - cached dependency install
-  - `/healthz` endpoint for container health checks
+- `infra/runtime.Dockerfile`
+- app code is **not baked into the image**
+- compose mounts the git repo into `/workspace`
+- role is selected via `APP_ROLE=backend|frontend`
+- `/healthz` endpoint remains available on backend
 
 For local compose:
 
@@ -68,7 +66,7 @@ For GitHub Actions deploy verification, also configure:
 - repository secret:
   - `DOKPLOY_WEBHOOK_URL`
 
-The Dokploy compose is intentionally minimal for Dokploy: no Traefik labels, no host port bindings, and uses external `dokploy-network` + a named volume (`backend-data`) for SQLite persistence.
+The Dokploy compose is intentionally minimal for Dokploy: no Traefik labels, no host port bindings, external `dokploy-network`, named volumes (`backend-data`, `pnpm-store`), and a bind mount of the checked-out repository into `/workspace`.
 
 ### Client auto-refresh on new deploy
 
@@ -82,7 +80,7 @@ The frontend checks `/version.json` every 60 seconds.
   - no active transaction/loading
 - If not safe yet, it shows a small notice and refreshes once the page becomes idle.
 
-In Docker builds, `infra/frontend.Dockerfile` writes `dist/version.json` from `VITE_APP_VERSION`.
+On container start, the frontend build writes `dist/version.json` from `VITE_APP_VERSION`.
 Set `VITE_APP_VERSION` in Dokploy/CI to a unique value per deploy (e.g. git SHA).
 
 The frontend version is also exposed in two places for quick verification:

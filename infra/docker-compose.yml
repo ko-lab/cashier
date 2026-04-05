@@ -2,15 +2,18 @@ services:
   backend:
     build:
       context: ..
-      dockerfile: infra/backend.Dockerfile
+      dockerfile: infra/runtime.Dockerfile
     env-file: ../apps/backend/.env
     environment:
+      APP_ROLE: backend
       PORT: "4000"
-      DATA_DIR: /app/apps/backend/data
-      CATALOG_DIR: /app/apps/backend/catalog
+      DATA_DIR: /workspace/apps/backend/data
+      CATALOG_DIR: /workspace/apps/backend/catalog
       ADMIN_PANEL_PASSWORD: ${ADMIN_PANEL_PASSWORD}
     volumes:
-      - ../apps/backend/data:/app/apps/backend/data
+      - ..:/workspace
+      - pnpm-store:/pnpm/store
+      - backend-data:/workspace/apps/backend/data
     ports:
       - "4000:4000"
     restart: unless-stopped
@@ -18,17 +21,22 @@ services:
   frontend:
     build:
       context: ..
-      dockerfile: infra/frontend.Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:4000/rpc}
-        VITE_IBAN: ${VITE_IBAN}
-        VITE_IBAN_NAME: ${VITE_IBAN_NAME}
-        VITE_APP_VERSION: ${VITE_APP_VERSION:-${COMMIT_SHA:-dev}}
+      dockerfile: infra/runtime.Dockerfile
+    environment:
+      APP_ROLE: frontend
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:4000/rpc}
+      VITE_IBAN: ${VITE_IBAN}
+      VITE_IBAN_NAME: ${VITE_IBAN_NAME}
+      VITE_APP_VERSION: ${VITE_APP_VERSION:-${COMMIT_SHA:-dev}}
     depends_on:
       - backend
+    volumes:
+      - ..:/workspace
+      - pnpm-store:/pnpm/store
     ports:
       - "4173:4173"
     restart: unless-stopped
 
 volumes:
   backend-data:
+  pnpm-store:
