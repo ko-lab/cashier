@@ -95,9 +95,21 @@ export function createTransactionStore(dataDir: string): TransactionStore {
   const originTableInfo = db
     .prepare("PRAGMA table_info(transaction_origins)")
     .all() as { name: string }[];
+  const hasLegacyOriginIdColumn = originTableInfo.some((column) => column.name === "origin_id");
   if (!originTableInfo.some((column) => column.name === "client_cookie")) {
     db.exec("ALTER TABLE transaction_origins ADD COLUMN client_cookie TEXT");
   }
+  if (hasLegacyOriginIdColumn) {
+    db.exec(`
+      UPDATE transaction_origins
+      SET client_cookie = COALESCE(client_cookie, origin_id)
+      WHERE origin_id IS NOT NULL
+    `);
+  }
+
+  const clientCookieSelectExpr = hasLegacyOriginIdColumn
+    ? "COALESCE(o.client_cookie, o.origin_id)"
+    : "o.client_cookie";
 
   const insertTransaction = db.prepare(`
     INSERT INTO transactions (id, created_at, status, type, abandonment_reason, member_id, member_name, credit_used, external_amount, total, items_json)
@@ -114,7 +126,7 @@ export function createTransactionStore(dataDir: string): TransactionStore {
       t.member_name,
       t.credit_used,
       t.external_amount,
-      o.client_cookie AS client_cookie,
+      ${clientCookieSelectExpr} AS client_cookie,
       o.ip_address AS origin_ip_address,
       t.total,
       t.items_json
@@ -136,7 +148,7 @@ export function createTransactionStore(dataDir: string): TransactionStore {
       t.member_name,
       t.credit_used,
       t.external_amount,
-      o.client_cookie AS client_cookie,
+      ${clientCookieSelectExpr} AS client_cookie,
       o.ip_address AS origin_ip_address,
       t.total,
       t.items_json
@@ -144,14 +156,26 @@ export function createTransactionStore(dataDir: string): TransactionStore {
     LEFT JOIN transaction_origins o ON o.transaction_id = t.id
     ORDER BY t.created_at DESC`
   );
-  const upsertTransactionOrigin = db.prepare(`
-    INSERT INTO transaction_origins (transaction_id, client_cookie, ip_address, created_at)
-    VALUES (?, ?, ?, ?)
-    ON CONFLICT(transaction_id) DO UPDATE SET
-      client_cookie = excluded.client_cookie,
-      ip_address = excluded.ip_address,
-      created_at = excluded.created_at
-  `);
+  const upsertTransactionOrigin = db.prepare(
+    hasLegacyOriginIdColumn
+      ? `
+        INSERT INTO transaction_origins (transaction_id, origin_id, client_cookie, ip_address, created_at)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(transaction_id) DO UPDATE SET
+          origin_id = excluded.origin_id,
+          client_cookie = excluded.client_cookie,
+          ip_address = excluded.ip_address,
+          created_at = excluded.created_at
+      `
+      : `
+        INSERT INTO transaction_origins (transaction_id, client_cookie, ip_address, created_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(transaction_id) DO UPDATE SET
+          client_cookie = excluded.client_cookie,
+          ip_address = excluded.ip_address,
+          created_at = excluded.created_at
+      `
+  );
 
   const mapRow = (row: {
     id: string;
@@ -250,6 +274,17 @@ export function createTransactionStore(dataDir: string): TransactionStore {
       return rows.map(mapRow);
     },
     async recordTransactionOrigin(input) {
+      if (hasLegacyOriginIdColumn) {
+        upsertTransactionOrigin.run(
+          input.transactionId,
+          input.clientCookie,
+          input.clientCookie,
+          input.ipAddress,
+          new Date().toISOString()
+        );
+        return;
+      }
+
       upsertTransactionOrigin.run(
         input.transactionId,
         input.clientCookie,
