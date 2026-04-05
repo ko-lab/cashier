@@ -40,6 +40,10 @@ export default defineConfig({
       "/client-log": "http://localhost:4000"
     }
   },
+  build: {
+    minify: false,
+    cssMinify: false
+  },
   test: {
     environment: "node"
   }

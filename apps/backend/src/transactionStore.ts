@@ -80,6 +80,12 @@ export function createTransactionStore(dataDir: string): TransactionStore {
     db.exec("ALTER TABLE transactions ADD COLUMN external_amount REAL");
   }
 
+  const originTableInfo = db
+    .prepare("PRAGMA table_info(transaction_origins)")
+    .all() as { name: string }[];
+  if (!originTableInfo.some((column) => column.name === "client_cookie")) {
+    db.exec("ALTER TABLE transaction_origins ADD COLUMN client_cookie TEXT");
+  }
 
   const insertTransaction = db.prepare(`
     INSERT INTO transactions (id, created_at, status, type, abandonment_reason, member_id, member_name, credit_used, external_amount, total, items_json)

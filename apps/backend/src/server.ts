@@ -236,6 +236,15 @@ const getRequestIpAddress = (req: IncomingMessage): string => {
 
 const server = createServer(async (req, res) => {
   try {
+  const requestStartAt = Date.now();
+  res.on("finish", () => {
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      console.warn(
+        `[http-non-2xx] ${new Date().toISOString()} ${req.method ?? "UNKNOWN"} ${req.url ?? ""} status=${res.statusCode} durationMs=${Date.now() - requestStartAt}`
+      );
+    }
+  });
+
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
