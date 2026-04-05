@@ -12,6 +12,7 @@ import type { ProductStore } from "./productStore.ts";
 import type { StockEventStore } from "./stockEventStore.ts";
 import type { TransactionStore } from "./transactionStore.ts";
 import type { MemberStore } from "./memberStore.ts";
+import { getRequestContext } from "./requestContext.ts";
 
 function buildTransactionItems(
   products: Product[],
@@ -148,6 +149,10 @@ export function createTransactionService(
 
         try {
           await transactionStore.create(transaction);
+          const requestIpAddress = getRequestContext().ipAddress;
+          if (requestIpAddress) {
+            await transactionStore.recordRequestOrigin(transaction.id, requestIpAddress);
+          }
           return transaction;
         } catch (error) {
           if (attempt < 4 && isUniqueConstraintError(error)) {
@@ -193,6 +198,10 @@ export function createTransactionService(
 
         try {
           await transactionStore.create(transaction);
+          const requestIpAddress = getRequestContext().ipAddress;
+          if (requestIpAddress) {
+            await transactionStore.recordRequestOrigin(transaction.id, requestIpAddress);
+          }
           return transaction;
         } catch (error) {
           if (attempt < 4 && isUniqueConstraintError(error)) {
@@ -371,6 +380,11 @@ export function createTransactionService(
 
       if (!transaction) {
         throw new ORPCError("NOT_FOUND", { data: { message: "Transaction not found" } });
+      }
+
+      const requestIpAddress = getRequestContext().ipAddress;
+      if (requestIpAddress) {
+        await transactionStore.recordRequestOrigin(transaction.id, requestIpAddress);
       }
 
       return transaction;

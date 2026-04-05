@@ -18,6 +18,7 @@ export type TransactionStore = {
     }
   ) => Promise<Transaction | null>;
   list: () => Promise<Transaction[]>;
+  recordRequestOrigin: (transactionId: string, ipAddress: string) => Promise<void>;
 };
 
 export function createTransactionStore(dataDir: string): TransactionStore {
@@ -39,6 +40,14 @@ export function createTransactionStore(dataDir: string): TransactionStore {
       external_amount REAL,
       total REAL NOT NULL,
       items_json TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS transaction_request_origins (
+      transaction_id TEXT NOT NULL,
+      ip_address TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (transaction_id, ip_address),
+      FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
     );
   `);
 
@@ -80,6 +89,10 @@ export function createTransactionStore(dataDir: string): TransactionStore {
   const listAll = db.prepare(
     "SELECT id, created_at, status, type, abandonment_reason, member_id, member_name, credit_used, external_amount, total, items_json FROM transactions ORDER BY created_at DESC"
   );
+  const insertRequestOrigin = db.prepare(`
+    INSERT OR IGNORE INTO transaction_request_origins (transaction_id, ip_address, created_at)
+    VALUES (?, ?, ?)
+  `);
 
   const mapRow = (row: {
     id: string;
@@ -168,6 +181,9 @@ export function createTransactionStore(dataDir: string): TransactionStore {
         items_json: string;
       }[];
       return rows.map(mapRow);
+    },
+    async recordRequestOrigin(transactionId, ipAddress) {
+      insertRequestOrigin.run(transactionId, ipAddress, new Date().toISOString());
     }
   };
 }

@@ -1,4 +1,4 @@
-import { createServer } from "node:http";
+import { createServer, type IncomingMessage } from "node:http";
 import { fileURLToPath } from "node:url";
 import { implement } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/node";
@@ -9,6 +9,7 @@ import { createTransactionService } from "./transactionService.ts";
 import { createAdminService } from "./adminService.ts";
 import { createStockEventStore } from "./stockEventStore.ts";
 import { createMemberStore } from "./memberStore.ts";
+import { runWithRequestContext } from "./requestContext.ts";
 
 const api = implement(contract);
 const defaultDataDir = fileURLToPath(new URL("../data/", import.meta.url));
@@ -116,6 +117,32 @@ const clientLogPath = "/client-log";
 const healthPath = "/healthz";
 const port = Number(process.env.PORT ?? 4000);
 
+const firstHeaderValue = (value: string | string[] | undefined): string | undefined => {
+  if (!value) {
+    return undefined;
+  }
+  return Array.isArray(value) ? value[0] : value;
+};
+
+const getRequestIpAddress = (req: IncomingMessage): string => {
+  const forwardedFor = firstHeaderValue(req.headers["x-forwarded-for"]);
+  if (forwardedFor) {
+    return forwardedFor.split(",")[0]?.trim() || "unknown";
+  }
+
+  const realIp = firstHeaderValue(req.headers["x-real-ip"]);
+  if (realIp?.trim()) {
+    return realIp.trim();
+  }
+
+  const cloudflareIp = firstHeaderValue(req.headers["cf-connecting-ip"]);
+  if (cloudflareIp?.trim()) {
+    return cloudflareIp.trim();
+  }
+
+  return req.socket.remoteAddress ?? "unknown";
+};
+
 const server = createServer(async (req, res) => {
   try {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -177,7 +204,10 @@ const server = createServer(async (req, res) => {
     req.url = req.url.slice(rpcPrefix.length) || "/";
   }
 
-  const result = await rpcHandler.handle(req, res);
+  const requestIpAddress = getRequestIpAddress(req);
+  const result = await runWithRequestContext({ ipAddress: requestIpAddress }, () =>
+    rpcHandler.handle(req, res)
+  );
 
   if (!result.matched) {
     res.statusCode = 404;

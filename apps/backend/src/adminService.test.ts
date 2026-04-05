@@ -11,7 +11,8 @@ function makeTransactionStore(transactions: Transaction[]): TransactionStore {
     create: vi.fn(async () => undefined),
     getById: vi.fn(async () => null),
     updateStatus: vi.fn(async () => null),
-    list: vi.fn(async () => transactions)
+    list: vi.fn(async () => transactions),
+    recordRequestOrigin: vi.fn(async () => undefined)
   };
 }
 
