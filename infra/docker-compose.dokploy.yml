@@ -2,17 +2,14 @@ services:
   backend:
     build:
       context: ..
-      dockerfile: infra/runtime.Dockerfile
+      dockerfile: infra/backend.Dockerfile
     environment:
-      APP_ROLE: backend
       PORT: "4000"
-      DATA_DIR: /workspace/apps/backend/data
-      CATALOG_DIR: /workspace/apps/backend/catalog
+      DATA_DIR: /app/apps/backend/data
+      CATALOG_DIR: /app/apps/backend/catalog
       ADMIN_PANEL_PASSWORD: ${ADMIN_PANEL_PASSWORD}
     volumes:
-      - ..:/workspace
-      - pnpm-store:/pnpm/store
-      - backend-data:/workspace/apps/backend/data
+      - backend-data:/app/apps/backend/data
     expose:
       - "4000"
     restart: unless-stopped
@@ -22,16 +19,12 @@ services:
   frontend:
     build:
       context: ..
-      dockerfile: infra/runtime.Dockerfile
-    environment:
-      APP_ROLE: frontend
-      VITE_API_URL: ${VITE_API_URL:-/rpc}
-      VITE_IBAN: ${VITE_IBAN}
-      VITE_IBAN_NAME: ${VITE_IBAN_NAME}
-      VITE_APP_VERSION: ${VITE_APP_VERSION:-${COMMIT_SHA:-dev}}
-    volumes:
-      - ..:/workspace
-      - pnpm-store:/pnpm/store
+      dockerfile: infra/frontend.Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/rpc}
+        VITE_IBAN: ${VITE_IBAN}
+        VITE_IBAN_NAME: ${VITE_IBAN_NAME}
+        VITE_APP_VERSION: ${VITE_APP_VERSION:-${COMMIT_SHA:-dev}}
     expose:
       - "4173"
     restart: unless-stopped
@@ -40,7 +33,6 @@ services:
 
 volumes:
   backend-data:
-  pnpm-store:
 
 networks:
   dokploy-network:
