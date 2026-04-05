@@ -159,23 +159,79 @@ const encodeUuidV6FromTimestampMs = (timestampMs: number): string => {
 
 const generateOriginId = (): string => encodeUuidV6FromTimestampMs(Date.now());
 
+const isPrivateOrLocalIp = (ip: string): boolean => {
+  const normalized = ip.trim().toLowerCase();
+
+  if (!normalized) {
+    return true;
+  }
+
+  if (
+    normalized === "::1" ||
+    normalized === "127.0.0.1" ||
+    normalized === "localhost" ||
+    normalized.startsWith("fc") ||
+    normalized.startsWith("fd") ||
+    normalized.startsWith("fe80:") ||
+    normalized.startsWith("::ffff:127.") ||
+    normalized.startsWith("::ffff:10.") ||
+    normalized.startsWith("::ffff:192.168.")
+  ) {
+    return true;
+  }
+
+  if (normalized.startsWith("::ffff:")) {
+    return isPrivateOrLocalIp(normalized.slice(7));
+  }
+
+  const ipv4Match = normalized.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (!ipv4Match) {
+    return false;
+  }
+
+  const [a, b] = [Number(ipv4Match[1]), Number(ipv4Match[2])];
+  if (a === 10 || a === 127) {
+    return true;
+  }
+  if (a === 192 && b === 168) {
+    return true;
+  }
+  if (a === 172 && b >= 16 && b <= 31) {
+    return true;
+  }
+
+  return false;
+};
+
 const getRequestIpAddress = (req: IncomingMessage): string => {
-  const forwardedFor = firstHeaderValue(req.headers["x-forwarded-for"]);
-  if (forwardedFor) {
-    return forwardedFor.split(",")[0]?.trim() || "unknown";
+  const candidates: string[] = [];
+
+  const cloudflareIp = firstHeaderValue(req.headers["cf-connecting-ip"]);
+  if (cloudflareIp) {
+    candidates.push(cloudflareIp.trim());
   }
 
   const realIp = firstHeaderValue(req.headers["x-real-ip"]);
-  if (realIp?.trim()) {
-    return realIp.trim();
+  if (realIp) {
+    candidates.push(realIp.trim());
   }
 
-  const cloudflareIp = firstHeaderValue(req.headers["cf-connecting-ip"]);
-  if (cloudflareIp?.trim()) {
-    return cloudflareIp.trim();
+  const forwardedFor = firstHeaderValue(req.headers["x-forwarded-for"]);
+  if (forwardedFor) {
+    candidates.push(
+      ...forwardedFor
+        .split(",")
+        .map((part) => part.trim())
+        .filter(Boolean)
+    );
   }
 
-  return req.socket.remoteAddress ?? "unknown";
+  if (req.socket.remoteAddress) {
+    candidates.push(req.socket.remoteAddress.trim());
+  }
+
+  const firstPublic = candidates.find((ip) => !isPrivateOrLocalIp(ip));
+  return firstPublic ?? candidates[0] ?? "unknown";
 };
 
 const server = createServer(async (req, res) => {
