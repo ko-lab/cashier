@@ -110,7 +110,6 @@ You can deploy this stack either from the Dokploy UI or via Dokploy CLI.
    - `VITE_IBAN`
    - `VITE_IBAN_NAME`
    - optional: `VITE_API_URL` (default is `/rpc` for same-domain routing)
-   - optional: `DEPLOY_WEBHOOK_PATH` (default `/deploy-webhook`)
    - optional: `DEPLOY_WEBHOOK_SECRET` (required if you want webhook auth)
 6. Expose routes on the same domain (`cashier.ko-lab.be`) with path-based routing:
    - Frontend service: host `cashier.ko-lab.be`, path `/`, port `4173`

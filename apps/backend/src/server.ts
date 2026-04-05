@@ -116,7 +116,7 @@ const runCommand = promisify(execFile);
 const rpcPrefix = "/rpc";
 const clientLogPath = "/client-log";
 const healthPath = "/healthz";
-const deployWebhookPath = process.env.DEPLOY_WEBHOOK_PATH ?? "/deploy-webhook";
+const deployWebhookPath = "/deploy-webhook";
 const deployWebhookSecret = process.env.DEPLOY_WEBHOOK_SECRET;
 const port = Number(process.env.PORT ?? 4000);
 
