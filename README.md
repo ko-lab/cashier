@@ -34,12 +34,11 @@ Frontend runs on Vite, backend runs on oRPC. Runtime data is stored under `apps/
 
 ## Docker / Dokploy (runtime-mounted repo)
 
-This repo now uses a **single runtime image** for both backend and frontend:
+This repo now uses the **plain Node image** (`node:24-bookworm-slim`) for both backend and frontend:
 
-- `infra/runtime.Dockerfile`
-- app code is **not baked into the image**
+- app code is **not baked into an image**
 - compose mounts the git repo into `/workspace`
-- role is selected via `APP_ROLE=backend|frontend`
+- each service runs its own startup command in the same base image
 - `/healthz` endpoint remains available on backend
 
 For local compose:
