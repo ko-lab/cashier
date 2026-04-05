@@ -14,6 +14,9 @@ import { filterProductsByQuery, formatPriceMode, getSelectedItems } from "./doma
 import { getUnitPrice } from "./domain/pricing";
 import { toStructuredCommunication } from "./domain/structuredCommunication";
 import { createPaymentQR, createQRImageSrc } from "./qrcode.ts";
+import { AdminPage } from "./pages/AdminPage";
+import { CartPage } from "./pages/CartPage";
+import { CheckoutPage } from "./pages/CheckoutPage";
 
 type View = "cart" | "checkout" | "topup";
 type UiMode = "pos" | "admin";
@@ -1876,8 +1879,7 @@ export default function App() {
         ) }
 
         { uiMode === "admin" ? (
-          <section
-            className="rounded-2xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
+          <AdminPage>
             { !adminTransactions ? (
               <form
                 className="mx-auto flex w-full max-w-md flex-col gap-4"
@@ -2605,9 +2607,9 @@ export default function App() {
                 ) }
               </div>
             ) }
-          </section>
+          </AdminPage>
         ) : view === "cart" ? (
-          <section>
+          <CartPage>
             <div
               className="rounded-2xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
               <div className="flex flex-wrap items-center justify-between gap-4">
@@ -2702,9 +2704,9 @@ export default function App() {
                 }) }
               </div>
             </div>
-          </section>
+          </CartPage>
         ) : (
-          <section className="flex flex-col gap-6">
+          <CheckoutPage>
             <div
               className="rounded-2xl border border-black/10 bg-white/80 p-6 shadow-sm dark:border-white/10 dark:bg-white/5">
               { !transaction && (
@@ -2986,7 +2988,7 @@ export default function App() {
                 </div>
               </div>
             </aside>
-          </section>
+          </CheckoutPage>
         ) }
 
         { memberCreditEnabled && transaction && showPayWithCreditModal && (
