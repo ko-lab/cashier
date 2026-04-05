@@ -211,6 +211,8 @@ export const TransactionSchema = z.object({
   memberName: z.string().optional(),
   creditUsed: z.number().nonnegative().optional(),
   externalAmount: z.number().nonnegative().optional(),
+  originId: z.string().min(1).optional(),
+  originIpAddress: z.string().min(1).optional(),
   total: z.number().nonnegative(),
   items: z.array(TransactionItemSchema)
 });

@@ -85,13 +85,45 @@ export function createTransactionStore(dataDir: string): TransactionStore {
     VALUES (@id, @createdAt, @status, @type, @abandonmentReason, @memberId, @memberName, @creditUsed, @externalAmount, @total, @itemsJson)
   `);
   const selectById = db.prepare(
-    "SELECT id, created_at, status, type, abandonment_reason, member_id, member_name, credit_used, external_amount, total, items_json FROM transactions WHERE id = ?"
+    `SELECT
+      t.id,
+      t.created_at,
+      t.status,
+      t.type,
+      t.abandonment_reason,
+      t.member_id,
+      t.member_name,
+      t.credit_used,
+      t.external_amount,
+      o.origin_id,
+      o.ip_address AS origin_ip_address,
+      t.total,
+      t.items_json
+    FROM transactions t
+    LEFT JOIN transaction_origins o ON o.transaction_id = t.id
+    WHERE t.id = ?`
   );
   const updateStatus = db.prepare(
     "UPDATE transactions SET status = ?, abandonment_reason = ?, member_id = ?, member_name = ?, credit_used = ?, external_amount = ? WHERE id = ?"
   );
   const listAll = db.prepare(
-    "SELECT id, created_at, status, type, abandonment_reason, member_id, member_name, credit_used, external_amount, total, items_json FROM transactions ORDER BY created_at DESC"
+    `SELECT
+      t.id,
+      t.created_at,
+      t.status,
+      t.type,
+      t.abandonment_reason,
+      t.member_id,
+      t.member_name,
+      t.credit_used,
+      t.external_amount,
+      o.origin_id,
+      o.ip_address AS origin_ip_address,
+      t.total,
+      t.items_json
+    FROM transactions t
+    LEFT JOIN transaction_origins o ON o.transaction_id = t.id
+    ORDER BY t.created_at DESC`
   );
   const upsertTransactionOrigin = db.prepare(`
     INSERT INTO transaction_origins (transaction_id, origin_id, ip_address, created_at)
@@ -112,6 +144,8 @@ export function createTransactionStore(dataDir: string): TransactionStore {
     member_name?: string | null;
     credit_used?: number | null;
     external_amount?: number | null;
+    origin_id?: string | null;
+    origin_ip_address?: string | null;
     total: number;
     items_json: string;
   }): Transaction => ({
@@ -124,6 +158,8 @@ export function createTransactionStore(dataDir: string): TransactionStore {
     memberName: row.member_name ?? undefined,
     creditUsed: row.credit_used ?? undefined,
     externalAmount: row.external_amount ?? undefined,
+    originId: row.origin_id ?? undefined,
+    originIpAddress: row.origin_ip_address ?? undefined,
     total: row.total,
     items: JSON.parse(row.items_json) as Transaction["items"]
   });
@@ -156,6 +192,8 @@ export function createTransactionStore(dataDir: string): TransactionStore {
             member_name?: string | null;
             credit_used?: number | null;
             external_amount?: number | null;
+            origin_id?: string | null;
+            origin_ip_address?: string | null;
             total: number;
             items_json: string;
           }
@@ -185,6 +223,8 @@ export function createTransactionStore(dataDir: string): TransactionStore {
         member_name?: string | null;
         credit_used?: number | null;
         external_amount?: number | null;
+        origin_id?: string | null;
+        origin_ip_address?: string | null;
         total: number;
         items_json: string;
       }[];
