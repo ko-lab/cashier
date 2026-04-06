@@ -80,48 +80,7 @@ export function createTransactionStore(dataDir: string): TransactionStore {
     db.exec("ALTER TABLE transactions ADD COLUMN external_amount REAL");
   }
 
-  const hasLegacyRequestOriginsTable = db
-    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'transaction_request_origins'")
-    .get() as { name: string } | undefined;
-  const originColumns = db
-    .prepare("PRAGMA table_info(transaction_origins)")
-    .all() as { name: string }[];
-  const originCookieSourceExpr = originColumns.some((column) => column.name === "origin_id")
-    ? "COALESCE(client_cookie, origin_id)"
-    : "client_cookie";
-
-  db.exec(`
-    DROP TABLE IF EXISTS transaction_origins_new;
-    CREATE TABLE transaction_origins_new (
-      transaction_id TEXT PRIMARY KEY,
-      client_cookie TEXT,
-      ip_address TEXT,
-      created_at TEXT NOT NULL,
-      FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
-    );
-
-    INSERT OR REPLACE INTO transaction_origins_new (transaction_id, client_cookie, ip_address, created_at)
-    SELECT
-      transaction_id,
-      ${originCookieSourceExpr},
-      ip_address,
-      created_at
-    FROM transaction_origins;
-
-    ${hasLegacyRequestOriginsTable
-      ? `INSERT OR IGNORE INTO transaction_origins_new (transaction_id, client_cookie, ip_address, created_at)
-    SELECT
-      transaction_id,
-      NULL,
-      ip_address,
-      created_at
-    FROM transaction_request_origins;`
-      : ""}
-
-    DROP TABLE transaction_origins;
-    ALTER TABLE transaction_origins_new RENAME TO transaction_origins;
-    DROP TABLE IF EXISTS transaction_request_origins;
-  `);
+  db.exec("DROP TABLE IF EXISTS transaction_request_origins");
 
   const insertTransaction = db.prepare(`
     INSERT INTO transactions (id, created_at, status, type, abandonment_reason, member_id, member_name, credit_used, external_amount, total, items_json)
