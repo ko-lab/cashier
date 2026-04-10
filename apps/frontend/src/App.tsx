@@ -2151,7 +2151,8 @@ export default function App() {
                         <button
                           type="button"
                           onClick={ () => setShowPaymentReminder(false) }
-                          className="mt-5 rounded-xl bg-emerald-600 px-5 py-3 text-base font-bold text-white"
+                          style={ { backgroundColor: "#059669", color: "#ffffff" } }
+                          className="mt-5 rounded-xl px-5 py-3 text-base font-bold"
                         >
                           Understood
                         </button>
