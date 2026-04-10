@@ -2041,6 +2041,9 @@ export default function App() {
                       ? "Scan the QR code to add credit. When done, press \"I paid\"."
                       : "Scan the QR code and pay the total. When done, press \"I paid\"." }
                   </p>
+                  <p className="mt-1 text-sm font-medium text-amber-700 dark:text-amber-300">
+                    Use your banking app to scan this QR code — do not use the Payconiq or Bancontact app.
+                  </p>
                 </>
               ) }
 
