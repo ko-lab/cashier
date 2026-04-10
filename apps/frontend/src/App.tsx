@@ -610,6 +610,7 @@ export default function App() {
   const [isDark, setIsDark] = useState(readStoredTheme);
   const [updateReady, setUpdateReady] = useState(false);
   const [showCheckoutConfirm, setShowCheckoutConfirm] = useState(false);
+  const [showPaymentReminder, setShowPaymentReminder] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [memberCreditEnabled, setMemberCreditEnabled] = useState(readMemberCreditFeatureFlag);
   const [activeMember, setActiveMember] = useState<Member | null>(null);
@@ -1081,6 +1082,10 @@ export default function App() {
     ? Math.max(0, creditToUseNumber)
     : 0;
   const isTopupView = view === "topup";
+
+  useEffect(() => {
+    setShowPaymentReminder(Boolean(transaction));
+  }, [transaction?.id]);
   const checkoutCreditUsed = transaction?.creditUsed ?? 0;
   const checkoutExternalAmount = transaction?.externalAmount ?? transaction?.total ?? 0;
   const payableTotal = (view === "checkout" || view === "topup") && transaction ? transaction.total : summary.total;
@@ -2127,6 +2132,27 @@ export default function App() {
 
               { transaction && (
                 <>
+                  { showPaymentReminder && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-4">
+                      <div className="w-full max-w-2xl rounded-2xl border-4 border-amber-400 bg-white p-6 text-center shadow-2xl dark:bg-slate-900">
+                        <p className="text-2xl font-black text-red-600 dark:text-red-400">IMPORTANT</p>
+                        <p className="mt-3 text-lg font-extrabold text-slate-900 dark:text-slate-100">
+                          AFTER PAYMENT, YOU MUST PRESS THE “I PAID” BUTTON.
+                        </p>
+                        <p className="mt-3 text-base font-bold text-amber-800 dark:text-amber-300">
+                          This QR works with BANKING APPS only — NOT with Payconiq or Bancontact apps.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={ () => setShowPaymentReminder(false) }
+                          className="mt-5 rounded-xl bg-emerald-600 px-5 py-3 text-base font-bold text-white"
+                        >
+                          Understood
+                        </button>
+                      </div>
+                    </div>
+                  ) }
+
                   <div className="sticky top-0 z-20 -mx-2 mb-4 mt-2 flex flex-wrap gap-3 rounded-xl border border-slate-200 bg-white/95 px-2 py-2 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
                     <button
                       type="button"
