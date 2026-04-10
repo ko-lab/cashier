@@ -10,7 +10,7 @@ export function createPaymentQR(
 ) {
   const payload = [
     "BCD",
-    "001",                        // Changed to version 001
+    "002",                        // Changed to version 001
     "1",
     "SCT",
     "",
