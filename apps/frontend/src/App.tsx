@@ -2132,7 +2132,8 @@ export default function App() {
                         void finalize("completed");
                       } }
                       disabled={ isBusy || paymentBlockedByMemberAuth }
-                      className="rounded-xl bg-emerald-500 px-6 py-3 text-base font-bold text-white transition hover:brightness-95 disabled:opacity-50"
+                      style={ { backgroundColor: "#10b981", color: "#ffffff" } }
+                      className="rounded-xl px-6 py-3 text-base font-bold transition hover:brightness-95 disabled:opacity-50"
                     >
                       I paid
                     </button>
