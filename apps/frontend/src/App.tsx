@@ -2146,7 +2146,7 @@ export default function App() {
                           After payment, you must press the “I PAID” button.
                         </p>
                         <p className="mt-3 text-base font-bold text-amber-800">
-                          This QR works with BANKING APPS only — not with Payconiq or Bancontact apps.
+                          This QR works with Banking Apps (KBC, Argenta, ...) only — NOT with Payconiq or Bancontact apps.
                         </p>
                         <button
                           type="button"
