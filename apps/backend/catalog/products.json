@@ -42,6 +42,12 @@
       "priceMember": 3,
       "priceNonMember": 4
     },
+    "bier-na": {
+      "id": "bier-na",
+      "name": "Bier Non Alc",
+      "priceMember": 3,
+      "priceNonMember": 4
+    },
     "bier-75cl": {
       "id": "bier-75cl",
       "name": "Bier 75cl",
@@ -171,27 +177,27 @@
     "aflligem-blond": {
       "id": "aflligem-blond",
       "name": "Affligem Blond 0.0",
-      "priceCategoryId": "bier"
+      "priceCategoryId": "bier-na"
     },
     "cornet-oaked-Na": {
       "id": "cornet-oaked-Na",
       "name": "Cornet oaked NA",
-      "priceCategoryId": "bier"
+      "priceCategoryId": "bier-na"
     },
     "desperados-0": {
       "id": "desperados-0",
       "name": "Desperados 0.0",
-      "priceCategoryId": "bier"
+      "priceCategoryId": "bier-na"
     },
     "liefmans-otr": {
       "id": "liefmans-otr",
       "name": "Liefmans On The Rocks 0.0",
-      "priceCategoryId": "bier"
+      "priceCategoryId": "bier-na"
     },
     "liefmans-otr-peach": {
       "id": "liefmans-otr-peach",
       "name": "Liefmans Peach 0.0",
-      "priceCategoryId": "promo"
+      "priceCategoryId": "bier-na"
     },
     "karmeliet-0.0": {
       "id": "karmeliet-0.0",
@@ -226,7 +232,7 @@
     "grimbergen-prestige": {
       "id": "grimbergen-prestige",
       "name": "Grimbergen prestige",
-      "priceCategoryId": "promo"
+      "priceCategoryId": "bier"
     },
     "hapkin": {
       "id": "hapkin",
@@ -267,6 +273,21 @@
       "id": "kwak_rouge",
       "name": "Kwak Rouge",
       "priceCategoryId": "bier"
+    },
+    "rodenbach-gc": {
+      "id": "rodenbach-gc",
+      "name": "Rodenbach Grand Cru",
+      "priceCategoryId": "bier"
+    },
+    "adriaen-b-bruin": {
+      "id": "adriaen-b-bruin",
+      "name": "Adriaen Brouwer Bruyn",
+      "priceCategoryId": "bier"
+    },
+    "ypra-na": {
+      "id": "ypra-na",
+      "name": "Ypra 0.4",
+      "priceCategoryId": "bier-na"
     },
     "cider": {
       "id": "cider",
