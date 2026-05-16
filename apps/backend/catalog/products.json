@@ -104,6 +104,11 @@
       "name": "Paulaner Spezi",
       "priceCategoryId": "premium-drink"
     },
+    "spezi-blik": {
+      "id": "spezi-blik",
+      "name": "Spezi Blik",
+      "priceCategoryId": "premium-drink"
+    },
     "miomio-mate": {
       "id": "miomio-mate",
       "name": "MioMio mate",
@@ -117,6 +122,11 @@
     "miomio-banana": {
       "id": "miomio-banana",
       "name": "MioMio banana",
+      "priceCategoryId": "premium-drink"    
+    },
+    "miomio-lemon": {
+      "id": "miomio-lemon",
+      "name": "MioMio Lemon",
       "priceCategoryId": "premium-drink"
     },
     "icetea": {
@@ -287,6 +297,16 @@
     "ypra-na": {
       "id": "ypra-na",
       "name": "Ypra 0.4",
+      "priceCategoryId": "bier-na"
+    },
+    "jupiler-na": {
+      "id": "jupiler-na",
+      "name": "Jupiler 0.0",
+      "priceCategoryId": "bier-na"
+    },
+    "stella-na": {
+      "id": "stella-na",
+      "name": "Stella 0.0",
       "priceCategoryId": "bier-na"
     },
     "cider": {
