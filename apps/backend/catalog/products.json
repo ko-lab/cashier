@@ -21,8 +21,8 @@
     "juice": {
       "id": "juice",
       "name": "Juice",
-      "priceMember": 2,
-      "priceNonMember": 3
+      "priceMember": 1,
+      "priceNonMember": 1.5
     },
     "water": {
       "id": "water",
@@ -309,6 +309,11 @@
       "name": "Stella 0.0",
       "priceCategoryId": "bier-na"
     },
+    "caprisun": {
+      "id": "caprisun",
+      "name": "Capri sun Multivitamin",
+      "priceCategoryId": "juice"
+    },
     "cider": {
       "id": "cider",
       "name": "Ko-lab cider",
@@ -334,6 +339,21 @@
       "name": "Ijshoorntje",
       "priceCategoryId": "snack"
     },
+    "indomie-veg": {
+      "id": "indomie-veg",
+      "name": "Noodles Indomie vegetable",
+      "priceCategoryId": "snack"
+    },
+    "indomie-shrimp": {
+      "id": "indomie-shrimp",
+      "name": "Noodles Indomie shrimp",
+      "priceCategoryId": "snack"
+    },
+    "indomie-kip": {
+      "id": "indomie-kip",
+      "name": "Noodles Indomie chicken",
+      "priceCategoryId": "snack"
+    },       
     "koffie": {
       "id": "koffie",
       "name": "Cappuccino",
