@@ -16,7 +16,7 @@
       "id": "soft-medium",
       "name": "Soft drink medium",
       "priceMember": 2,
-      "priceNonMember": 3
+      "priceNonMember": 2.5
     },
     "juice": {
       "id": "juice",
@@ -28,7 +28,7 @@
       "id": "water",
       "name": "Water",
       "priceMember": 1,
-      "priceNonMember": 2
+      "priceNonMember": 1.5
     },
     "snack": {
       "id": "snack",
@@ -302,12 +302,12 @@
     "jupiler-na": {
       "id": "jupiler-na",
       "name": "Jupiler 0.0",
-      "priceCategoryId": "bier-na"
+      "priceCategoryId": "pils"
     },
     "stella-na": {
       "id": "stella-na",
       "name": "Stella 0.0",
-      "priceCategoryId": "bier-na"
+      "priceCategoryId": "pils"
     },
     "caprisun": {
       "id": "caprisun",
