@@ -129,6 +129,11 @@
       "name": "MioMio Lemon",
       "priceCategoryId": "premium-drink"
     },
+    "miomio-pommegranate": {
+      "id": "miomio-pommegranate",
+      "name": "MioMio PommeGranate",
+      "priceCategoryId": "premium-drink"
+    },
     "icetea": {
       "id": "icetea",
       "name": "IceTea",
@@ -319,7 +324,7 @@
       "name": "Ko-lab cider",
       "priceCategoryId": "bier"
     },
-    "cider": {
+    "canada-dry": {
       "id": "canada-dry",
       "name": "Canada Dry",
       "priceCategoryId": "soft-medium"
