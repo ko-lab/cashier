@@ -319,6 +319,11 @@
       "name": "Ko-lab cider",
       "priceCategoryId": "bier"
     },
+    "cider": {
+      "id": "canada-dry",
+      "name": "Canada Dry",
+      "priceCategoryId": "soft-medium"
+    },
     "chips": {
       "id": "chips",
       "name": "Chips",
