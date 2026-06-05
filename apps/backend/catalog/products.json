@@ -375,8 +375,9 @@
       "priceCategoryId": "hot"
     },
     "fraline": {
-    "id": "fraline",
-    "name": "fraline",
-    "priceCategoryId": "promo"
+      "id": "fraline",
+      "name": "fraline",
+      "priceCategoryId": "promo"
   }
+}
 }
