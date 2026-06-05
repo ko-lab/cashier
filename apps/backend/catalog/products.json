@@ -373,6 +373,10 @@
       "id": "thee",
       "name": "Thee",
       "priceCategoryId": "hot"
-    }
+    },
+    {
+    "id": "fraline",
+    "name": "fraline",
+    "priceCategoryId": "promo"
   }
 }
