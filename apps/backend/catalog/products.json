@@ -36,6 +36,12 @@
       "priceMember": 1.5,
       "priceNonMember": 2
     },
+    "ice-cream": {
+      "id": "ice-cream",
+      "name" : "ice-cream",
+      "priceMember": 1,
+      "priceNonMember": 1
+    },
     "bier": {
       "id": "bier",
       "name": "Bier",
@@ -347,7 +353,7 @@
     "cornetto": {
       "id": "cornetto",
       "name": "Ijshoorntje",
-      "priceCategoryId": "snack"
+      "priceCategoryId": "ice-cream"
     },
     "indomie-veg": {
       "id": "indomie-veg",
