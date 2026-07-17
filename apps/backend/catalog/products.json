@@ -320,6 +320,11 @@
       "name": "Stella 0.0",
       "priceCategoryId": "pils"
     },
+    "stella": {
+      "id": "stella",
+      "name": "Stella",
+      "priceCategoryId": "pils"
+    },
     "caprisun": {
       "id": "caprisun",
       "name": "Capri sun Multivitamin",
