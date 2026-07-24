@@ -387,8 +387,13 @@
     },
     "fraline": {
       "id": "fraline",
-      "name": "fraline",
+      "name": "Fraline",
       "priceCategoryId": "promo"
-  }
+    },
+    "flying-fish": {
+      "id": "flying-fish",
+      "name": "Flying Fish",
+      "priceCategoryId": "promo"
+    }
 }
 }
