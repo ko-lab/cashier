@@ -394,6 +394,11 @@
       "id": "flying-fish",
       "name": "Flying Fish",
       "priceCategoryId": "promo"
+    },
+    "duvel-tripel-hop": {
+      "id": "duvel-tripel-hop",
+      "name": "Duvel Tripel Hop",
+      "priceCategoryId": "bier"
     }
 }
 }
